@@ -5,138 +5,221 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <title>Fabiana Martins Beauty Hair</title>
-<meta name="theme-color" content="#a3395f">
+<meta name="theme-color" content="#2a1722">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Instrument+Sans:wght@400..700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Figtree:wght@400..800&display=swap">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
 <style>
-/* Layout: barra fixa no topo (nome, estado da conexão e abas); abaixo, uma coluna de até 820px com listas numa única superfície e formulários em janela modal. */
+/* Visual "ateliê de cor": menu lateral ameixa, fundo pérola, títulos em serifa e a carta de tons de cabelo como assinatura. */
 :root{
   color-scheme:light;
-  --bg:#f6f2f4;--surface:#ffffff;--ink:#2a2127;--muted:#74656d;
-  --accent:#a3395f;--accent-ink:#ffffff;--accent-soft:#f4e4ea;--line:#e6dbe0;
-  --ok:#2b7a53;--ok-soft:#e1f1e8;--warn:#b3372c;--warn-soft:#fbe5e2;
-  --font-display:'Bricolage Grotesque',system-ui,sans-serif;
-  --font-body:'Instrument Sans',system-ui,sans-serif;
+  --bg:#f5f1f3;--surface:#ffffff;--ink:#27191f;--muted:#716068;--line:#e7dde2;--line-2:#f0e8ec;
+  --accent:#9b2f58;--accent-hover:#832649;--accent-ink:#ffffff;--accent-soft:#f6e7ee;
+  --side:#2a1722;--side-ink:#f3e8ee;--side-muted:#b9a3af;--side-hover:rgba(255,255,255,.07);--side-on:rgba(255,255,255,.12);
+  --gold:#c9a46c;
+  --ok:#23704b;--ok-soft:#e0f1e8;--warn:#b0322a;--warn-soft:#fbe6e3;--amber:#8a5a00;--amber-soft:#fcefd2;
+  --font-display:'Instrument Serif',Georgia,'Times New Roman',serif;
+  --font-body:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --shadow:0 1px 2px rgba(42,23,34,.05),0 6px 20px -12px rgba(42,23,34,.18);
+  --tons:linear-gradient(90deg,#1d1411 0 11.11%,#3a2418 0 22.22%,#5b3a22 0 33.33%,#7e5532 0 44.44%,#a57a48 0 55.55%,#c99f66 0 66.66%,#e0bf86 0 77.77%,#efd8ab 0 88.88%,#f6e8cd 0 100%);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#171216;--surface:#231c21;--ink:#f1e9ed;--muted:#a99aa2;
-    --accent:#e5799f;--accent-ink:#2a1119;--accent-soft:#3a2530;--line:#382d34;
-    --ok:#6fcf9b;--ok-soft:#1f3329;--warn:#ff8f82;--warn-soft:#3d2320;
+    --bg:#161017;--surface:#211a20;--ink:#f3eaef;--muted:#ab9aa3;--line:#372c33;--line-2:#2b2229;
+    --accent:#e47aa4;--accent-hover:#ee93b7;--accent-ink:#2a1119;--accent-soft:#3a2530;
+    --side:#1a0f16;--ok:#6fcf9b;--ok-soft:#1f3329;--warn:#ff8f82;--warn-soft:#3d2320;--amber:#f0c26b;--amber-soft:#3a2d12;
+    --shadow:0 1px 2px rgba(0,0,0,.3);
     color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
-  --bg:#171216;--surface:#231c21;--ink:#f1e9ed;--muted:#a99aa2;
-  --accent:#e5799f;--accent-ink:#2a1119;--accent-soft:#3a2530;--line:#382d34;
-  --ok:#6fcf9b;--ok-soft:#1f3329;--warn:#ff8f82;--warn-soft:#3d2320;
+  --bg:#161017;--surface:#211a20;--ink:#f3eaef;--muted:#ab9aa3;--line:#372c33;--line-2:#2b2229;
+  --accent:#e47aa4;--accent-hover:#ee93b7;--accent-ink:#2a1119;--accent-soft:#3a2530;
+  --side:#1a0f16;--ok:#6fcf9b;--ok-soft:#1f3329;--warn:#ff8f82;--warn-soft:#3d2320;--amber:#f0c26b;--amber-soft:#3a2d12;
+  --shadow:0 1px 2px rgba(0,0,0,.3);
   color-scheme:dark;
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.45}
-.wrap{max-width:820px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.top{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
-.brand-row{display:flex;align-items:center;justify-content:space-between;gap:4px 12px;flex-wrap:wrap;padding-block:12px 2px}
-.brand{font-family:var(--font-display);font-weight:700;font-size:20px;letter-spacing:-.015em}
-.sync{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
-.dot.on{background:var(--ok)}.dot.off{background:var(--warn)}
-.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1040px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.num,.stat b,.side b,.side-val{font-variant-numeric:tabular-nums}
+
+/* Cabeçalho (celular) e menu lateral (computador) */
+.top{position:sticky;top:0;z-index:20;background:var(--side);color:var(--side-ink)}
+.brand-row{display:flex;align-items:center;justify-content:space-between;gap:4px 12px;flex-wrap:wrap;padding-block:12px 4px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-size:21px;line-height:1.1;letter-spacing:.005em}
+.brand-name span{margin-left:.25em}
+.mono{flex:none;display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--gold);color:#2a1722;font-family:var(--font-display);font-size:16px;letter-spacing:0}
+.tone{height:4px;border-radius:2px;background:var(--tons);margin:6px 0 2px}
+.sync{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--side-muted)}
+.sync .linkbtn{color:var(--side-ink);text-decoration:underline;text-underline-offset:3px}
+.who{display:none}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--side-muted)}
+.dot.on{background:#5fd39a}.dot.off{background:#ff8f82}
+.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding-block:8px 10px}
 .tabs::-webkit-scrollbar{display:none}
-.tabs button{border:0;background:none;padding:10px 12px;font:inherit;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;cursor:pointer}
-.tabs button[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
-main.wrap{padding-block:16px 56px}
-h2{font-family:var(--font-display);font-weight:700;font-size:22px;letter-spacing:-.01em;margin:4px 0 12px;text-wrap:balance}
-h3{font-family:var(--font-display);font-weight:600;font-size:16px;margin:22px 0 8px}
+.tabs button{display:inline-flex;align-items:center;gap:7px;border:0;background:none;padding:8px 13px;border-radius:99px;font:inherit;font-weight:500;color:var(--side-muted);white-space:nowrap;cursor:pointer}
+.tabs button:hover{background:var(--side-hover);color:var(--side-ink)}
+.tabs button[aria-current="page"]{background:var(--side-on);color:#fff;font-weight:600}
+.ic{width:18px;height:18px;flex:none}
+
+main.wrap{padding-block:20px 72px}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:6px 16px;flex-wrap:wrap;margin:2px 0 18px}
+h1{font-family:var(--font-display);font-weight:400;font-size:32px;line-height:1.1;letter-spacing:-.005em;margin:0}
+.page-head p{margin:4px 0 0;font-size:14px}
+.page-head .hoje{font-size:13px}
+h2{font-family:var(--font-display);font-weight:400;font-size:26px;line-height:1.15;margin:4px 0 12px;text-wrap:balance}
+h3{font-family:var(--font-body);font-weight:700;font-size:14px;color:var(--ink);margin:26px 0 10px;letter-spacing:.005em}
 .muted{color:var(--muted)}
-.bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
-.bar>input,.bar>select{flex:1 1 180px;min-width:0}
-input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:16px;background:var(--surface);color:var(--ink)}
+
+/* Campos e botões */
+.bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.bar>input,.bar>select{flex:1 1 200px;min-width:0}
+input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font:inherit;font-size:16px;background:var(--surface);color:var(--ink);transition:border-color .12s,box-shadow .12s}
+input:hover,select:hover,textarea:hover{border-color:#cdbcc5}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 textarea{resize:vertical}
-label{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px}
+label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:14px 0 5px}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.btn{border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);border-radius:8px;padding:10px 14px;font:inherit;font-weight:600;cursor:pointer}
-.btn:hover{filter:brightness(1.07)}
-.btn.ghost{background:transparent;color:var(--accent);border-color:var(--line)}
-.btn.danger{background:var(--warn-soft);color:var(--warn);border-color:transparent}
-.btn.sm{padding:6px 10px;font-size:13px}
-.btn:disabled{opacity:.55;cursor:default}
+.btn{border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);border-radius:10px;padding:10px 16px;font:inherit;font-weight:600;cursor:pointer;transition:background .12s,border-color .12s}
+.btn:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
+.btn.ghost{background:var(--surface);color:var(--ink);border-color:var(--line)}
+.btn.ghost:hover{background:var(--accent-soft);border-color:var(--accent-soft);color:var(--accent)}
+.btn.danger{background:transparent;color:var(--warn);border-color:transparent}
+.btn.danger:hover{background:var(--warn-soft);border-color:var(--warn-soft)}
+.btn.sm{padding:6px 11px;font-size:13px;border-radius:8px}
+.btn:disabled{opacity:.5;cursor:default}
 .linkbtn{border:0;background:none;padding:0;font:inherit;font-weight:600;color:var(--accent);cursor:pointer;text-align:left}
+.linkbtn:hover{text-decoration:underline;text-underline-offset:3px}
 a.wa{color:var(--ok);font-weight:600;text-decoration:none}
-.list{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
-.item{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;padding:12px 14px;border-top:1px solid var(--line)}
+a.btn{text-decoration:none;display:inline-block;text-align:center}
+a.btn.wa-btn{background:var(--ok);border-color:var(--ok);color:#fff}
+a.btn.wa-btn:hover{filter:brightness(1.08)}
+a.btn.wa-btn.ghost{background:transparent;color:var(--ok);border-color:color-mix(in srgb,var(--ok) 55%,transparent)}
+a.btn.wa-btn.ghost:hover{background:var(--ok-soft);color:var(--ok)}
+label.chk{display:flex;gap:8px;align-items:center;margin-top:10px;font-weight:600;color:var(--ink)}
+label.chk input{width:auto}
+
+/* Listas */
+.list{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+.item{display:flex;justify-content:space-between;align-items:center;gap:8px 14px;flex-wrap:wrap;padding:14px 18px;border-top:1px solid var(--line-2)}
 .item:first-child{border-top:0}
-.item.click{cursor:pointer}
+.item.click{cursor:pointer;transition:background .12s}
 .item.click:hover{background:var(--accent-soft)}
-.grow{flex:1 1 200px;min-width:0;overflow-wrap:anywhere}
-.t{font-weight:600}
-.side{text-align:right;font-size:13px;color:var(--muted)}
-.item-acts{display:flex;gap:6px;align-items:center}
-.obs{margin-top:4px;overflow-wrap:anywhere}
-.tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:600;background:var(--accent-soft);color:var(--accent)}
-.tag.late{background:var(--warn-soft);color:var(--warn)}
+.grow{flex:1 1 220px;min-width:0;overflow-wrap:anywhere}
+.t{font-weight:650;font-size:15.5px}
+.grow .muted{font-size:13.5px}
+.side{text-align:right;font-size:13px;color:var(--muted);line-height:1.4}
+.side b{display:block;font-size:16px;color:var(--ink);font-weight:650}
+.side-val{font-size:17px;font-weight:700;white-space:nowrap}
+.item-acts{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.obs{margin-top:4px;overflow-wrap:anywhere;font-size:14px}
+.av{flex:none;display:grid;place-items:center;width:40px;height:40px;border-radius:50%;font-weight:700;font-size:14px;letter-spacing:.01em}
+.item .av{margin-right:2px}
+.tag{display:inline-block;padding:1px 9px;border-radius:99px;font-size:12px;font-weight:650;background:var(--line-2);color:var(--muted);vertical-align:1px}
+.tag.late{background:var(--amber-soft);color:var(--amber)}
 .tag.ok{background:var(--ok-soft);color:var(--ok)}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
-.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
-.stat b.neg{color:var(--warn)}
-.stat b{display:block;font-family:var(--font-display);font-size:21px;font-variant-numeric:tabular-nums;color:var(--accent)}
-.stat span{font-size:12px;color:var(--muted)}
-.barv{height:6px;background:var(--accent-soft);border-radius:99px;margin-top:6px}
+
+/* Resumos */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px;margin-bottom:18px}
+.stat{display:flex;flex-direction:column-reverse;justify-content:flex-end;gap:2px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow)}
+.stat span{font-size:12.5px;font-weight:600;color:var(--muted);line-height:1.3}
+.stat b{display:block;font-size:25px;font-weight:700;letter-spacing:-.01em;color:var(--ink)}
+.stat b.neg,.side b.neg{color:var(--warn)}
+.barv{height:6px;background:var(--line-2);border-radius:99px;margin-top:8px}
 .barv i{display:block;height:100%;background:var(--accent);border-radius:99px}
-.num{font-variant-numeric:tabular-nums}
-.empty{background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:28px 18px}
-.empty p{margin:0 0 14px;color:var(--muted);max-width:46ch}
+.empty{background:var(--surface);border:1px dashed #d8c8d0;border-radius:14px;padding:30px 22px}
+.empty h2{font-size:24px}
+.empty p{margin:0 0 14px;color:var(--muted);max-width:52ch}
 .row-actions{display:flex;gap:8px;flex-wrap:wrap}
-.head-card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.head-card h2{margin:0 0 4px}
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px}
+.head-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;box-shadow:var(--shadow)}
+.head-card h2{margin:0 0 4px;font-size:30px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px;box-shadow:var(--shadow)}
 .panel p{margin:0 0 12px}
-.login{max-width:380px;margin:28px auto 0;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px}
-.login h2{margin-top:0}
+.seg{display:inline-flex;gap:2px;padding:3px;margin:0 0 16px;background:var(--line-2);border:1px solid var(--line);border-radius:12px;flex-wrap:wrap}
+.seg .btn{border:0;border-radius:9px;background:transparent;color:var(--muted);padding:7px 14px}
+.seg .btn:hover{background:transparent;color:var(--ink)}
+.seg .btn:not(.ghost){background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(42,23,34,.14)}
+
+/* Entrada */
+body:not(.logado) .top{display:none}
+body:not(.logado) main.wrap{max-width:none;padding:0}
+.entrada{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);min-height:100vh;min-height:100dvh}
+.entrada-marca{background:var(--side);color:var(--side-ink);padding:56px clamp(28px,6vw,84px);display:flex;flex-direction:column;justify-content:center;gap:18px}
+.entrada-marca .mono{width:52px;height:52px;font-size:24px}
+.entrada-marca h1{font-size:clamp(38px,5vw,60px);line-height:1.02;max-width:11ch}
+.entrada-marca h1 span{display:block;color:var(--gold)}
+.entrada-marca .tone{height:8px;max-width:340px;margin:6px 0}
+.entrada-marca p{margin:0;max-width:34ch;color:var(--side-muted);font-size:16px}
+.login{align-self:center;justify-self:center;width:min(400px,calc(100% - 40px));padding:32px 0}
+.login h2{margin-top:0;font-size:32px}
+.login .btn{width:100%;padding:12px 16px;margin-top:6px}
+.login .acts{margin-top:8px}
 .erro{color:var(--warn);min-height:1.3em;margin:10px 0 0;font-weight:500}
-dialog{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:20px;width:min(520px,calc(100vw - 32px));max-height:90dvh;overflow:auto}
-dialog::backdrop{background:rgba(20,10,16,.55)}
-dialog h2{margin-top:0}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:760px){
+  .entrada{grid-template-columns:1fr}
+  .entrada-marca{padding:32px 24px;gap:12px}
+  .entrada-marca h1{font-size:40px;max-width:none}
+  .entrada-marca p{display:none}
+  .login{padding:24px 0 40px}
+}
+
+/* Janelas, avisos */
+dialog{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:18px;padding:24px;width:min(560px,calc(100vw - 32px));max-height:90dvh;overflow:auto;box-shadow:0 24px 60px -20px rgba(20,8,16,.5)}
+dialog::backdrop{background:rgba(26,12,20,.58);backdrop-filter:blur(2px)}
+dialog h2{margin-top:0;font-size:28px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
 .grid2>div{min-width:0}
 @media (max-width:480px){.grid2{grid-template-columns:1fr}}
-.acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:18px}
-#toast{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;pointer-events:none;padding:0 max(16px,env(safe-area-inset-left,0px)) 16px;z-index:40}
-.toast-in{background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:500;max-width:100%}
+.acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:22px}
+#toast{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;pointer-events:none;padding:0 max(16px,env(safe-area-inset-left,0px)) 18px;z-index:40}
+.toast-in{background:var(--side);color:#fff;padding:12px 18px;border-radius:12px;font-weight:600;max-width:100%;box-shadow:0 10px 30px -10px rgba(20,8,16,.5)}
 .toast-in.err{background:var(--warn);color:#fff}
 @media (prefers-reduced-motion:no-preference){.toast-in{animation:up .18s ease-out}@keyframes up{from{opacity:0;transform:translateY(6px)}}}
-/* Alternância Faturamento / Despesas nos relatórios. */
-.seg{display:flex;gap:6px;margin:0 0 14px}
+@media (max-width:640px){
+  main.wrap{padding-block:14px 72px}
+  h1{font-size:28px}
+  .item{padding:13px 14px}
+  .item-acts{width:100%;margin-top:2px}
+  .item .side{flex-basis:100%;text-align:left;display:flex;gap:6px 12px;flex-wrap:wrap}
+  .item .side b{display:inline}
+  .stat b{font-size:22px}
+}
+
 /* Menu na lateral esquerda em telas largas (computador e tablet deitado); no celular continua no topo. */
 @media (min-width:860px){
-  body.logado{display:grid;grid-template-columns:240px minmax(0,1fr);align-items:start}
-  body.logado .top{position:sticky;top:0;height:100vh;height:100dvh;border-bottom:0;border-right:1px solid var(--line)}
-  body.logado .top .wrap{display:flex;flex-direction:column;gap:2px;max-width:none;margin:0;height:100%;padding:22px 12px 16px}
+  body.logado{display:grid;grid-template-columns:252px minmax(0,1fr);align-items:start}
+  body.logado .top{position:sticky;top:0;height:100vh;height:100dvh}
+  body.logado .top .wrap{display:flex;flex-direction:column;gap:2px;max-width:none;margin:0;height:100%;padding:26px 14px 18px}
   body.logado .brand-row{display:contents}
-  body.logado .brand{order:1;padding:2px 10px 18px;font-size:19px;line-height:1.25}
-  body.logado .tabs{order:2;flex-direction:column;overflow:visible;gap:2px}
-  body.logado .tabs button{width:100%;text-align:left;border-bottom:0;border-radius:8px;padding:10px 12px}
-  body.logado .tabs button:hover{background:var(--accent-soft)}
-  body.logado .tabs button[aria-current="page"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
-  body.logado .sync{order:3;margin-top:auto;padding:12px 10px 0;border-top:1px solid var(--line);flex-wrap:wrap}
-  body.logado main.wrap{max-width:900px;margin:0;padding-inline:32px;padding-block:28px 56px}
-  body.logado #toast{left:240px}
+  body.logado .brand{order:1;padding:2px 10px 6px;font-size:25px;gap:12px}
+  body.logado .brand-name{display:block}
+  body.logado .brand-name span{display:block;margin:0;color:var(--gold)}
+  body.logado .mono{width:42px;height:42px;font-size:19px}
+  body.logado .tone{order:2;margin:10px 10px 18px;height:5px}
+  body.logado .tabs{order:3;flex-direction:column;overflow:visible;gap:2px;padding:0}
+  body.logado .tabs button{width:100%;text-align:left;border-radius:10px;padding:11px 12px;gap:12px;position:relative}
+  body.logado .tabs button[aria-current="page"]::before{content:"";position:absolute;left:-14px;top:9px;bottom:9px;width:3px;border-radius:0 3px 3px 0;background:var(--gold)}
+  body.logado .sync{order:4;margin-top:auto;padding:14px 10px 0;border-top:1px solid rgba(255,255,255,.1);flex-wrap:wrap}
+  body.logado .who{display:block;flex-basis:100%;color:var(--side-muted);font-size:12px;overflow:hidden;text-overflow:ellipsis}
+  body.logado main.wrap{max-width:1120px;margin:0;padding-inline:40px;padding-block:34px 72px}
+  body.logado #toast{left:252px}
 }
 </style>
 </head>
 <body>
 <header class="top">
   <div class="wrap">
-    <div class="brand-row"><span class="brand">Fabiana Martins Beauty Hair</span><span class="sync" id="sync" role="status"></span></div>
+    <div class="brand-row"><span class="brand"><span class="mono" aria-hidden="true">FM</span><span class="brand-name">Fabiana Martins <span>Beauty Hair</span></span></span><span class="sync" id="sync" role="status"></span></div>
+    <div class="tone" aria-hidden="true"></div>
     <nav class="tabs" id="tabs" aria-label="Seções" hidden></nav>
   </div>
 </header>
@@ -152,16 +235,17 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;'
 const brl=v=>(Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const fd=d=>d?String(d).split('-').reverse().join('/'):'';
 const hoje=()=>{const d=new Date();return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
-const zap=t=>{let n=String(t||'').replace(/\D/g,'');if(n.length<=11)n='55'+n;return 'https://wa.me/'+n};
+const zap=t=>{let n=String(t||'').replace(/\D/g,'').replace(/^0+/,'');if(n.length<=11)n='55'+n;return 'https://wa.me/'+n};
 const mesNome=m=>{const [y,mo]=m.split('-');return new Date(+y,+mo-1,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'})};
 
 const CFG=window.SALAO_CONFIG||{};
 let sb=null;
-const PROCS=['Alisamento','Mechas','Cronograma capilar','Corte feminino','Coloração'];
+const PROCS=['Alisamento','Mechas','Cronograma capilar','Corte feminino','Coloração','Matização','Tonalização','Esfumado de raiz','Tratamento'];
+const SALAO='Fabiana Martins Beauty Hair';
 const PROF='Fabiana';
 const PARC=n=>Math.min(12,Math.max(1,parseInt(n,10)||1));
 
-const S={clientes:[],atend:[],view:'clientes',sel:null,busca:'',mesFiltro:'',mesRel:'',relAba:'fat',lim:{at:100,desp:100,gasto:100},gastos:[],mesDesp:hoje().slice(0,7),semDesp:false,
+const S={clientes:[],atend:[],view:'clientes',sel:null,busca:'',mesFiltro:'',mesRel:'',relAba:'fat',lim:{at:100,desp:100,gasto:100},gastos:[],produtos:[],fichas:[],movs:[],semEst:false,estAba:'prod',estCat:'',estBusca:'',mesDesp:hoje().slice(0,7),semDesp:false,
   pronto:false,semConfig:false,semLib:false,sessao:null,got:false,erro:'',busy:false,prog:'',conf:null,
   iniciado:false,canal:null,sig:''};
 const cli=id=>S.clientes.find(c=>c.id===id);
@@ -188,15 +272,16 @@ const pagTxt=a=>{
 /* ---------- Dados (Supabase) ---------- */
 const rowC=r=>({id:r.id,nome:r.nome||'',telefone:r.telefone||'',nascimento:r.nascimento||'',obs:r.obs||''});
 const rowA=r=>({id:r.id,clienteId:r.cliente_id,data:r.data,procedimento:r.procedimento||'',profissional:r.profissional||'',
-  valor:Number(r.valor)||0,pagamento:r.pagamento||'',parcelas:PARC(r.parcelas),gastoProdutos:Number(r.gasto_produtos)||0,taxaMaquina:Number(r.taxa_maquina)||0,retorno:r.retorno||'',obs:r.obs||''});
+  hora:String(r.hora||'').slice(0,5),valor:Number(r.valor)||0,pagamento:r.pagamento||'',parcelas:PARC(r.parcelas),gastoProdutos:Number(r.gasto_produtos)||0,taxaMaquina:Number(r.taxa_maquina)||0,retorno:r.retorno||'',obs:r.obs||''});
 const CATS=['Anúncio Instagram','Água','Internet','Produtos de limpeza','Luz','Manutenção','Aluguel','Condomínio','Outros'];
 const rowD=r=>({id:r.id,data:r.data,categoria:r.categoria||'Outros',descricao:r.descricao||'',valor:Number(r.valor)||0});
 const gastosDoMes=m=>m?S.gastos.filter(g=>String(g.data).startsWith(m)):S.gastos;
 const mesesGastos=()=>[...new Set(S.gastos.map(g=>String(g.data).slice(0,7)))].filter(Boolean);
-async function todos(t){
+async function todos(t,filtro){
   let out=[],de=0;
   for(;;){
-    const r=await sb.from(t).select('*').order('id').range(de,de+999);
+    let q=sb.from(t).select('*');if(filtro)q=filtro(q);
+    const r=await q.order('id').range(de,de+999);
     if(r.error)throw r.error;
     out=out.concat(r.data||[]);
     if(!r.data||r.data.length<1000)return out;
@@ -207,13 +292,15 @@ async function recarregar(){
   if(!sb||!S.sessao)return;
   const tinhaErro=!!S.erro;
   try{
-    let semD=false;
-    const [c,a,g]=await Promise.all([todos('clientes'),todos('atendimentos'),todos('despesas').catch(()=>{semD=true;return []})]);
-    S.semDesp=semD;
-    const sig=JSON.stringify([c,a,g]);
+    let semD=false,semE=false;
+    const desde=new Date(Date.now()-120*864e5).toISOString().slice(0,10),ignE=()=>{semE=true;return []};
+    const [c,a,g,pr,fi,mv]=await Promise.all([todos('clientes'),todos('atendimentos'),todos('despesas').catch(()=>{semD=true;return []}),
+      todos('produtos').catch(ignE),todos('ficha_procedimento').catch(ignE),todos('movimentacoes_estoque',q=>q.gte('data',desde)).catch(ignE)]);
+    S.semDesp=semD;S.semEst=semE;
+    const sig=JSON.stringify([c,a,g,pr,fi,mv]);
     const mudou=sig!==S.sig||tinhaErro||!S.got;
     S.sig=sig;S.erro='';
-    if(mudou){S.clientes=c.map(rowC);S.atend=a.map(rowA);S.gastos=g.map(rowD);S.got=true;render()}
+    if(mudou){S.clientes=c.map(rowC);S.atend=a.map(rowA);S.gastos=g.map(rowD);S.produtos=pr.map(rowP);S.fichas=fi.map(rowF);S.movs=mv.map(rowM);S.got=true;render()}
   }catch(e){S.erro=(e&&(e.code||e.message))||'erro';render()}
 }
 let tmr;
@@ -225,31 +312,58 @@ function iniciar(){
   try{S.canal=sb.channel('salao-mudancas').on('postgres_changes',{event:'*',schema:'public'},agendar).subscribe()}catch(_){}
 }
 function parar(){
-  S.iniciado=false;S.got=false;S.clientes=[];S.atend=[];S.gastos=[];S.sig='';S.sel=null;S.erro='';
+  S.iniciado=false;S.got=false;S.clientes=[];S.atend=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';
   if(S.canal&&sb){try{sb.removeChannel(S.canal)}catch(_){}}
   S.canal=null;
 }
 
 /* ---------- Estrutura ---------- */
+const IC=(d)=>`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const ICONES={
+  clientes:IC('<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><path d="M16 5.2a3 3 0 0 1 0 5.6M17.5 14.4c1.7.6 2.9 2.2 3.3 4.6"/>'),
+  atendimentos:IC('<rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M4 10h16M8 3v4M16 3v4M9 15l2 2 4-4"/>'),
+  despesas:IC('<path d="M5 4h14v17l-2.3-1.6L14.3 21 12 19.4 9.7 21l-2.4-1.6L5 21z"/><path d="M9 9h6M9 13h6"/>'),
+  estoque:IC('<path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5 12 12l8.5-4.5M12 12v9"/>'),
+  retornos:IC('<path d="M4 12a8 8 0 1 0 2.6-5.9"/><path d="M4 4v4.5h4.5"/>'),
+  relatorios:IC('<path d="M4 20V4M4 20h16"/><path d="M8 16v-4M12 16V8M16 16v-6"/>'),
+  backup:IC('<path d="M12 4v11m0 0-4-4m4 4 4-4"/><path d="M5 19h14"/>')
+};
+const TONS_AV=['#1d1411','#3a2418','#5b3a22','#7e5532','#a57a48','#c99f66','#e0bf86','#efd8ab','#f6e8cd'];
+function avatar(nome){
+  const n=String(nome||'?').trim(),p=n.split(/\s+/).map(w=>w.replace(/[^\p{L}\p{N}]/gu,'')).filter(Boolean),ini=((p[0]||'?')[0]+(p.length>1?p[p.length-1][0]:'')).toUpperCase();
+  let h=0;for(const ch of n)h=(h*31+ch.charCodeAt(0))>>>0;
+  const i=h%TONS_AV.length;
+  return `<span class="av" style="background:${TONS_AV[i]};color:${i>=5?'#3a2418':'#fff'}" aria-hidden="true">${esc(ini)}</span>`;
+}
+function cabecalho(){
+  if(!S.pronto||S.semConfig||S.semLib||!S.sessao||!S.got||(S.view==='clientes'&&S.sel))return '';
+  const n=(k,a,b)=>`${k} ${k===1?a:b}`;
+  const T={clientes:['Clientes',n(S.clientes.length,'cadastrada','cadastradas')],atendimentos:['Atendimentos',n(S.atend.length,'registro','registros')+' e lembretes de WhatsApp'],
+    despesas:['Despesas','Contas do salão: aluguel, luz, água, anúncios…'],estoque:['Estoque','Produtos, fichas técnicas e custo por atendimento'],retornos:['Retornos','Clientes para chamar de volta'],
+    relatorios:['Relatórios','Faturamento, despesas e resultado'],backup:['Backup','Planilha Excel e cópia de segurança']}[S.view]||['',''];
+  let d=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});d=d.charAt(0).toUpperCase()+d.slice(1);
+  return `<div class="page-head"><div><h1>${esc(T[0])}</h1><p class="muted">${esc(T[1])}</p></div><div class="muted hoje">${esc(d)}</div></div>`;
+}
 function render(){
   renderTop();
   const m=$('main');
   const ae=document.activeElement;
   const fid=ae&&ae.id&&m.contains(ae)?ae.id:null;
   const pos=fid&&typeof ae.selectionStart==='number'?ae.selectionStart:null;
-  m.innerHTML=conteudo();
+  m.innerHTML=cabecalho()+conteudo();
   if(fid){const e=$(fid);if(e){e.focus();if(pos!=null&&e.setSelectionRange){try{e.setSelectionRange(pos,pos)}catch(_){}}}}
 }
 function renderTop(){
   const logado=!!S.sessao;
   document.body.classList.toggle('logado',logado);
-  const t=[['clientes','Clientes'],['atendimentos','Atendimentos'],['despesas','Despesas'],['retornos','Retornos'],['relatorios','Relatórios'],['backup','Backup']];
+  const t=[['clientes','Clientes'],['atendimentos','Atendimentos'],['despesas','Despesas'],['estoque','Estoque'],['retornos','Retornos'],['relatorios','Relatórios'],['backup','Backup']];
   $('tabs').hidden=!logado;
-  $('tabs').innerHTML=logado?t.map(([k,l])=>`<button data-go="${k}" ${S.view===k?'aria-current="page"':''}>${l}</button>`).join(''):'';
+  $('tabs').innerHTML=logado?t.map(([k,l])=>`<button data-go="${k}" ${S.view===k?'aria-current="page"':''}>${ICONES[k]}<span>${l}</span></button>`).join(''):'';
   let st='';
   if(!S.pronto)st='Conectando…';
   else if(logado)st=S.erro?'<span class="dot off"></span>Erro ao carregar':'<span class="dot on"></span>Sincronizado';
-  $('sync').innerHTML=st+(logado?' <button class="linkbtn" data-act="sair">Sair</button>':'');
+  const em=logado&&S.sessao&&S.sessao.user&&S.sessao.user.email?`<span class="who">${esc(S.sessao.user.email)}</span>`:'';
+  $('sync').innerHTML=st+(logado?' <button class="linkbtn" data-act="sair">Sair</button>':'')+em;
 }
 function aviso(t,p,extra){return `<div class="empty"><h2>${esc(t)}</h2><p>${esc(p)}</p>${extra||''}</div>`}
 function conteudo(){
@@ -263,15 +377,17 @@ function conteudo(){
   if(v==='clientes')return S.sel?detalhe():lista();
   if(v==='atendimentos')return telaAtend();
   if(v==='despesas')return telaDesp();
+  if(v==='estoque')return telaEstoque();
   if(v==='retornos')return telaRet();
   if(v==='relatorios')return telaRel();
   return telaBackup();
 }
 function telaLogin(){
-  return `<div class="login"><h2>Entrar</h2><p class="muted">Use o e-mail e a senha que você recebeu.</p>
+  return `<div class="entrada"><aside class="entrada-marca"><span class="mono" aria-hidden="true">FM</span><h1>Fabiana Martins <span>Beauty Hair</span></h1><div class="tone" aria-hidden="true"></div><p>Clientes, atendimentos e estoque do salão em um só lugar.</p></aside>
+  <section class="login"><h2>Entrar</h2><p class="muted">Use o e-mail e a senha que você recebeu.</p>
   <form data-form="login"><label for="l-email">E-mail</label><input id="l-email" name="email" type="email" required autocomplete="username" autocapitalize="none">
   <label for="l-senha">Senha</label><input id="l-senha" name="senha" type="password" required autocomplete="current-password">
-  <p class="erro" id="l-erro" role="alert"></p><p class="muted" id="l-det" style="font-size:12px;overflow-wrap:anywhere;margin:4px 0 0"></p><div class="acts"><button class="btn">Entrar</button></div></form></div>`;
+  <p class="erro" id="l-erro" role="alert"></p><p class="muted" id="l-det" style="font-size:12px;overflow-wrap:anywhere;margin:4px 0 0"></p><div class="acts"><button class="btn">Entrar</button></div></form></section></div>`;
 }
 
 /* ---------- Clientes ---------- */
@@ -287,7 +403,7 @@ function itensClientes(){
   if(!l.length)return '<p class="muted">Nenhuma cliente encontrada.</p>';
   return '<div class="list">'+l.map(c=>{
     const a=atends(c.id);
-    return `<div class="item click" tabindex="0" role="button" data-act="abrir" data-id="${esc(c.id)}"><div class="grow"><div class="t">${esc(c.nome)}</div><div class="muted">${esc(c.telefone||'sem telefone')}</div></div><div class="side">${a.length} atend.<br>${a[0]?'Última: '+fd(a[0].data):'Sem visitas'}</div></div>`;
+    return `<div class="item click" tabindex="0" role="button" data-act="abrir" data-id="${esc(c.id)}">${avatar(c.nome)}<div class="grow"><div class="t">${esc(c.nome)}</div><div class="muted">${esc(c.telefone||'sem telefone')}</div></div><div class="side">${a.length} atend.<br>${a[0]?'Última: '+fd(a[0].data):'Sem visitas'}</div></div>`;
   }).join('')+'</div>';
 }
 function detalhe(){
@@ -295,7 +411,7 @@ function detalhe(){
   if(!c){S.sel=null;return lista()}
   const a=atends(c.id);
   return `<div class="bar"><button class="btn ghost" data-act="voltar">← Clientes</button></div>
-  <div class="head-card"><div class="grow"><h2>${esc(c.nome)}</h2>
+  <div class="head-card">${avatar(c.nome)}<div class="grow"><h2>${esc(c.nome)}</h2>
     <div class="muted">${c.telefone?`${esc(c.telefone)} · <a class="wa" href="${zap(c.telefone)}" target="_blank" rel="noopener">WhatsApp</a>`:'sem telefone'}</div>
     ${c.nascimento?`<div class="muted">Nascimento: ${fd(c.nascimento)}</div>`:''}
     ${c.obs?`<p class="obs">${esc(c.obs)}</p>`:''}</div>
@@ -330,12 +446,26 @@ function pedirDelCliente(id){
 }
 
 /* ---------- Atendimentos ---------- */
+/* ---------- Lembrete de WhatsApp (envio manual: a pessoa aperta Enviar no WhatsApp) ---------- */
+function msgLembrete(a){
+  const L=['✨ Olá! Tudo bem? \u{1F495}','','Passando para lembrar que você tem um horário agendado conosco!','','\u{1F4C5} Data: '+fd(a.data)];
+  if(a.hora)L.push('⏰ Horário: '+a.hora);
+  L.push('\u{1F487}‍♀️ Procedimento: '+a.procedimento,'','Estamos esperando você com muito carinho para proporcionar um momento especial de cuidado e beleza! ❤️','','Até breve!',SALAO+' \u{1F337}');
+  return L.join('\n');
+}
+function btnLembrete(a){
+  const c=cli(a.clienteId),tel=c?String(c.telefone||'').replace(/\D/g,'').replace(/^0+/,''):'';
+  if(tel.length<10){const m=tel?'telefone sem DDD':'cliente sem telefone';return `<button class="btn ghost sm" disabled title="${m==='telefone sem DDD'?'O telefone da cliente está sem DDD. Edite o cadastro dela.':'Esta cliente não tem telefone cadastrado'}">Lembrete WhatsApp</button><div class="muted" style="font-size:12px">${m}</div>`}
+  const prox=String(a.data)>=hoje();
+  return `<a class="btn sm wa-btn ${prox?'':'ghost'}" href="${esc(zap(c.telefone)+'?text='+encodeURIComponent(msgLembrete(a)))}" target="_blank" rel="noopener" title="Abre o WhatsApp com a mensagem pronta; você só aperta Enviar">Lembrete WhatsApp</a>`;
+}
 function itemAtend(a,mostra,mes){
   const c=mostra?cli(a.clienteId):null;
   return `<div class="item"><div class="grow"><div class="t">${esc(a.procedimento)}${c?` <span class="muted">·</span> <button class="linkbtn" data-act="abrir" data-id="${esc(c.id)}">${esc(c.nome)}</button>`:''}</div>
-  <div class="muted num">${fd(a.data)}${a.profissional?' · '+esc(a.profissional):''} · ${brl(a.valor)}${a.pagamento?' · '+esc(pagTxt(a)):''}</div>
+  <div class="muted num">${fd(a.data)}${a.hora?' às '+esc(a.hora):''}${a.profissional?' · '+esc(a.profissional):''}${a.pagamento?' · '+esc(pagTxt(a)):''}</div>
   ${despTxt(a)}${parcMes(a,mes)}${a.retorno?`<div class="muted">Retorno previsto: ${fd(a.retorno)}</div>`:''}${a.obs?`<div class="obs">${esc(a.obs)}</div>`:''}</div>
-  <div class="item-acts"><button class="btn ghost sm" data-act="editAtend" data-id="${esc(a.id)}">Editar</button><button class="btn danger sm" data-act="delAtend" data-id="${esc(a.id)}">Excluir</button></div></div>`;
+  <div class="side-val">${brl(a.valor)}</div>
+  <div class="item-acts">${btnLembrete(a)}<button class="btn ghost sm" data-act="editAtend" data-id="${esc(a.id)}">Editar</button><button class="btn danger sm" data-act="delAtend" data-id="${esc(a.id)}">Excluir</button></div></div>`;
 }
 function telaAtend(){
   const m=S.mesFiltro,meses=mesesDe();
@@ -357,6 +487,7 @@ function formAtend(id,clienteId){
   abrir(`<h2>${id?'Editar atendimento':'Novo atendimento'}</h2><form data-form="atend" data-id="${esc(id||'')}">
   <label for="a-cli">Cliente *</label><select id="a-cli" name="clienteId" required><option value="">Selecione…</option>${cls.map(c=>`<option value="${esc(c.id)}" ${c.id===a.clienteId?'selected':''}>${esc(c.nome)}</option>`).join('')}</select>
   <div class="grid2"><div><label for="a-data">Data *</label><input id="a-data" name="data" type="date" required value="${esc(a.data)}"></div>
+  <div><label for="a-hora">Horário</label><input id="a-hora" name="hora" type="time" value="${esc(a.hora||'')}"></div>
   <div><label for="a-proc">Procedimento *</label><select id="a-proc" name="procedimento" required><option value="">Selecione…</option>${procs.map(p=>`<option value="${esc(p)}" ${p===a.procedimento?'selected':''}>${esc(p)}</option>`).join('')}</select></div>
   <div><label for="a-prof">Profissional</label><select id="a-prof" name="profissional">${profs.map(p=>`<option value="${esc(p)}" ${p===profSel?'selected':''}>${esc(p)}</option>`).join('')}</select></div>
   <div><label for="a-val">Valor (R$)</label><input id="a-val" name="valor" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(a.valor)}"></div>
@@ -365,10 +496,23 @@ function formAtend(id,clienteId){
   <div id="a-taxa-wrap" ${cartao?'':'hidden'}><label for="a-taxa">Taxa da máquina (R$)</label><input id="a-taxa" name="taxaMaquina" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(a.taxaMaquina||'')}"></div>
   <div><label for="a-prod">Gastos com produtos (R$)</label><input id="a-prod" name="gastoProdutos" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(a.gastoProdutos||'')}"></div>
   <div><label for="a-ret">Retorno previsto</label><input id="a-ret" name="retorno" type="date" value="${esc(a.retorno)}"></div></div>
+  <div id="a-estq" class="panel" style="margin-top:10px" hidden><div id="a-estq-txt" class="muted num"></div>
+    <label class="chk"><input type="checkbox" id="a-baixa" name="baixa" ${id?'':'checked'}> Dar baixa no estoque com a ficha técnica</label></div>
+  <input type="hidden" name="tinha" value="${id&&S.movs.some(m=>m.atendimentoId===id)?'1':'0'}">
   <div id="a-liq" class="muted num" style="margin-top:10px"></div>
   <label for="a-obs">Observações</label><textarea id="a-obs" name="obs" rows="3" placeholder="Produtos usados, tom, fórmula…">${esc(a.obs)}</textarea>
   <div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Salvar</button></div></form>`);
-  atualizaParc();
+  const bx=$('a-baixa');if(bx&&id)bx.checked=S.movs.some(m=>m.atendimentoId===id);
+  atualizaParc();atualizaEstq(false);
+}
+function atualizaEstq(auto){
+  const w=$('a-estq'),pr=$('a-proc');if(!w||!pr)return;
+  const itens=fichaDe(pr.value);
+  if(!itens.length||S.semEst){w.hidden=true;return}
+  const custo=custoFicha(pr.value),campo=$('a-prod');
+  w.hidden=false;
+  $('a-estq-txt').textContent=`Ficha técnica de ${pr.value}: ${itens.map(x=>x.p.nome).join(', ')}. Custo estimado de produtos: ${brl(custo)}.`;
+  if(auto&&(campo.value===''||campo.dataset.auto==='1')){campo.value=custo>0?custo:'';campo.dataset.auto='1';atualizaParc()}
 }
 function atualizaParc(){
   const pag=$('a-pag'),w=$('a-parc-wrap');if(!pag||!w)return;
@@ -383,16 +527,206 @@ async function salvarAtend(id,d){
   const cred=d.pagamento==='Cartão de crédito',cartao=cred||d.pagamento==='Cartão de débito';
   const o={cliente_id:d.clienteId,data:d.data,procedimento:d.procedimento.trim(),profissional:(d.profissional||PROF).trim(),
     valor:Math.max(0,Number(d.valor)||0),pagamento:d.pagamento||'',parcelas:cred?PARC(d.parcelas):1,gasto_produtos:din(d.gastoProdutos),taxa_maquina:cartao?din(d.taxaMaquina):0,retorno:d.retorno||null,obs:(d.obs||'').trim()};
+  if(!S.semEst)o.hora=d.hora||null;
+  const aid=id||novoId();
+  if(!id)o.id=aid;
   const r=id?await sb.from('atendimentos').update(o).eq('id',id):await sb.from('atendimentos').insert(o);
   if(r.error)throw r.error;
+  /* Estoque: refaz a baixa deste atendimento (devolve a anterior e dá a nova). */
+  let msg=id?'Atendimento atualizado.':'Atendimento registrado.';
+  if(!S.semEst){
+    const baixa=d.baixa==='on',tinha=d.tinha==='1';
+    try{
+      if(tinha||(id&&baixa)){const x=await sb.from('movimentacoes_estoque').delete().eq('atendimento_id',aid);if(x.error)throw x.error}
+      if(baixa){
+        const linhas=fichaDe(o.procedimento).map(({f,p})=>({id:novoId(),produto_id:p.id,data:o.data,tipo:'atendimento',quantidade:-r4(usoEf(p,f.quantidade)),motivo:'Atendimento: '+o.procedimento,atendimento_id:aid}));
+        if(linhas.length){const x=await sb.from('movimentacoes_estoque').insert(linhas);if(x.error)throw x.error;msg+=' Estoque atualizado.'}
+      }else if(tinha)msg+=' Baixa do estoque desfeita.';
+    }catch(_){msg+=' Atenção: não foi possível atualizar o estoque, confira na aba Estoque.'}
+  }
   await recarregar();
-  toast(id?'Atendimento atualizado.':'Atendimento registrado.');
+  toast(msg);
 }
 function pedirDelAtend(id){
   confirmar('Excluir este atendimento?','Esta ação não pode ser desfeita.','Excluir',async()=>{
     const r=await sb.from('atendimentos').delete().eq('id',id);
     if(r.error)throw r.error;
     await recarregar();toast('Atendimento excluído.');
+  });
+}
+
+/* ---------- Estoque ---------- */
+const UN=['g','ml','un'],CAT_EST=['Cabelo','Unhas','Sobrancelha','Maquiagem','Depilação','Limpeza','Outros'];
+const r3=n=>Math.round((Number(n)||0)*1e3)/1e3,r4=n=>Math.round((Number(n)||0)*1e4)/1e4;
+const nTxt=(n,d=2)=>Number(n||0).toLocaleString('pt-BR',{maximumFractionDigits:d});
+const erroAviso=m=>Object.assign(new Error(m),{aviso:m});
+const rowP=r=>({id:r.id,nome:r.nome||'',categoria:r.categoria||'Outros',unidade:UN.includes(r.unidade)?r.unidade:'g',conteudo:Number(r.conteudo)>0?Number(r.conteudo):1,preco:Number(r.preco)||0,
+  uso:Number(r.uso_aplicacao)||0,perda:Number(r.perda)||0,estoque:Number(r.estoque)||0,minimo:Number(r.minimo)||0,fornecedor:r.fornecedor||'',validade:r.validade||'',obs:r.obs||''});
+const rowF=r=>({id:r.id,procedimento:r.procedimento||'',produtoId:r.produto_id,quantidade:Number(r.quantidade)||0});
+const rowM=r=>({id:r.id,produtoId:r.produto_id,data:r.data,tipo:r.tipo,quantidade:Number(r.quantidade)||0,motivo:r.motivo||'',atendimentoId:r.atendimento_id||''});
+/* Rendimento: quanto uma embalagem rende e quanto custa cada aplicação. */
+const usoEf=(p,q)=>(Number(q)||0)*(1+(p.perda||0)/100);
+const custoUso=(p,q)=>din((p.preco/p.conteudo)*usoEf(p,q));
+const aplicPorEmb=p=>p.uso>0?Math.floor(p.conteudo/usoEf(p,p.uso)+1e-9):0;
+const aplicRest=p=>p.uso>0&&p.estoque>0?Math.floor(p.estoque/usoEf(p,p.uso)+1e-9):0;
+const custoAplic=p=>p.uso>0?custoUso(p,p.uso):0;
+const nEmb=p=>p.estoque/p.conteudo;
+const diasPara=d=>Math.floor((new Date(d+'T00:00:00')-new Date(hoje()+'T00:00:00'))/864e5);
+const emFalta=p=>p.estoque<=0||(p.minimo>0&&p.estoque<p.minimo*p.conteudo);
+const vencendo=p=>!!p.validade&&diasPara(p.validade)<=30;
+const procsTodas=()=>{const l=[...PROCS];[...S.atend.map(a=>a.procedimento),...S.fichas.map(f=>f.procedimento)].forEach(x=>{if(x&&!l.includes(x))l.push(x)});return l};
+const fichaDe=proc=>S.fichas.filter(f=>f.procedimento===proc).map(f=>({f,p:S.produtos.find(x=>x.id===f.produtoId)})).filter(x=>x.p);
+const custoFicha=proc=>din(fichaDe(proc).reduce((t,x)=>t+custoUso(x.p,x.f.quantidade),0));
+function tagsProd(p){
+  const t=[];
+  if(p.estoque<0)t.push('<span class="tag late">Estoque negativo</span>');
+  else if(p.estoque<=0)t.push('<span class="tag late">Sem estoque</span>');
+  else if(p.minimo>0&&p.estoque<p.minimo*p.conteudo)t.push('<span class="tag late">Estoque baixo</span>');
+  if(p.validade){const d=diasPara(p.validade);if(d<0)t.push('<span class="tag late">Vencido</span>');else if(d<=30)t.push(`<span class="tag late">Vence em ${d} ${d===1?'dia':'dias'}</span>`)}
+  return t.join(' ');
+}
+function itensProdutos(){
+  const b=nrm(S.estBusca||'');
+  const L=S.produtos.filter(p=>(!S.estCat||p.categoria===S.estCat)&&(!b||nrm(p.nome+' '+p.categoria+' '+p.fornecedor).includes(b))).sort((x,y)=>x.nome.localeCompare(y.nome,'pt-BR'));
+  if(!L.length)return '<div class="empty"><p>'+(S.produtos.length?'Nenhum produto encontrado.':'Nenhum produto cadastrado ainda. Clique em "Novo produto".')+'</p></div>';
+  return '<div class="list">'+L.map(p=>`<div class="item"><div class="grow"><div class="t">${esc(p.nome)} <span class="tag">${esc(p.categoria)}</span> ${tagsProd(p)}</div>
+    <div class="muted num">Estoque: ${nTxt(nEmb(p))} emb. (${nTxt(p.estoque)} ${p.unidade}) · embalagem de ${nTxt(p.conteudo)} ${p.unidade} · ${brl(p.preco)}${p.fornecedor?' · '+esc(p.fornecedor):''}</div>
+    <div class="muted num">${p.uso>0?`Rende ${nTxt(aplicPorEmb(p),0)} aplicações (${nTxt(p.uso)} ${p.unidade} cada${p.perda?` + ${nTxt(p.perda)}% de perda`:''}) · custo ${brl(custoAplic(p))} por aplicação · o estoque atual dá ${nTxt(aplicRest(p),0)} aplicações`:'Informe quanto usa por aplicação para ver o rendimento e o custo.'}</div></div>
+    <div class="item-acts"><button class="btn sm" data-act="movProd" data-id="${esc(p.id)}">Movimentar</button><button class="btn ghost sm" data-act="histProd" data-id="${esc(p.id)}">Histórico</button><button class="btn ghost sm" data-act="editProd" data-id="${esc(p.id)}">Editar</button><button class="btn danger sm" data-act="delProd" data-id="${esc(p.id)}">Excluir</button></div></div>`).join('')+'</div>';
+}
+function telaEstoque(){
+  const ab=S.estAba,P=S.produtos;
+  const seg=`<div class="seg" role="group" aria-label="Estoque"><button class="btn sm ${ab==='prod'?'':'ghost'}" data-act="estAba" data-id="prod" aria-pressed="${ab==='prod'}">Produtos</button><button class="btn sm ${ab==='fichas'?'':'ghost'}" data-act="estAba" data-id="fichas" aria-pressed="${ab==='fichas'}">Fichas técnicas</button></div>`;
+  const av=S.semEst?'<div class="empty"><h2>Falta atualizar o banco de dados</h2><p>Abra o SQL Editor do Supabase e rode o arquivo atualizar-banco-3.sql. Depois recarregue esta página.</p></div>':'';
+  if(ab==='fichas')return seg+av+telaFichas();
+  const cats=[...new Set(P.map(p=>p.categoria))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const valor=P.reduce((t,p)=>t+(p.estoque>0?nEmb(p)*p.preco:0),0);
+  return seg+av+`<div class="bar"><input id="estBusca" type="search" placeholder="Buscar produto…" aria-label="Buscar produto" value="${esc(S.estBusca)}"><select id="estCat" aria-label="Categoria"><option value="">Todas as categorias</option>${cats.map(c=>`<option ${c===S.estCat?'selected':''}>${esc(c)}</option>`).join('')}</select><button class="btn" data-act="novoProd">Novo produto</button></div>
+  <div class="stats"><div class="stat"><b>${P.length}</b><span>produtos</span></div><div class="stat"><b>${P.filter(emFalta).length}</b><span>em falta ou estoque baixo</span></div><div class="stat"><b>${P.filter(vencendo).length}</b><span>vencidos ou vencendo em 30 dias</span></div><div class="stat"><b>${brl(valor)}</b><span>valor em estoque</span></div></div>
+  <div id="lista-est">${itensProdutos()}</div>`;
+}
+/* Produto: cadastro com cálculo de rendimento ao vivo */
+function formProd(id){
+  const p=id?S.produtos.find(x=>x.id===id):{nome:'',categoria:'',unidade:'g',conteudo:'',preco:'',uso:'',perda:'',minimo:'',fornecedor:'',validade:'',obs:''};if(id&&!p)return;
+  const cats=[...new Set([...CAT_EST,...S.produtos.map(x=>x.categoria)])];
+  abrir(`<h2>${id?'Editar produto':'Novo produto'}</h2><form data-form="prod" data-id="${esc(id||'')}">
+  <label for="p-nome">Nome *</label><input id="p-nome" name="nome" required maxlength="120" placeholder="Ex.: Máscara de hidratação, esmalte, cera" value="${esc(p.nome)}">
+  <div class="grid2">
+  <div><label for="p-cat">Categoria</label><input id="p-cat" name="categoria" list="p-cats" maxlength="60" placeholder="Cabelo, Unhas…" value="${esc(p.categoria)}"><datalist id="p-cats">${cats.map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>
+  <div><label for="p-un">Unidade de medida</label><select id="p-un" name="unidade"><option value="g" ${p.unidade==='g'?'selected':''}>gramas (g)</option><option value="ml" ${p.unidade==='ml'?'selected':''}>mililitros (ml)</option><option value="un" ${p.unidade==='un'?'selected':''}>unidades (un)</option></select></div>
+  <div><label for="p-cont">Conteúdo de 1 embalagem *</label><input id="p-cont" name="conteudo" type="number" step="0.001" min="0.001" required inputmode="decimal" placeholder="Ex.: 500 (pote) ou 5000 (galão)" value="${esc(p.conteudo)}"></div>
+  <div><label for="p-preco">Preço pago por embalagem (R$) *</label><input id="p-preco" name="preco" type="number" step="0.01" min="0" required inputmode="decimal" value="${esc(p.preco)}"></div>
+  <div><label for="p-uso">Quanto usa por aplicação</label><input id="p-uso" name="uso" type="number" step="0.001" min="0" inputmode="decimal" placeholder="Ex.: 25" value="${esc(p.uso)}"></div>
+  <div><label for="p-perda">Perda / desperdício (%)</label><input id="p-perda" name="perda" type="number" step="0.01" min="0" max="100" inputmode="decimal" placeholder="0" value="${esc(p.perda)}"></div>
+  ${id?'':`<div><label for="p-ini">Embalagens em estoque agora</label><input id="p-ini" name="inicial" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Ex.: 3"></div>`}
+  <div><label for="p-min">Estoque mínimo (embalagens)</label><input id="p-min" name="minimo" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Avisar quando ficar abaixo" value="${esc(p.minimo)}"></div>
+  <div><label for="p-forn">Fornecedor</label><input id="p-forn" name="fornecedor" maxlength="120" value="${esc(p.fornecedor)}"></div>
+  <div><label for="p-val">Validade</label><input id="p-val" name="validade" type="date" value="${esc(p.validade)}"></div></div>
+  <div id="p-prev" class="panel muted num" style="margin-top:10px"></div>
+  <label for="p-obs">Observações</label><textarea id="p-obs" name="obs" rows="2">${esc(p.obs)}</textarea>
+  <div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Salvar</button></div></form>`);
+  previaProd();
+}
+function previaProd(){
+  const w=$('p-prev');if(!w)return;
+  const p={unidade:$('p-un').value,conteudo:Number($('p-cont').value)||0,preco:Number($('p-preco').value)||0,uso:Number($('p-uso').value)||0,perda:Number($('p-perda').value)||0};
+  if(!(p.conteudo>0)||!(p.uso>0)){w.textContent='Preencha o conteúdo da embalagem, o preço e quanto usa por aplicação para ver quanto rende e o custo real de cada atendimento.';return}
+  w.textContent=`Rende ${nTxt(aplicPorEmb(p),0)} aplicações por embalagem · custo de ${brl(custoAplic(p))} por aplicação.`;
+}
+async function salvarProd(id,d){
+  const nome=(d.nome||'').trim(),cont=r3(d.conteudo);
+  if(!nome)throw erroAviso('Informe o nome do produto.');
+  if(!(cont>0))throw erroAviso('Informe o conteúdo da embalagem (maior que zero).');
+  const o={nome,categoria:(d.categoria||'').trim()||'Outros',unidade:UN.includes(d.unidade)?d.unidade:'g',conteudo:cont,preco:din(d.preco),uso_aplicacao:r3(d.uso),
+    perda:Math.min(100,Math.max(0,Math.round((Number(d.perda)||0)*100)/100)),minimo:r3(d.minimo),fornecedor:(d.fornecedor||'').trim(),validade:d.validade||null,obs:(d.obs||'').trim()};
+  if(id){const r=await sb.from('produtos').update(o).eq('id',id);if(r.error)throw r.error}
+  else{
+    o.id=novoId();
+    const r=await sb.from('produtos').insert(o);if(r.error)throw r.error;
+    const ini=Number(d.inicial)||0;
+    if(ini>0){const m=await sb.from('movimentacoes_estoque').insert({id:novoId(),produto_id:o.id,data:hoje(),tipo:'entrada',quantidade:r4(ini*cont),motivo:'Estoque inicial'});if(m.error)throw m.error}
+  }
+  await recarregar();toast(id?'Produto atualizado.':'Produto cadastrado.');
+}
+function pedirDelProd(id){
+  const p=S.produtos.find(x=>x.id===id);if(!p)return;
+  confirmar(`Excluir "${p.nome}"?`,'O histórico de movimentações e o uso deste produto nas fichas técnicas também serão apagados. Esta ação não pode ser desfeita.','Excluir',async()=>{
+    const r=await sb.from('produtos').delete().eq('id',id);if(r.error)throw r.error;
+    await recarregar();toast('Produto excluído.');
+  });
+}
+/* Movimentar: entrada (compra), saída (uso/perda) e ajuste (contagem) */
+function formMov(id){
+  const p=S.produtos.find(x=>x.id===id);if(!p)return;
+  abrir(`<h2>Movimentar estoque</h2><p class="muted">${esc(p.nome)} · estoque atual: ${nTxt(nEmb(p))} embalagens (${nTxt(p.estoque)} ${p.unidade})</p>
+  <form data-form="mov" data-id="${esc(id)}"><div class="grid2">
+  <div><label for="m-tipo">Tipo</label><select id="m-tipo" name="tipo"><option value="entrada">Entrada (compra)</option><option value="saida">Saída (uso ou perda)</option><option value="ajuste">Ajuste (contagem)</option></select></div>
+  <div><label for="m-qtd" id="m-qtd-l">Quantidade (embalagens) *</label><input id="m-qtd" name="qtd" type="number" step="0.01" min="0" required inputmode="decimal"></div>
+  <div><label for="m-data">Data</label><input id="m-data" name="data" type="date" value="${hoje()}"></div>
+  <div><label for="m-mot">Motivo</label><input id="m-mot" name="motivo" maxlength="120" placeholder="Ex.: compra na distribuidora"></div></div>
+  <div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Salvar</button></div></form>`);
+}
+async function salvarMov(id,d){
+  const p=S.produtos.find(x=>x.id===id);if(!p)throw new Error('produto');
+  const q=Number(d.qtd);
+  if(!(q>=0)||(d.tipo!=='ajuste'&&!(q>0)))throw erroAviso('Informe uma quantidade maior que zero.');
+  let delta=d.tipo==='entrada'?q*p.conteudo:d.tipo==='saida'?-q*p.conteudo:q*p.conteudo-p.estoque;
+  delta=r4(delta);
+  if(d.tipo==='saida'&&p.estoque+delta<-1e-6)throw erroAviso(`Saída maior que o estoque (${nTxt(nEmb(p))} embalagens). Use "Ajuste" para corrigir a contagem.`);
+  if(d.tipo==='ajuste'&&delta===0)throw erroAviso('O estoque já está com essa quantidade.');
+  const r=await sb.from('movimentacoes_estoque').insert({id:novoId(),produto_id:id,data:d.data||hoje(),tipo:UN.length&&['entrada','saida','ajuste'].includes(d.tipo)?d.tipo:'ajuste',quantidade:delta,motivo:(d.motivo||'').trim()});
+  if(r.error)throw r.error;
+  await recarregar();toast('Movimentação registrada.');
+}
+function histProd(id){
+  const p=S.produtos.find(x=>x.id===id);if(!p)return;
+  const TT={entrada:'Entrada',saida:'Saída',ajuste:'Ajuste',atendimento:'Uso em atendimento'};
+  const L=S.movs.filter(m=>m.produtoId===id).sort((a,b)=>String(b.data).localeCompare(String(a.data))||String(b.id).localeCompare(String(a.id))).slice(0,100);
+  abrir(`<h2>Histórico</h2><p class="muted">${esc(p.nome)} · mostrando os últimos 120 dias</p>`+(L.length?'<div class="list">'+L.map(m=>`<div class="item"><div class="grow"><div class="t">${TT[m.tipo]||esc(m.tipo)}</div><div class="muted num">${fd(m.data)}${m.motivo?' · '+esc(m.motivo):''}</div></div><div class="side num"><b>${m.quantidade>0?'+':'−'}${nTxt(Math.abs(m.quantidade)/p.conteudo)} emb.</b><div class="muted">${nTxt(Math.abs(m.quantidade))} ${p.unidade}</div></div></div>`).join('')+'</div>':'<div class="empty"><p>Sem movimentações nos últimos 120 dias.</p></div>')+`<div class="acts"><button type="button" class="btn ghost" data-act="fechar">Fechar</button></div>`);
+}
+/* Fichas técnicas: o que cada procedimento consome */
+function telaFichas(){
+  return `<p class="muted" style="font-size:13px;margin:0 0 10px">Para cada procedimento, informe quais produtos e quanto de cada um é usado por atendimento. O sistema calcula o custo real de produtos, sugere o valor ao registrar o atendimento e dá baixa no estoque.</p>`+
+  procsTodas().map(proc=>{
+    const it=fichaDe(proc);
+    return `<div class="panel"><div class="bar" style="margin:0 0 6px"><div><b>${esc(proc)}</b> <span class="muted num">${it.length?'· custo de produtos: '+brl(custoFicha(proc)):'· sem ficha'}</span></div><button class="btn ghost sm" data-act="novaFicha" data-id="${esc(proc)}">Adicionar produto</button></div>`+
+    (it.length?'<div class="list">'+it.map(({f,p})=>`<div class="item"><div class="grow"><div class="t">${esc(p.nome)}</div><div class="muted num">${nTxt(f.quantidade)} ${p.unidade} por aplicação${p.perda?` (+${nTxt(p.perda)}% de perda)`:''}</div></div><div class="side num"><b>${brl(custoUso(p,f.quantidade))}</b></div><div class="item-acts"><button class="btn ghost sm" data-act="editFicha" data-id="${esc(f.id)}">Editar</button><button class="btn danger sm" data-act="delFicha" data-id="${esc(f.id)}">Remover</button></div></div>`).join('')+'</div>':'')+'</div>';
+  }).join('');
+}
+function formFicha(proc,id){
+  if(!S.produtos.length){toast('Cadastre um produto primeiro.',true);return}
+  const f=id?S.fichas.find(x=>x.id===id):null;if(id&&!f)return;
+  const pr=f?f.procedimento:proc;
+  abrir(`<h2>${esc(pr)}</h2><form data-form="ficha" data-id="${esc(id||'')}"><input type="hidden" name="procedimento" value="${esc(pr)}">
+  <label for="f-prod">Produto *</label><select id="f-prod" name="produtoId" required><option value="">Selecione…</option>${[...S.produtos].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')).map(p=>`<option value="${esc(p.id)}" ${f&&f.produtoId===p.id?'selected':''}>${esc(p.nome)}</option>`).join('')}</select>
+  <label for="f-qtd">Quantidade usada por aplicação <span id="f-un" class="muted"></span> *</label><input id="f-qtd" name="quantidade" type="number" step="0.001" min="0.001" required inputmode="decimal" value="${f?esc(f.quantidade):''}">
+  <div id="f-prev" class="muted num" style="margin-top:8px"></div>
+  <div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Salvar</button></div></form>`);
+  previaFicha(false);
+}
+function previaFicha(auto){
+  const sel=$('f-prod');if(!sel)return;const p=S.produtos.find(x=>x.id===sel.value);
+  $('f-un').textContent=p?'('+p.unidade+')':'';
+  if(p&&auto&&!$('f-qtd').value&&p.uso>0)$('f-qtd').value=p.uso;
+  const q=Number($('f-qtd').value)||0;
+  $('f-prev').textContent=p&&q>0?`Custo deste produto por atendimento: ${brl(custoUso(p,q))}`:'';
+}
+async function salvarFicha(id,d){
+  const q=r3(d.quantidade),p=S.produtos.find(x=>x.id===d.produtoId);
+  if(!p)throw erroAviso('Escolha o produto.');
+  if(!(q>0))throw erroAviso('Informe a quantidade usada por aplicação.');
+  const igual=S.fichas.find(x=>x.procedimento===d.procedimento&&x.produtoId===d.produtoId);
+  const alvo=id||(igual&&igual.id);
+  if(id&&igual&&igual.id!==id)throw erroAviso('Este produto já está na ficha deste procedimento.');
+  const o={procedimento:d.procedimento,produto_id:d.produtoId,quantidade:q};
+  const r=alvo?await sb.from('ficha_procedimento').update(o).eq('id',alvo):await sb.from('ficha_procedimento').insert(Object.assign({id:novoId()},o));
+  if(r.error)throw r.error;
+  await recarregar();toast('Ficha técnica atualizada.');
+}
+function pedirDelFicha(id){
+  confirmar('Remover este produto da ficha?','O estoque e os atendimentos já registrados não mudam.','Remover',async()=>{
+    const r=await sb.from('ficha_procedimento').delete().eq('id',id);if(r.error)throw r.error;
+    await recarregar();toast('Produto removido da ficha.');
   });
 }
 
@@ -462,7 +796,21 @@ const desp=a=>din(a.gastoProdutos)+din(a.taxaMaquina);
 const despTxt=a=>{const p=din(a.gastoProdutos),t=din(a.taxaMaquina);return p>0||t>0?`<div class="muted num">${p>0?'Produtos '+brl(p):''}${p>0&&t>0?' · ':''}${t>0?'Taxa da máquina '+brl(t):''}</div>`:''};
 function segRel(){
   const ab=S.relAba||'fat';
-  return `<div class="seg" role="group" aria-label="Tipo de relatório"><button class="btn sm ${ab==='fat'?'':'ghost'}" data-act="relAba" data-id="fat" aria-pressed="${ab==='fat'}">Faturamento</button><button class="btn sm ${ab==='desp'?'':'ghost'}" data-act="relAba" data-id="desp" aria-pressed="${ab==='desp'}">Despesas</button></div>`;
+  return `<div class="seg" role="group" aria-label="Tipo de relatório"><button class="btn sm ${ab==='fat'?'':'ghost'}" data-act="relAba" data-id="fat" aria-pressed="${ab==='fat'}">Faturamento</button><button class="btn sm ${ab==='desp'?'':'ghost'}" data-act="relAba" data-id="desp" aria-pressed="${ab==='desp'}">Despesas</button><button class="btn sm ${ab==='custos'?'':'ghost'}" data-act="relAba" data-id="custos" aria-pressed="${ab==='custos'}">Custos e margem</button></div>`;
+}
+function relCustos(m,F){
+  const mp=new Map();
+  F.forEach(a=>{const k=a.procedimento||'—',o=mp.get(k)||{n:0,r:0,p:0,t:0};o.n++;o.r+=Number(a.valor)||0;o.p+=din(a.gastoProdutos);o.t+=din(a.taxaMaquina);mp.set(k,o)});
+  const rows=[...mp.entries()].map(([k,o])=>Object.assign({k},o,{m:o.r-o.p-o.t})).sort((a,b)=>b.m-a.m);
+  const T=rows.reduce((x,o)=>({r:x.r+o.r,p:x.p+o.p,t:x.t+o.t}),{r:0,p:0,t:0}),marg=T.r-T.p-T.t;
+  const stats=`<div class="stats"><div class="stat"><b>${brl(T.r)}</b><span>cobrado nos atendimentos</span></div><div class="stat"><b>${brl(T.p)}</b><span>produtos</span></div><div class="stat"><b>${brl(T.t)}</b><span>taxas da máquina</span></div><div class="stat"><b class="${marg<0?'neg':''}">${brl(marg)}</b><span>margem (cobrado − produtos − taxas)</span></div></div>`;
+  const usados=new Map();
+  S.movs.filter(x=>x.quantidade<0&&(!m||String(x.data).startsWith(m))).forEach(x=>usados.set(x.produtoId,(usados.get(x.produtoId)||0)+Math.abs(x.quantidade)));
+  const U=[...usados.entries()].map(([id,q])=>({p:S.produtos.find(x=>x.id===id),q})).filter(x=>x.p).sort((a,b)=>b.q/b.p.conteudo*b.p.preco-a.q/a.p.conteudo*a.p.preco);
+  return stats+`<p class="muted" style="font-size:13px;margin:0 0 4px">Considera o valor total de cada atendimento feito no período (cartão parcelado entra inteiro). Produtos e taxas vêm dos campos de cada atendimento.</p>`+
+    '<h3>Custo real e margem por procedimento</h3>'+(rows.length?'<div class="list">'+rows.map(o=>{const fc=custoFicha(o.k),pc=o.r>0?Math.round(o.m/o.r*100):0;
+      return `<div class="item"><div class="grow"><div class="t">${esc(o.k)} <span class="muted">· ${o.n} ${o.n===1?'atendimento':'atendimentos'}</span></div><div class="muted num">Cobrado ${brl(o.r)} · produtos ${brl(o.p)} · taxas ${brl(o.t)}${fc>0?` · ficha técnica: ${brl(fc)} por atendimento`:''}</div></div><div class="side num"><b class="${o.m<0?'neg':''}">${brl(o.m)}</b><div class="muted">${pc}% do cobrado</div></div></div>`}).join('')+'</div>':'<div class="empty"><p>Nenhum atendimento neste período.</p></div>')+
+    '<h3>Produtos que mais saíram'+(m?' no mês':' (últimos 120 dias)')+'</h3>'+(U.length?'<div class="list">'+U.map(({p,q})=>`<div class="item"><div class="grow"><div class="t">${esc(p.nome)}</div><div class="muted num">${nTxt(q)} ${p.unidade} (${nTxt(q/p.conteudo,3)} embalagens)</div></div><div class="side num"><b>${brl(q/p.conteudo*p.preco)}</b></div></div>`).join('')+'</div>':'<div class="empty"><p>Nenhuma saída de estoque neste período.</p></div>');
 }
 function relDesp(m,F,G){
   const prod=F.reduce((s,a)=>s+din(a.gastoProdutos),0),taxa=F.reduce((s,a)=>s+din(a.taxaMaquina),0),fix=soma(G),tot=prod+taxa+fix;
@@ -501,6 +849,7 @@ function telaRel(){
   const despAt=feitos.reduce((x,a)=>x+desp(a),0),G=gastosDoMes(m),despTot=despAt+soma(G),res=tot-despTot;
   const resumo=`<div class="stats"><div class="stat"><b>${brl(tot)}</b><span>${m?'recebido no mês':'faturado'}</span></div><div class="stat"><b>${brl(despTot)}</b><span>despesas (atendimentos + contas)</span></div><div class="stat"><b class="${res<0?'neg':''}">${brl(res)}</b><span>resultado (${m?'recebido':'faturado'} − despesas)</span></div></div>`;
   if(S.relAba==='desp')return head+resumo+relDesp(m,feitos,G);
+  if(S.relAba==='custos')return head+relCustos(m,feitos);
   return head+resumo+`
   <div class="stats"><div class="stat"><b>${feitos.length}</b><span>atendimentos</span></div><div class="stat"><b>${nCli}</b><span>clientes atendidas</span></div><div class="stat"><b>${brl(feitos.length?soma(feitos)/feitos.length:0)}</b><span>ticket médio</span></div></div>`+
   (parc?`<p class="muted" style="font-size:13px;margin:0 0 4px">Cartão de crédito parcelado: o valor é dividido pelas parcelas e cada parcela entra no mês em que cai. A 1ª parcela conta no mês do atendimento.</p>`:'')+
@@ -510,14 +859,13 @@ function telaRel(){
 
 /* ---------- Backup ---------- */
 function telaBackup(){
-  return `<h2>Backup e Excel</h2>
-  <div class="panel"><p>Os dados ficam guardados na nuvem e aparecem para todas as pessoas que têm login. Aqui você baixa uma cópia em planilha ou em arquivo de backup.</p>
+  return `<div class="panel"><p>Os dados ficam guardados na nuvem e aparecem para todas as pessoas que têm login. Aqui você baixa uma cópia em planilha ou em arquivo de backup.</p>
   <div class="row-actions"><button class="btn" data-act="exportXlsx">Baixar planilha Excel (.xlsx)</button><button class="btn ghost" data-act="exportJson">Baixar backup (.json)</button><button class="btn ghost" data-act="exportCsv">Baixar atendimentos (.csv)</button></div>
-  <p class="muted" style="font-size:13px">A planilha tem três abas: Clientes, Atendimentos e Despesas.</p></div>
-  <div class="panel"><b>Importar planilha ou backup</b><p class="muted">Aceita a planilha .xlsx baixada aqui (já editada no Excel ou não) e o backup .json, inclusive de versões anteriores. Linhas com o mesmo ID são atualizadas; linhas novas, com a coluna ID em branco, são adicionadas. Nada é apagado: para excluir um registro, use o botão Excluir no sistema. Importar o mesmo arquivo duas vezes não duplica.</p>
+  <p class="muted" style="font-size:13px">A planilha tem cinco abas: Clientes, Atendimentos, Despesas, Produtos e Fichas.</p></div>
+  <div class="panel"><b>Importar planilha ou backup</b><p class="muted">Aceita a planilha .xlsx baixada aqui (já editada no Excel ou não) e o backup .json, inclusive de versões anteriores. Linhas com o mesmo ID são atualizadas; linhas novas, com a coluna ID em branco, são adicionadas. Nada é apagado: para excluir um registro, use o botão Excluir no sistema. O estoque atual dos produtos que já existem não muda pela planilha: corrija em Estoque, botão Movimentar, Ajuste. Importar o mesmo arquivo duas vezes não duplica.</p>
   <label for="arquivo">Planilha (.xlsx) ou backup (.json)</label><input id="arquivo" type="file" accept=".xlsx,.json,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
   ${S.prog?`<p class="num" style="margin-top:10px">${esc(S.prog)}</p>`:''}</div>
-  <p class="muted num">${S.clientes.length} clientes · ${S.atend.length} atendimentos · ${S.gastos.length} despesas</p>`;
+  <p class="muted num">${S.clientes.length} clientes · ${S.atend.length} atendimentos · ${S.gastos.length} despesas · ${S.produtos.length} produtos</p>`;
 }
 function salvarArquivo(nome,txt,tipo){
   const u=URL.createObjectURL(txt instanceof Blob?txt:new Blob([txt],{type:tipo}));
@@ -526,12 +874,12 @@ function salvarArquivo(nome,txt,tipo){
   toast('Arquivo baixado.');
 }
 function exportJson(){
-  salvarArquivo(`salao-backup-${hoje()}.json`,JSON.stringify({versao:4,exportadoEm:new Date().toISOString(),clientes:S.clientes,atendimentos:S.atend,despesas:S.gastos},null,2),'application/json');
+  salvarArquivo(`salao-backup-${hoje()}.json`,JSON.stringify({versao:5,exportadoEm:new Date().toISOString(),clientes:S.clientes,atendimentos:S.atend,despesas:S.gastos,produtos:S.produtos,fichas:S.fichas},null,2),'application/json');
 }
 function exportCsv(){
   const q=v=>{let t=String(v==null?'':v);if(/^[=+\-@\t\r]/.test(t)&&!/^[+-]?[\d\s().,-]+$/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"'};
-  const cab=['Data','Cliente','Telefone','Procedimento','Profissional','Valor','Pagamento','Parcelas','Gasto com produtos','Taxa da máquina','Retorno','Observações'];
-  const linhas=[...S.atend].sort((a,b)=>String(a.data).localeCompare(String(b.data))).map(a=>{const c=cli(a.clienteId)||{};return [a.data,c.nome,c.telefone,a.procedimento,a.profissional,a.valor,a.pagamento,a.pagamento==='Cartão de crédito'?PARC(a.parcelas):'',din(a.gastoProdutos),din(a.taxaMaquina),a.retorno,a.obs].map(q).join(';')});
+  const cab=['Data','Horário','Cliente','Telefone','Procedimento','Profissional','Valor','Pagamento','Parcelas','Gasto com produtos','Taxa da máquina','Retorno','Observações'];
+  const linhas=[...S.atend].sort((a,b)=>String(a.data).localeCompare(String(b.data))).map(a=>{const c=cli(a.clienteId)||{};return [a.data,a.hora,c.nome,c.telefone,a.procedimento,a.profissional,a.valor,a.pagamento,a.pagamento==='Cartão de crédito'?PARC(a.parcelas):'',din(a.gastoProdutos),din(a.taxaMaquina),a.retorno,a.obs].map(q).join(';')});
   salvarArquivo(`atendimentos-${hoje()}.csv`,'﻿'+[cab.map(q).join(';'),...linhas].join('\n'),'text/csv');
 }
 /* ---------- Planilha Excel (.xlsx), sem biblioteca externa ---------- */
@@ -578,10 +926,16 @@ function exportXlsx(){
   const ordN=(a,b)=>String(a.nome).localeCompare(String(b.nome),'pt-BR'),ordD=(a,b)=>String(a.data).localeCompare(String(b.data));
   const abas=[
     ['Clientes',['ID','Nome','Telefone','Nascimento','Observações'],[...S.clientes].sort(ordN).map(c=>[c.id,c.nome,c.telefone,c.nascimento,c.obs]),['t','t','t','d','t'],[38,30,16,14,40]],
-    ['Atendimentos',['ID','ID da cliente','Cliente','Data','Procedimento','Profissional','Valor','Pagamento','Parcelas','Gasto com produtos','Taxa da máquina','Retorno','Observações'],
-      [...S.atend].sort(ordD).map(a=>[a.id,a.clienteId,(cli(a.clienteId)||{}).nome||'',a.data,a.procedimento,a.profissional,a.valor,a.pagamento,a.pagamento==='Cartão de crédito'?PARC(a.parcelas):'',a.gastoProdutos,a.taxaMaquina,a.retorno,a.obs]),
-      ['t','t','t','d','t','t','m','t','n','m','m','d','t'],[38,38,28,12,20,14,12,18,9,18,16,12,40]],
-    ['Despesas',['ID','Data','Categoria','Descrição','Valor'],[...S.gastos].sort(ordD).map(g=>[g.id,g.data,g.categoria,g.descricao,g.valor]),['t','d','t','t','m'],[38,12,24,40,12]]
+    ['Atendimentos',['ID','ID da cliente','Cliente','Data','Horário','Procedimento','Profissional','Valor','Pagamento','Parcelas','Gasto com produtos','Taxa da máquina','Retorno','Observações'],
+      [...S.atend].sort(ordD).map(a=>[a.id,a.clienteId,(cli(a.clienteId)||{}).nome||'',a.data,a.hora,a.procedimento,a.profissional,a.valor,a.pagamento,a.pagamento==='Cartão de crédito'?PARC(a.parcelas):'',a.gastoProdutos,a.taxaMaquina,a.retorno,a.obs]),
+      ['t','t','t','d','t','t','t','m','t','n','m','m','d','t'],[38,38,28,12,8,20,14,12,18,9,18,16,12,40]],
+    ['Despesas',['ID','Data','Categoria','Descrição','Valor'],[...S.gastos].sort(ordD).map(g=>[g.id,g.data,g.categoria,g.descricao,g.valor]),['t','d','t','t','m'],[38,12,24,40,12]],
+    ['Produtos',['ID','Nome','Categoria','Unidade','Conteúdo da embalagem','Preço da embalagem','Uso por aplicação','Perda (%)','Estoque atual (na unidade)','Estoque mínimo (embalagens)','Fornecedor','Validade','Observações'],
+      [...S.produtos].sort(ordN).map(p=>[p.id,p.nome,p.categoria,p.unidade,p.conteudo,p.preco,p.uso,p.perda,r4(p.estoque),p.minimo,p.fornecedor,p.validade,p.obs]),
+      ['t','t','t','t','n','m','n','n','n','n','t','d','t'],[38,28,16,10,14,14,14,10,16,16,22,12,36]],
+    ['Fichas',['ID','Procedimento','ID do produto','Produto','Quantidade por aplicação'],
+      [...S.fichas].sort((a,b)=>a.procedimento.localeCompare(b.procedimento,'pt-BR')).map(f=>[f.id,f.procedimento,f.produtoId,(S.produtos.find(p=>p.id===f.produtoId)||{}).nome||'',f.quantidade]),
+      ['t','t','t','t','n'],[38,22,38,28,16]]
   ];
   const arqs=[
     ['[Content_Types].xml',XH+`<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${abas.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`],
@@ -652,6 +1006,12 @@ function nData(v){
   if((m=t.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/)))return m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0');
   return '';
 }
+function nHora(v){
+  if(v==null||v==='')return '';
+  if(typeof v==='number'){const f=v-Math.floor(v);if(!f)return '';const mi=Math.round(f*1440)%1440;return String(Math.floor(mi/60)).padStart(2,'0')+':'+String(mi%60).padStart(2,'0')}
+  const m=String(v).trim().match(/^(\d{1,2})[:h](\d{2})/);return m&&+m[1]<24&&+m[2]<60?m[1].padStart(2,'0')+':'+m[2]:'';
+}
+const unNorm=v=>{const t=nrm(v);return /^(ml|mililitros?)$/.test(t)?'ml':/^(un|und|unidades?)$/.test(t)?'un':'g'};
 function nNum(v){
   if(typeof v==='number')return isFinite(v)?v:0;
   let t=String(v==null?'':v).replace(/R\$|\s/g,'');
@@ -672,13 +1032,17 @@ async function lerXlsx(buf){
     const x=xml(alvo[rid]);if(x)abas[nrm(sh.getAttribute('name'))]=lerAba(x,ss);
   }
   const tx=v=>v==null?'':typeof v==='number'?String(v):String(v).trim();
-  return {achou:!!(abas.clientes||abas.atendimentos||abas.despesas),
+  return {achou:!!(abas.clientes||abas.atendimentos||abas.despesas||abas.produtos||abas.fichas),
     clientes:tabela(abas.clientes,{id:['id','id da cliente'],nome:['nome','cliente'],telefone:['telefone','celular','whatsapp'],nascimento:['nascimento','data de nascimento'],obs:['observacoes','obs']})
       .map(o=>({id:tx(o.id),nome:tx(o.nome),telefone:tx(o.telefone),nascimento:nData(o.nascimento),obs:tx(o.obs)})),
-    atendimentos:tabela(abas.atendimentos,{id:['id','id do atendimento'],clienteId:['id da cliente','id cliente'],cliente:['cliente','nome da cliente','nome'],data:['data'],procedimento:['procedimento'],profissional:['profissional'],valor:['valor'],pagamento:['pagamento','forma de pagamento'],parcelas:['parcelas'],gastoProdutos:['gasto com produtos','gastos com produtos'],taxaMaquina:['taxa da maquina'],retorno:['retorno','retorno previsto'],obs:['observacoes','obs']})
-      .map(o=>({id:tx(o.id),clienteId:tx(o.clienteId),cliente:tx(o.cliente),data:nData(o.data),procedimento:tx(o.procedimento),profissional:tx(o.profissional),valor:nNum(o.valor),pagamento:tx(o.pagamento),parcelas:nNum(o.parcelas),gastoProdutos:nNum(o.gastoProdutos),taxaMaquina:nNum(o.taxaMaquina),retorno:nData(o.retorno),obs:tx(o.obs)})),
+    atendimentos:tabela(abas.atendimentos,{id:['id','id do atendimento'],clienteId:['id da cliente','id cliente'],cliente:['cliente','nome da cliente','nome'],data:['data'],hora:['horario','hora'],procedimento:['procedimento'],profissional:['profissional'],valor:['valor'],pagamento:['pagamento','forma de pagamento'],parcelas:['parcelas'],gastoProdutos:['gasto com produtos','gastos com produtos'],taxaMaquina:['taxa da maquina'],retorno:['retorno','retorno previsto'],obs:['observacoes','obs']})
+      .map(o=>({id:tx(o.id),clienteId:tx(o.clienteId),cliente:tx(o.cliente),data:nData(o.data),hora:o.hora===undefined?undefined:nHora(o.hora),procedimento:tx(o.procedimento),profissional:tx(o.profissional),valor:nNum(o.valor),pagamento:tx(o.pagamento),parcelas:nNum(o.parcelas),gastoProdutos:nNum(o.gastoProdutos),taxaMaquina:nNum(o.taxaMaquina),retorno:nData(o.retorno),obs:tx(o.obs)})),
     despesas:tabela(abas.despesas,{id:['id'],data:['data'],categoria:['categoria'],descricao:['descricao','observacoes'],valor:['valor']})
-      .map(o=>({id:tx(o.id),data:nData(o.data),categoria:tx(o.categoria),descricao:tx(o.descricao),valor:nNum(o.valor)}))};
+      .map(o=>({id:tx(o.id),data:nData(o.data),categoria:tx(o.categoria),descricao:tx(o.descricao),valor:nNum(o.valor)})),
+    produtos:tabela(abas.produtos,{id:['id'],nome:['nome','produto'],categoria:['categoria'],unidade:['unidade','unidade de medida'],conteudo:['conteudo da embalagem','conteudo'],preco:['preco da embalagem','preco'],uso:['uso por aplicacao'],perda:['perda'],estoque:['estoque atual na unidade','estoque atual'],minimo:['estoque minimo embalagens','estoque minimo'],fornecedor:['fornecedor'],validade:['validade'],obs:['observacoes','obs']})
+      .map(o=>({id:tx(o.id),nome:tx(o.nome),categoria:tx(o.categoria),unidade:unNorm(o.unidade),conteudo:nNum(o.conteudo),preco:nNum(o.preco),uso:nNum(o.uso),perda:nNum(o.perda),estoque:nNum(o.estoque),minimo:nNum(o.minimo),fornecedor:tx(o.fornecedor),validade:nData(o.validade),obs:tx(o.obs)})),
+    fichas:tabela(abas.fichas,{id:['id'],procedimento:['procedimento'],produtoId:['id do produto'],produto:['produto','nome do produto'],quantidade:['quantidade por aplicacao','quantidade']})
+      .map(o=>({id:tx(o.id),procedimento:tx(o.procedimento),produtoId:tx(o.produtoId),produto:tx(o.produto),quantidade:nNum(o.quantidade)}))};
 }
 /* Linhas novas da planilha (sem ID) ganham um ID; se já existir igual no sistema, atualiza em vez de duplicar. */
 function resolverPlanilha(d){
@@ -692,6 +1056,13 @@ function resolverPlanilha(d){
   d.atendimentos.forEach(a=>{
     if(!a.clienteId||!ids.has(a.clienteId))a.clienteId=porNome.get(nrm(a.cliente))||a.clienteId;
     if(!a.id)a.id=pega(exA,[a.clienteId,a.data,nrm(a.procedimento),Number(a.valor)||0,nrm(a.pagamento)].join('|'))||novoId();
+  });
+  const pNome=new Map(S.produtos.map(p=>[nrm(p.nome),p.id]));
+  (d.produtos||[]).forEach(p=>{if(!p.id)p.id=pNome.get(nrm(p.nome))||novoId();pNome.set(nrm(p.nome),p.id)});
+  const exF=new Map(S.fichas.map(f=>[f.procedimento+'|'+f.produtoId,f.id]));
+  (d.fichas||[]).forEach(f=>{
+    const pid=(d.produtos||[]).some(p=>p.id===f.produtoId)||S.produtos.some(p=>p.id===f.produtoId)?f.produtoId:(pNome.get(nrm(f.produto))||f.produtoId);
+    f.produtoId=pid;if(!f.id)f.id=exF.get(f.procedimento+'|'+pid)||novoId();
   });
   d.despesas.forEach(g=>{
     if(!g.id)g.id=pega(exG,[g.data,nrm(g.categoria||'Outros'),Number(g.valor)||0,nrm(g.descricao)].join('|'))||novoId();
@@ -709,10 +1080,14 @@ async function importar(file){
   if(!d||!Array.isArray(d.clientes)||!Array.isArray(d.atendimentos)){toast('Este arquivo não é uma planilha nem um backup do sistema.',true);return}
   if(xl&&!d.achou){toast('A planilha precisa ter as abas Clientes, Atendimentos ou Despesas.',true);return}
   if(!Array.isArray(d.despesas))d.despesas=[];
+  if(!Array.isArray(d.produtos))d.produtos=[];
+  if(!Array.isArray(d.fichas))d.fichas=[];
+  if(S.semEst&&(d.produtos.length||d.fichas.length)){toast('Antes de importar produtos, rode o arquivo atualizar-banco-3.sql no Supabase.',true);return}
   if(xl)resolverPlanilha(d);
   const idOk=s=>typeof s==='string'&&/^[A-Za-z0-9_\-.~:@+]{1,200}$/.test(s)&&!/^\.+$/.test(s);
   const dataOk=s=>{s=String(s||'');if(!/^\d{4}-\d{2}-\d{2}$/.test(s))return false;const t=new Date(s+'T00:00:00Z');return !isNaN(t)&&t.toISOString().slice(0,10)===s};
   const txt=v=>String(v==null?'':v);
+  const horaOk=h=>/^([01]\d|2[0-3]):[0-5]\d$/.test(String(h||''));
   let pulou=0;
   const cm=new Map(),ids=new Set(S.clientes.map(c=>c.id));
   d.clientes.forEach(o=>{
@@ -725,7 +1100,7 @@ async function importar(file){
     if(!o||!idOk(o.id)||!idOk(o.clienteId)||!ids.has(o.clienteId)||!dataOk(o.data)||!txt(o.procedimento).trim()){pulou++;return}
     const cred=o.pagamento==='Cartão de crédito';
     am.set(o.id,{id:o.id,cliente_id:o.clienteId,data:o.data,procedimento:txt(o.procedimento).trim(),profissional:txt(o.profissional),
-      valor:Math.max(0,Number(o.valor)||0),pagamento:txt(o.pagamento),parcelas:cred?PARC(o.parcelas):1,gasto_produtos:dv(o.gastoProdutos,(exA.get(o.id)||{}).gastoProdutos),taxa_maquina:dv(o.taxaMaquina,(exA.get(o.id)||{}).taxaMaquina),retorno:dataOk(o.retorno)?o.retorno:null,obs:txt(o.obs)});
+      valor:Math.max(0,Number(o.valor)||0),pagamento:txt(o.pagamento),parcelas:cred?PARC(o.parcelas):1,hora:S.semEst?undefined:(o.hora===undefined?((exA.get(o.id)||{}).hora||null):(horaOk(o.hora)?o.hora:null)),gasto_produtos:dv(o.gastoProdutos,(exA.get(o.id)||{}).gastoProdutos),taxa_maquina:dv(o.taxaMaquina,(exA.get(o.id)||{}).taxaMaquina),retorno:dataOk(o.retorno)?o.retorno:null,obs:txt(o.obs)});
   });
   const gm=new Map();
   d.despesas.forEach(o=>{
@@ -733,10 +1108,26 @@ async function importar(file){
     if(!o||!idOk(o.id)||!dataOk(o.data)||!(v>0)){pulou++;return}
     gm.set(o.id,{id:o.id,data:o.data,categoria:txt(o.categoria).trim()||'Outros',descricao:txt(o.descricao).trim(),valor:v});
   });
-  const cs=[...cm.values()],as=[...am.values()],gs=[...gm.values()],total=cs.length+as.length+gs.length;
+  const pm=new Map(),estIni=new Map(),exP=new Set(S.produtos.map(x=>x.id));
+  d.produtos.forEach(o=>{
+    const cont=r3(o&&o.conteudo);
+    if(!o||!idOk(o.id)||!txt(o.nome).trim()||!(cont>0)){pulou++;return}
+    pm.set(o.id,{id:o.id,nome:txt(o.nome).trim(),categoria:txt(o.categoria).trim()||'Outros',unidade:UN.includes(o.unidade)?o.unidade:'g',conteudo:cont,preco:din(o.preco),uso_aplicacao:r3(o.uso),
+      perda:Math.min(100,Math.max(0,Math.round((Number(o.perda)||0)*100)/100)),minimo:r3(o.minimo),fornecedor:txt(o.fornecedor).trim(),validade:dataOk(o.validade)?o.validade:null,obs:txt(o.obs)});
+    if(!exP.has(o.id)&&Number(o.estoque)>0)estIni.set(o.id,r4(o.estoque));
+  });
+  const fm=new Map(),pares=new Map();
+  d.fichas.forEach(o=>{
+    const q=r3(o&&o.quantidade);
+    if(!o||!idOk(o.id)||!idOk(o.produtoId)||!(pm.has(o.produtoId)||exP.has(o.produtoId))||!txt(o.procedimento).trim()||!(q>0)){pulou++;return}
+    const proc=txt(o.procedimento).trim(),par=proc+'|'+o.produtoId,ex=S.fichas.find(x=>x.procedimento===proc&&x.produtoId===o.produtoId),id=pares.get(par)||(ex?ex.id:o.id);
+    pares.set(par,id);fm.set(id,{id,procedimento:proc,produto_id:o.produtoId,quantidade:q});
+  });
+  const cs=[...cm.values()],ps=[...pm.values()],as=[...am.values()],fs=[...fm.values()],gs=[...gm.values()],total=cs.length+ps.length+as.length+fs.length+gs.length+estIni.size;
   S.busy=true;let ok=0,parou=false;
   try{
-    for(const [t,l] of [['clientes',cs],['atendimentos',as],['despesas',gs]]){
+    const ini=[...estIni.entries()].map(([pid,q])=>({id:novoId(),produto_id:pid,data:hoje(),tipo:'entrada',quantidade:q,motivo:'Estoque inicial (importação)'}));
+    for(const [t,l] of [['clientes',cs],['produtos',ps],['atendimentos',as],['ficha_procedimento',fs],['despesas',gs],['movimentacoes_estoque',ini]]){
       for(let i=0;i<l.length;i+=200){
         const r=await sb.from(t).upsert(l.slice(i,i+200),{onConflict:'id'});
         if(r.error)throw r.error;
@@ -746,7 +1137,7 @@ async function importar(file){
   }catch(e){parou=true;falha(e)}
   S.busy=false;S.prog='';
   await recarregar();render();
-  if(!parou)toast(`Importado: ${cs.length} clientes, ${as.length} atendimentos e ${gs.length} despesas${pulou?` (${pulou} ${pulou===1?'linha ignorada':'linhas ignoradas'} por dados inválidos)`:''}.`);
+  if(!parou)toast(`Importado: ${cs.length} clientes, ${as.length} atendimentos, ${gs.length} despesas${ps.length?` e ${ps.length} produtos`:''}${pulou?` (${pulou} ${pulou===1?'linha ignorada':'linhas ignoradas'} por dados inválidos)`:''}.`);
 }
 
 /* ---------- Janelas e avisos ---------- */
@@ -762,6 +1153,7 @@ function toast(m,erro){
 }
 function falha(e){
   const c=e&&(e.code||e.status),m=String(e&&e.message||'');
+  if(e&&e.aviso){toast(e.aviso,true);return}
   toast(c==='42501'||c===401||c==='401'||/jwt|row-level|permission/i.test(m)?'Você não tem permissão ou a sessão expirou. Saia e entre de novo.':
     /fetch|network|failed/i.test(m)?'Sem conexão com a internet. Tente de novo.':
     c==='23503'?'Esta cliente não existe mais. Atualize a página.':
@@ -778,7 +1170,7 @@ document.addEventListener('click',e=>{
     novaCliente:()=>formCliente(),editCliente:()=>formCliente(id),delCliente:()=>pedirDelCliente(id),
     novoAtend:()=>formAtend(null,a.dataset.cliente),editAtend:()=>formAtend(id),delAtend:()=>pedirDelAtend(id),
     abrir:()=>{S.view='clientes';S.sel=id;render();window.scrollTo(0,0)},
-    relAba:()=>{S.relAba=id;render()},mais:()=>{S.lim[id]=(S.lim[id]||100)+200;render()},voltar:()=>{S.sel=null;render()},exportJson,exportCsv,exportXlsx,novaDesp:()=>formDesp(),editDesp:()=>formDesp(id),delDesp:()=>pedirDelDesp(id),fechar:()=>$('dlg').close(),
+    relAba:()=>{S.relAba=id;render()},mais:()=>{S.lim[id]=(S.lim[id]||100)+200;render()},voltar:()=>{S.sel=null;render()},estAba:()=>{S.estAba=id;render()},novoProd:()=>formProd(),editProd:()=>formProd(id),delProd:()=>pedirDelProd(id),movProd:()=>formMov(id),histProd:()=>histProd(id),novaFicha:()=>formFicha(id),editFicha:()=>formFicha(null,id),delFicha:()=>pedirDelFicha(id),exportJson,exportCsv,exportXlsx,novaDesp:()=>formDesp(),editDesp:()=>formDesp(id),delDesp:()=>pedirDelDesp(id),fechar:()=>$('dlg').close(),
     recarregar:()=>{S.erro='';render();recarregar()},
     sair:async()=>{try{await sb.auth.signOut()}catch(_){}}
   }[a.dataset.act];
@@ -789,7 +1181,10 @@ document.addEventListener('keydown',e=>{
 });
 document.addEventListener('input',e=>{
   if(e.target.id==='busca'){S.busca=e.target.value;$('lista').innerHTML=itensClientes()}
-  else if(['a-val','a-prod','a-taxa'].includes(e.target.id))atualizaParc();
+  else if(e.target.id==='estBusca'){S.estBusca=e.target.value;$('lista-est').innerHTML=itensProdutos()}
+  else if(['p-cont','p-preco','p-uso','p-perda'].includes(e.target.id))previaProd();
+  else if(e.target.id==='f-qtd')previaFicha(false);
+  else if(['a-val','a-prod','a-taxa'].includes(e.target.id)){if(e.target.id==='a-prod')e.target.dataset.auto='';atualizaParc()}
 });
 document.addEventListener('change',e=>{
   const t=e.target;
@@ -797,6 +1192,11 @@ document.addEventListener('change',e=>{
   else if(t.id==='mesRel'){S.mesRel=t.value;render()}
   else if(t.id==='mesDesp'){S.mesDesp=t.value;S.lim.gasto=100;render()}
   else if(t.id==='a-pag'||t.id==='a-parc')atualizaParc();
+  else if(t.id==='a-proc')atualizaEstq(true);
+  else if(t.id==='estCat'){S.estCat=t.value;render()}
+  else if(t.id==='p-un')previaProd();
+  else if(t.id==='f-prod')previaFicha(true);
+  else if(t.id==='m-tipo'){$('m-qtd-l').textContent=t.value==='ajuste'?'Quantidade real em estoque agora (embalagens) *':'Quantidade (embalagens) *'}
   else if(t.id==='arquivo'){const f=t.files&&t.files[0];t.value='';importar(f)}
 });
 $('dlg').addEventListener('click',e=>{if(e.target===$('dlg'))$('dlg').close()});
@@ -811,6 +1211,9 @@ $('dlg').addEventListener('submit',async e=>{
     if(k==='cliente')await salvarCliente(id,dados);
     else if(k==='atend')await salvarAtend(id,dados);
     else if(k==='desp')await salvarDesp(id,dados);
+    else if(k==='prod')await salvarProd(id,dados);
+    else if(k==='mov')await salvarMov(id,dados);
+    else if(k==='ficha')await salvarFicha(id,dados);
     else if(k==='confirmar')await S.conf();
     $('dlg').close();
   }catch(err){falha(err)}
