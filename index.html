@@ -906,9 +906,11 @@ async function plRpc(nome,args,msg,reabre){
 
 /* ---------- Mensagens (textos do WhatsApp) ---------- */
 const AMOSTRA={nome:'Maria',nome_completo:'Maria Souza',data:'12/12/2026',hora:'14:30',procedimento:'Mechas',profissional:'Fabiana',valor:'R$ 350,00'};
+const cfgTaxa=()=>{const g=i=>{const e=$(i);return e?e.value.trim():null},m=msgsSalvas(),n=g('mg-taxa-valor'),x=g('mg-pix');return {taxa:fmtTaxa(n===null?m._taxa:n),pix:String(x===null?(m._pix||''):x).trim()}};
+const fmtTaxa=v=>{const n=Number(String(v==null?'':v).replace(/[^\d,.]/g,'').replace(',','.'));return n>0?brl(n):''};
 function previaMsg(chave,texto){
   const salvo=S.msgs;S.msgs=Object.assign({},msgsSalvas(),{[chave]:texto});
-  try{return montaMsg(chave,Object.assign({},AMOSTRA))}finally{S.msgs=salvo}
+  try{const c=cfgTaxa();return montaMsg(chave,Object.assign({},AMOSTRA,{taxa:c.taxa||'R$ 30,00',pix:c.pix||'seuemail@exemplo.com'}))}finally{S.msgs=salvo}
 }
 function telaMensagens(){
   const pode=NV('config')==='escrita',sv=msgsSalvas();
@@ -918,12 +920,17 @@ function telaMensagens(){
     <label for="mg-${k}" class="sr-only">Texto: ${esc(m.t)}</label><textarea id="mg-${k}" name="${k}" class="msg-ta" data-k="${k}" rows="8" maxlength="1000" ${pode?'':'disabled'}>${esc(txt)}</textarea>
     ${pode?`<div class="msg-vars"><span class="muted">Inserir:</span>${m.v.map(v=>`<button type="button" class="btn ghost sm" data-act="insVar" data-id="${k}" data-v="${v}">${esc(VAR_ROT[v])}</button>`).join('')}<button type="button" class="btn ghost sm" data-act="padraoMsg" data-id="${k}">Restaurar original</button></div>`:''}
     <div class="msg-prev"><span class="muted">Como a cliente vai ler (exemplo)</span><div class="wa-bolha" id="pv-${k}">${esc(previaMsg(k,txt))}</div></div></div>`};
+  const cfg=`<div class="panel msg-card"><b>Taxa de agendamento e Pix</b><p class="muted" style="margin:2px 0 8px">Usados na mensagem de taxa de agendamento ({taxa} e {pix}).</p>
+    <label for="mg-taxa-valor">Valor da taxa (R$)</label><input id="mg-taxa-valor" name="taxa_valor" inputmode="decimal" maxlength="12" placeholder="30,00" value="${esc(sv._taxa||'')}" ${pode?'':'disabled'}>
+    <label for="mg-pix">Chave Pix</label><input id="mg-pix" name="pix_chave" maxlength="120" placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória" autocomplete="off" value="${esc(sv._pix||'')}" ${pode?'':'disabled'}></div>`;
   return `${nota}<p class="muted" style="max-width:640px">Escreva do seu jeito. Os campos entre chaves, como <b>{nome}</b>, são trocados pelos dados da cliente na hora de enviar. Linhas com horário ou profissional em branco somem sozinhas.</p>
-  <form data-form="mensagens" class="msg-grid">${Object.keys(MSG_DEF).map(card).join('')}<p class="erro" id="a-erro" role="alert"></p>${pode?'<div class="acts"><button class="btn">Salvar mensagens</button></div>':'<p class="muted">Só quem administra o salão altera os textos.</p>'}</form>`;
+  <form data-form="mensagens" class="msg-grid">${cfg}${Object.keys(MSG_DEF).map(card).join('')}<p class="erro" id="a-erro" role="alert"></p>${pode?'<div class="acts"><button class="btn">Salvar mensagens</button></div>':'<p class="muted">Só quem administra o salão altera os textos.</p>'}</form>`;
 }
 async function salvarMensagens(d){
   const m={};
   Object.keys(MSG_DEF).forEach(k=>{const t=String(d[k]||'').replace(/\r/g,'').trim();if(t&&t!==MSG_DEF[k].d)m[k]=t.slice(0,1000)});
+  const tx=String(d.taxa_valor||'').replace(/[^\d,.]/g,'').slice(0,12),px=String(d.pix_chave||'').trim().slice(0,120);
+  if(tx)m._taxa=tx;if(px)m._pix=px;
   if(S.legado){LS.set('salao_mensagens',JSON.stringify(m));S.msgs=null;return 'local'}
   const r=await sb.from('tenants').update({mensagens:m}).eq('id',S.ctx.tenant.id);
   if(r.error){LS.set('salao_mensagens',JSON.stringify(m));S.msgs=null;S.msgsLocal=true;return 'local'}
@@ -996,10 +1003,12 @@ const MSG_DEF={
     d:'\u{1F389} Parabéns, {nome}! \u{1F495}\n\nA equipe do {salao} deseja um dia muito especial e um novo ciclo cheio de beleza e alegria! \u{1F337}'},
   agradecimento:{t:'Agradecimento',q:'Enviado depois do atendimento, pelo botão Agradecer.',v:['nome','nome_completo','salao','procedimento','data','profissional'],
     d:'Olá, {nome}! \u{1F495}\n\nFoi um prazer cuidar de você ({procedimento}) no {salao}! Qualquer dúvida sobre os cuidados em casa, é só me chamar. Até a próxima! \u{1F337}'},
+  taxa:{t:'Taxa de agendamento (Pix)',q:'Enviado pela Agenda, no botão Taxa Pix, para garantir o horário.',v:['nome','nome_completo','salao','data','hora','procedimento','profissional','taxa','pix'],
+    d:'Olá, {nome}! \u{1F495}\n\nPara confirmar o seu horário no {salao}, pedimos uma taxa de agendamento de {taxa}, que é descontada do valor do atendimento.\n\n\u{1F4C5} Data: {data}\n⏰ Horário: {hora}\n\u{1F487}‍♀️ Procedimento: {procedimento}\n\n\u{1F4B8} Chave Pix: {pix}\n\nDepois de pagar, é só enviar o comprovante por aqui. Obrigada! \u{1F337}'},
   cobranca:{t:'Cobrança (a receber)',q:'Enviado pelo botão Cobrar, nos valores a receber.',v:['nome','nome_completo','salao','valor','procedimento','data'],
     d:'Olá, {nome}! Tudo bem? \u{1F495}\n\nPassando para lembrar do valor de {valor} referente a {procedimento} do dia {data}. Quando puder, é só me avisar por aqui. Obrigada! \u{1F337}\n{salao}'}
 };
-const VAR_ROT={nome:'Primeiro nome',nome_completo:'Nome completo',salao:'Nome do salão',data:'Data',hora:'Horário',procedimento:'Procedimento',profissional:'Profissional',valor:'Valor'};
+const VAR_ROT={nome:'Primeiro nome',nome_completo:'Nome completo',salao:'Nome do salão',data:'Data',hora:'Horário',procedimento:'Procedimento',profissional:'Profissional',valor:'Valor',taxa:'Valor da taxa',pix:'Chave Pix'};
 const salaoNome=()=>(S.ctx&&S.ctx.tenant&&S.ctx.tenant.nome)||SALAO;
 function msgsSalvas(){
   if(S.msgs)return S.msgs;
@@ -1007,10 +1016,10 @@ function msgsSalvas(){
 }
 function montaMsg(chave,v){
   const t=(msgsSalvas()[chave]||'').trim()||MSG_DEF[chave].d;
-  const val=Object.assign({salao:salaoNome()},v);
+  const _m=msgsSalvas(),val=Object.assign({salao:salaoNome(),taxa:fmtTaxa(_m._taxa),pix:String(_m._pix||'').trim()},v);
   const L=String(t).replace(/\r/g,'').split('\n').filter(l=>{
     const m=l.match(/\{(\w+)\}/g);
-    return !m||m.every(x=>{const k=x.slice(1,-1);return !(k in val)||String(val[k]||'')!==''||!(k in {hora:1,profissional:1,procedimento:1,data:1,valor:1})});
+    return !m||m.every(x=>{const k=x.slice(1,-1);return !(k in val)||String(val[k]||'')!==''||!(k in {hora:1,profissional:1,procedimento:1,data:1,valor:1,taxa:1,pix:1})});
   });
   return L.join('\n').replace(/\{(\w+)\}/g,(x,k)=>k in val?String(val[k]||''):x).replace(/\n{3,}/g,'\n\n').trim();
 }
@@ -1021,6 +1030,12 @@ function btnLembrete(a){
   if(tel.length<10){const m=tel?'telefone sem DDD':'cliente sem telefone';return `<button class="btn ghost sm" disabled title="${m==='telefone sem DDD'?'O telefone da cliente está sem DDD. Edite o cadastro dela.':'Esta cliente não tem telefone cadastrado'}">Lembrete WhatsApp</button><div class="muted" style="font-size:12px">${m}</div>`}
   const prox=String(a.data)>=hoje(),env=enviados()[a.id]?'<span class="tag ok" title="Você abriu o WhatsApp para esta cliente">Enviado</span> ':'';
   return env+`<a class="btn sm wa-btn ${prox?'':'ghost'}" data-lem="${esc(a.id)}" href="${esc(zap(c.telefone)+'?text='+encodeURIComponent(msgLembrete(a)))}" target="_blank" rel="noopener" title="Abre o WhatsApp com a mensagem pronta; você só aperta Enviar">Lembrete WhatsApp</a>`;
+}
+function btnTaxa(a){
+  const m=msgsSalvas(),c=cli(a.clienteId),tel=c?String(c.telefone||'').replace(/\D/g,'').replace(/^0+/,''):'';
+  if(!m._pix||tel.length<10||String(a.data)<hoje())return '';
+  const msg=montaMsg('taxa',Object.assign(vCli(c),{data:fd(a.data),hora:a.hora||'',procedimento:a.procedimento||'',profissional:a.profissional||''}));
+  return `<a class="btn ghost sm wa-btn" href="${esc(zap(c.telefone)+'?text='+encodeURIComponent(msg))}" target="_blank" rel="noopener" title="Abre o WhatsApp com a taxa de agendamento e a chave Pix">Taxa Pix</a>`;
 }
 function itemAtend(a,mostra,mes){
   const c=mostra?cli(a.clienteId):null;
@@ -1391,7 +1406,7 @@ const telOk=c=>!!c&&String(c.telefone||'').replace(/\D/g,'').replace(/^0+/,'').l
 const primeiro=n=>String(n||'').trim().split(/\s+/)[0]||'';
 const msgAniv=c=>montaMsg('aniversario',vCli(c));
 const msgSaudade=c=>montaMsg('retorno',vCli(c));
-if(window.__TESTE__)window.__t={msgAniv,msgSaudade,msgLembrete,msgAgradece,msgCobranca};
+if(window.__TESTE__)window.__t={montaMsg,msgAniv,msgSaudade,msgLembrete,msgAgradece,msgCobranca};
 const linkZap=(c,m)=>zap(c.telefone)+'?text='+encodeURIComponent(m);
 function sumidas(){
   const lim=addDia(hoje(),-60);
@@ -1400,7 +1415,7 @@ function sumidas(){
 function linhaAg(a){
   const c=cli(a.clienteId)||{nome:'(cliente removida)'};
   return `<div class="item"><div class="side-val" style="min-width:56px">${esc(a.hora||'—')}</div>${avatar(c.nome)}<div class="grow"><div class="t">${esc(c.nome)}</div><div class="muted">${esc(a.procedimento)}${a.profissional?' · '+esc(a.profissional):''}</div></div>
-  <div class="item-acts">${btnLembrete(a)}<button class="btn ghost sm" data-act="editAtend" data-id="${esc(a.id)}">Editar</button></div></div>`;
+  <div class="item-acts">${btnLembrete(a)}${btnTaxa(a)}<button class="btn ghost sm" data-act="editAtend" data-id="${esc(a.id)}">Editar</button></div></div>`;
 }
 function telaInicio(){
   const h=hoje(),mes=h.slice(0,7),mm=h.slice(5,7);
@@ -1922,6 +1937,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('keydown',e=>{
   if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.item.click')){e.preventDefault();e.target.click()}
 });
+document.addEventListener('input',e=>{if(e.target.id==='mg-pix'||e.target.id==='mg-taxa-valor'){document.querySelectorAll('.msg-ta').forEach(t=>{const pv=$('pv-'+t.dataset.k);if(pv)pv.textContent=previaMsg(t.dataset.k,t.value)})}});
 document.addEventListener('input',e=>{if(e.target.classList&&e.target.classList.contains('msg-ta')){const k=e.target.dataset.k,pv=$('pv-'+k);if(pv)pv.textContent=previaMsg(k,e.target.value)}});
 document.addEventListener('input',e=>{if(e.target.id==='pl-q'){S.pl.q=e.target.value;const l=$('pl-lista');if(l)l.innerHTML=plLista()}});
 document.addEventListener('change',e=>{if(e.target.id==='pl-st'){S.pl.st=e.target.value;const l=$('pl-lista');if(l)l.innerHTML=plLista()}});
