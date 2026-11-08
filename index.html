@@ -159,6 +159,11 @@ body:not(.logado) main.wrap{max-width:none;padding:0}
 .entrada-marca h1 span{display:block;color:var(--gold)}
 .entrada-marca .tone{height:8px;max-width:340px;margin:6px 0}
 .entrada-marca p{margin:0;max-width:34ch;color:var(--side-muted);font-size:16px}
+.auth-links{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:16px;font-size:14px}
+.ok-msg{margin:0 0 14px;padding:10px 12px;border-radius:10px;background:var(--ok-bg,#e8f3ea);color:var(--ok-ink,#1f5a2e);font-size:14px}
+.faixa{margin:0 0 14px;padding:9px 12px;border-radius:10px;background:var(--gold-soft,#f7ecd6);color:var(--ink,#2a1722);font-size:13px}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 12px}
+.entrada.longo .login{align-self:start;padding:40px 0}
 .login{align-self:center;justify-self:center;width:min(400px,calc(100% - 40px));padding:32px 0}
 .login h2{margin-top:0;font-size:32px}
 .login .btn{width:100%;padding:12px 16px;margin-top:6px}
@@ -234,6 +239,44 @@ dialog h2{margin-top:0;font-size:28px}
   body.logado main.wrap{max-width:1120px;margin:0;padding-inline:40px;padding-block:34px 72px}
   body.logado #toast{left:252px}
 }
+
+/* ---- Acabamento profissional ---- */
+.salao-id{display:none}
+.tabs .grp{display:none}
+.stat{position:relative;overflow:hidden;border-color:var(--line);box-shadow:var(--shadow)}
+.stat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--gold);opacity:.85}
+.stat span{letter-spacing:.005em}
+.stat b{font-size:26px;white-space:nowrap}
+@media (max-width:480px){.stat b{font-size:22px}}
+.page-head{padding-bottom:14px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+.page-head h1{font-size:clamp(30px,4vw,38px);letter-spacing:-.005em}
+.faixa{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:99px;background:var(--amber-soft);color:var(--amber);font-size:12.5px;font-weight:600;margin:0 0 12px}
+.list,.card{border-color:var(--line);box-shadow:var(--shadow)}
+.item{transition:background .12s}
+.item.click:hover{background:var(--accent-soft)}
+.btn:focus-visible,.tabs button:focus-visible,.linkbtn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input,select,textarea{transition:border-color .12s,box-shadow .12s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+table{font-variant-numeric:tabular-nums}
+@media (min-width:860px){
+  body.logado .salao-id{display:flex;flex-direction:column;order:2;margin:0 10px 16px;padding:10px 12px;border-radius:10px;background:var(--side-hover);line-height:1.25}
+  body.logado .salao-id b{font-size:14px;color:var(--side-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  body.logado .salao-id span{font-size:12px;color:var(--side-muted)}
+  body.logado .tone{margin:10px 10px 14px}
+  body.logado .tabs .grp{display:block;margin:14px 12px 4px;font-size:12px;font-weight:600;color:var(--side-muted);opacity:.8}
+  body.logado .tabs .grp:first-child{margin-top:2px}
+}
+
+.logo-linha{display:flex;align-items:center;gap:16px;margin-bottom:6px}
+.logo-prev{width:88px;height:88px;border-radius:14px;border:1px dashed var(--line);display:grid;place-items:center;background:var(--bg);overflow:hidden;flex:none;text-align:center;font-size:12px}
+.logo-prev img{max-width:100%;max-height:100%;object-fit:contain}
+.salao-id img{width:30px;height:30px;border-radius:8px;object-fit:contain;background:#fff;flex:none}
+body.logado .salao-id{flex-direction:row;align-items:center;gap:10px}
+body.logado .salao-id div{display:flex;flex-direction:column;min-width:0}
+
+.segs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 16px}
+.segs .btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.bar select,.bar input[type=search],.bar input[type=date],.bar input[type=number]{min-width:0}
 </style>
 </head>
 <body>
@@ -241,6 +284,7 @@ dialog h2{margin-top:0;font-size:28px}
   <div class="wrap">
     <div class="brand-row"><span class="brand"><span class="mono" aria-hidden="true">A</span><span class="brand-name">Agendio</span></span><span class="sync" id="sync" role="status"></span></div>
     <div class="tone" aria-hidden="true"></div>
+    <div class="salao-id" id="salaoId" hidden></div>
     <nav class="tabs" id="tabs" aria-label="Seções" hidden></nav>
   </div>
 </header>
@@ -264,9 +308,20 @@ let sb=null;
 const PROCS=['Alisamento','Mechas','Cronograma capilar','Corte feminino','Coloração','Matização','Tonalização','Esfumado de raiz','Tratamento'];
 const SALAO='Fabiana Martins Beauty Hair';
 const PROF='Fabiana';
+function profPadrao(){
+  const e=S.ctx&&S.ctx.eu;if(e&&e.profissional_nome)return e.profissional_nome;
+  if(S.ctx&&S.ctx.role==='profissional')return '';
+  const f={};S.atend.forEach(a=>{if(a.profissional)f[a.profissional]=(f[a.profissional]||0)+1});
+  const t=Object.keys(f).sort((a,b)=>f[b]-f[a])[0];
+  return t||String((S.ctx&&S.ctx.tenant&&S.ctx.tenant.proprietario_nome)||'').split(/\s+/)[0]||PROF;
+}
+function listaProfs(){
+  if(S.ctx&&S.ctx.role==='profissional')return [profPadrao()].filter(Boolean);
+  return [...new Set([profPadrao(),...((S.ctx&&S.ctx.profissionais)||[]),...S.atend.map(a=>a.profissional)].filter(Boolean))];
+}
 const PARC=n=>Math.min(12,Math.max(1,parseInt(n,10)||1));
 
-const S={clientes:[],atend:[],view:'inicio',agSem:0,sel:null,busca:'',mesFiltro:'',mesRel:'',relAba:'fat',lim:{at:100,desp:100,gasto:100},gastos:[],produtos:[],fichas:[],movs:[],semEst:false,estAba:'prod',estCat:'',estBusca:'',mesDesp:hoje().slice(0,7),semDesp:false,
+const S={pl:{aba:'painel',ok:false,q:'',st:'',saloes:[],cresc:[],ind:null,pags:[],logs:[],planos:[],lim:60},eq:{ok:false,membros:[],convites:[]},salao:null,logoNovo:undefined,auth:'entrar',ctx:null,ctxPronto:false,ctxErro:false,suspenso:false,legado:false,recuperando:false,aviso:'',clientes:[],atend:[],view:'inicio',agSem:0,sel:null,busca:'',mesFiltro:'',mesRel:'',relAba:'fat',lim:{at:100,desp:100,gasto:100},gastos:[],produtos:[],fichas:[],movs:[],semEst:false,estAba:'prod',estCat:'',estBusca:'',mesDesp:hoje().slice(0,7),semDesp:false,
   pronto:false,semConfig:false,semLib:false,sessao:null,got:false,erro:'',busy:false,prog:'',conf:null,
   iniciado:false,canal:null,sig:''};
 const cli=id=>S.clientes.find(c=>c.id===id);
@@ -310,7 +365,8 @@ async function todos(t,filtro){
   }
 }
 async function recarregar(){
-  if(!sb||!S.sessao)return;
+  if(!sb||!S.sessao||!temSalao())return;
+  if(S.got&&!S.legado){const a=JSON.stringify(S.ctx);await carregarCtx();if(a!==JSON.stringify(S.ctx)){if(!temSalao()){parar();S.iniciado=true;render();return}render()}}
   const tinhaErro=!!S.erro;
   try{
     let semD=false,semE=false;
@@ -326,14 +382,18 @@ async function recarregar(){
 }
 let tmr;
 function agendar(){clearTimeout(tmr);tmr=setTimeout(recarregar,500)}
-function iniciar(){
+async function iniciar(){
   if(S.iniciado||!sb||!S.sessao)return;
   S.iniciado=true;
+  await carregarCtx();
+  if(!temSalao()&&ehAdmin()){S.view='plataforma'}
+  render();
+  if(!temSalao()){if(ehAdmin())carregarPlataforma();return}
   recarregar();
   try{S.canal=sb.channel('salao-mudancas').on('postgres_changes',{event:'*',schema:'public'},agendar).subscribe()}catch(_){}
 }
 function parar(){
-  S.iniciado=false;S.got=false;S.clientes=[];S.atend=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';
+  S.iniciado=false;S.got=false;S.clientes=[];S.atend=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;
   if(S.canal&&sb){try{sb.removeChannel(S.canal)}catch(_){}}
   S.canal=null;
 }
@@ -349,7 +409,10 @@ const ICONES={
   estoque:IC('<path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5 12 12l8.5-4.5M12 12v9"/>'),
   retornos:IC('<path d="M4 12a8 8 0 1 0 2.6-5.9"/><path d="M4 4v4.5h4.5"/>'),
   relatorios:IC('<path d="M4 20V4M4 20h16"/><path d="M8 16v-4M12 16V8M16 16v-6"/>'),
-  backup:IC('<path d="M12 4v11m0 0-4-4m4 4 4-4"/><path d="M5 19h14"/>')
+  backup:IC('<path d="M12 4v11m0 0-4-4m4 4 4-4"/><path d="M5 19h14"/>'),
+  plataforma:IC('<path d="M12 3 4 6.5v5.3c0 4.4 3.1 7.4 8 9.2 4.9-1.8 8-4.8 8-9.2V6.5z"/><path d="m9 12 2.2 2.2L15.5 10"/>'),
+  equipe:IC('<circle cx="9" cy="8.5" r="3"/><path d="M3.5 19c.5-3 2.6-4.6 5.5-4.6s5 1.6 5.5 4.6"/><path d="M17 8v6M14 11h6"/>'),
+  salao:IC('<path d="M4 10 5.5 5h13L20 10"/><path d="M5 10v9h14v-9"/><path d="M9 19v-5h6v5"/>')
 };
 const TONS_AV=['#1d1411','#3a2418','#5b3a22','#7e5532','#a57a48','#c99f66','#e0bf86','#efd8ab','#f6e8cd'];
 function avatar(nome){
@@ -363,9 +426,10 @@ function cabecalho(){
   const n=(k,a,b)=>`${k} ${k===1?a:b}`;
   const T={inicio:['Início','Resumo do mês e do dia'],agenda:['Agenda','Semana, horários e lembretes de amanhã'],clientes:['Clientes',n(S.clientes.length,'cadastrada','cadastradas')],atendimentos:['Atendimentos',n(S.atend.length,'registro','registros')+' e lembretes de WhatsApp'],
     despesas:['Despesas','Contas do salão: aluguel, luz, água, anúncios…'],estoque:['Estoque','Produtos, fichas técnicas e custo por atendimento'],retornos:['Retornos','Clientes para chamar de volta'],
-    relatorios:['Relatórios','Faturamento, despesas e resultado'],backup:['Backup','Planilha Excel e cópia de segurança']}[S.view]||['',''];
+    relatorios:['Relatórios','Faturamento, despesas e resultado'],equipe:['Equipe','Quem usa o sistema e o que cada pessoa pode ver'],plataforma:['Plataforma','Salões, assinaturas e pagamentos do Agendio'],salao:['Salão','Dados, logotipo e cor da sua marca'],backup:['Backup','Planilha Excel e cópia de segurança']}[S.view]||['',''];
   let d=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});d=d.charAt(0).toUpperCase()+d.slice(1);
-  return `<div class="page-head"><div><h1>${esc(T[0])}</h1><p class="muted">${esc(T[1])}</p></div><div class="muted hoje">${esc(d)}</div></div>`;
+  const tn=S.ctx&&S.ctx.tenant,fx=tn&&tn.status==='teste'&&tn.vencimento?`<p class="faixa">${tn.vencimento<hoje()?'Seu período de teste terminou em ':'Período de teste grátis até '}${esc(fd(tn.vencimento))}.</p>`:'';
+  return fx+`<div class="page-head"><div><h1>${esc(T[0])}</h1><p class="muted">${esc(T[1])}</p></div><div class="muted hoje">${esc(d)}</div></div>`;
 }
 function render(){
   renderTop();
@@ -377,11 +441,17 @@ function render(){
   if(fid){const e=$(fid);if(e){e.focus();if(pos!=null&&e.setSelectionRange){try{e.setSelectionRange(pos,pos)}catch(_){}}}}
 }
 function renderTop(){
-  const logado=!!S.sessao;
+  const logado=!!S.sessao&&!S.recuperando&&S.ctxPronto&&temAcesso();
   document.body.classList.toggle('logado',logado);
-  const t=[['inicio','Início'],['clientes','Clientes'],['agenda','Agenda'],['atendimentos','Atendimentos'],['despesas','Despesas'],['estoque','Estoque'],['retornos','Retornos'],['relatorios','Relatórios'],['backup','Backup']];
+  const t=[['inicio','Início'],['agenda','Agenda'],['clientes','Clientes'],['atendimentos','Atendimentos'],['retornos','Retornos'],['despesas','Despesas'],['estoque','Estoque'],['relatorios','Relatórios'],['equipe','Equipe'],['salao','Salão'],['plataforma','Plataforma'],['backup','Backup']];
   $('tabs').hidden=!logado;
-  $('tabs').innerHTML=logado?t.map(([k,l])=>`<button data-go="${k}" ${S.view===k?'aria-current="page"':''}>${ICONES[k]}<span>${l}</span></button>`).join(''):'';
+  $('tabs').innerHTML=logado?t.filter(([k])=>podeVer(k)).map(([k,l],i,a)=>{
+    const GEST=['despesas','estoque','relatorios','equipe','salao','plataforma','backup'];
+    const pr=a.find(x=>GEST.includes(x[0])),g=(k==='inicio'||(pr&&k===pr[0]))?`<span class="grp" aria-hidden="true">${k==='inicio'?'Dia a dia':'Gestão'}</span>`:'';
+    return g+`<button data-go="${k}" ${S.view===k?'aria-current="page"':''}>${ICONES[k]}<span>${l}</span></button>`}).join(''):'';
+  const sid=$('salaoId'),tn=S.ctx&&S.ctx.tenant;
+  sid.hidden=!(logado&&tn);
+  if(logado&&tn){const R={proprietario:'Proprietário(a)',gerente:'Gerente',recepcionista:'Recepcionista',profissional:'Profissional'};sid.innerHTML=(tn.logo_url?`<img src="${esc(tn.logo_url)}" alt="">`:'')+`<div><b>${esc(tn.nome)}</b><span>${esc(R[S.ctx.role]||'')}</span></div>`}
   let st='';
   if(!S.pronto)st='Conectando…';
   else if(logado)st=S.erro?'<span class="dot off"></span>Erro ao carregar':'<span class="dot on"></span>Sincronizado';
@@ -394,6 +464,14 @@ function conteudo(){
   if(S.semConfig)return aviso('Falta configurar a conexão','Abra o arquivo config.js, cole o endereço e a chave pública do Supabase e publique de novo.');
   if(S.semLib)return aviso('Não foi possível carregar o sistema','Verifique a conexão com a internet e recarregue a página.');
   if(!S.sessao)return telaLogin();
+  if(S.recuperando)return telaNovaSenha();
+  if(!S.ctxPronto)return '<p class="muted">Carregando…</p>';
+  if(S.ctxErro)return telaCtxErro();
+  if(!temSalao()){
+    if(S.suspenso)return telaSuspenso();
+    return ehAdmin()?headPlataforma()+telaPlataforma():telaCadastroSalao();
+  }
+  if(!podeVer(S.view))S.view='inicio';
   if(S.erro&&!S.got)return aviso('Não foi possível carregar os dados','Verifique a conexão com a internet.','<div class="row-actions"><button class="btn" data-act="recarregar">Tentar de novo</button></div>');
   if(!S.got)return '<p class="muted">Carregando dados…</p>';
   const v=S.view;
@@ -405,14 +483,356 @@ function conteudo(){
   if(v==='estoque')return telaEstoque();
   if(v==='retornos')return telaRet()+blocoSumidas();
   if(v==='relatorios')return telaRel();
+  if(v==='plataforma'&&ehAdmin())return telaPlataforma();
+  if(v==='equipe')return telaEquipe();
+  if(v==='salao')return telaSalao();
   return telaBackup();
 }
+const NV=k=>S.ctx?((S.ctx.permissoes&&S.ctx.permissoes[k])||'nenhum'):'escrita';
+const ROTAS={equipe:'equipe',salao:'config',clientes:'clientes',agenda:'agenda',atendimentos:'agenda',retornos:'clientes',despesas:'financeiro',relatorios:'financeiro',estoque:'estoque',backup:'config'};
+const podeVer=v=>v==='plataforma'?ehAdmin():(!temSalao()&&ehAdmin())?false:(S.legado&&(v==='equipe'||v==='salao'))?false:(!ROTAS[v]||NV(ROTAS[v])!=='nenhum');
+const temSalao=()=>S.legado||!!(S.ctx&&S.ctx.tenant);
+const ehAdmin=()=>!!(S.ctx&&S.ctx.admin);
+const temAcesso=()=>temSalao()||ehAdmin();
+async function carregarCtx(){
+  if(typeof sb.rpc!=='function'){S.legado=true;S.ctx=null;S.ctxPronto=true;return}
+  try{
+    const r=await sb.rpc('meu_contexto');
+    if(r.error){
+      if(/PGRST202|42883|could not find the function/i.test(String(r.error.code||'')+' '+String(r.error.message||''))){S.legado=true;S.ctx=null;S.ctxErro=false;S.ctxPronto=true;return}
+      throw r.error;
+    }
+    S.legado=false;S.ctx=r.data;S.ctxErro=false;S.suspenso=false;
+    if(!S.ctx.tenant&&!S.ctx.admin){
+      const u=await sb.from('tenant_users').select('tenant_id').eq('user_id',S.sessao.user.id);
+      S.suspenso=!!(u.data&&u.data.length);
+      if(!S.suspenso){
+        const c=await sb.rpc('aceitar_convite');
+        if(!c.error){const r2=await sb.rpc('meu_contexto');if(!r2.error)S.ctx=r2.data}
+      }
+    }
+    aplicaTema();
+  }catch(_){S.ctxErro=true}
+  S.ctxPronto=true;
+}
+function hexRgb(h){const m=/^#([0-9a-f]{6})$/i.exec(h||'');if(!m)return null;const n=parseInt(m[1],16);return [n>>16&255,n>>8&255,n&255]}
+const lumin=c=>{const f=v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)};return .2126*f(c[0])+.7152*f(c[1])+.0722*f(c[2])};
+const contraste=(a,b)=>{const x=lumin(a),y=lumin(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
+const mixC=(a,t,p)=>a.map((v,i)=>Math.round(v+(t[i]-v)*p));
+const rgbCss=c=>'rgb('+c.join(',')+')';
+function aplicaTema(){
+  const st=document.documentElement.style,ks=['--accent','--accent-hover','--accent-ink','--accent-soft'];
+  const c=S.ctx&&S.ctx.tenant&&S.ctx.tenant.cor_principal,base=hexRgb(c);
+  if(!base||c.toLowerCase()==='#9b2f58'){ks.forEach(k=>st.removeProperty(k));return}
+  const th=document.documentElement.dataset.theme;
+  const dark=th==='dark'||(th!=='light'&&window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches);
+  let acc=base,n=0;
+  if(dark){while(contraste(acc,[33,26,32])<4.5&&n++<30)acc=mixC(acc,[255,255,255],.08)}
+  else{while(contraste(acc,[255,255,255])<4.5&&n++<30)acc=mixC(acc,[0,0,0],.08)}
+  st.setProperty('--accent',rgbCss(acc));
+  st.setProperty('--accent-hover',rgbCss(mixC(acc,dark?[255,255,255]:[0,0,0],.15)));
+  st.setProperty('--accent-ink',dark?'#1b1118':'#ffffff');
+  st.setProperty('--accent-soft','color-mix(in srgb, '+rgbCss(acc)+' '+(dark?22:12)+'%, var(--surface))');
+}
+try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',aplicaTema)}catch(_){}
+function msgAuth(m,st){
+  m=String(m||'');
+  if(st===429||/rate limit|too many/i.test(m))return 'Muitas tentativas. Aguarde alguns minutos e tente de novo.';
+  if(/already registered|already been registered/i.test(m))return 'Este e-mail já tem cadastro. Entre ou recupere a senha.';
+  if(/password.*(least|short|weak)|weak password/i.test(m))return 'Escolha uma senha mais forte (8 caracteres ou mais).';
+  if(/signups? (not allowed|disabled)/i.test(m))return 'O cadastro de novas contas está desativado.';
+  if(/invalid.*email|email.*invalid|unable to validate email/i.test(m))return 'Confira o e-mail digitado.';
+  if(/same password|different from the old/i.test(m))return 'A nova senha precisa ser diferente da atual.';
+  if(/session|jwt|not authenticated|auth session missing/i.test(m))return 'O link expirou. Peça um novo em "Esqueci a senha".';
+  return 'Não foi possível concluir. Tente de novo.';
+}
+function telaMarca(longo,corpo){
+  return `<div class="entrada${longo?' longo':''}"><aside class="entrada-marca"><span class="mono" aria-hidden="true">A</span><h1>Agendio</h1><div class="tone" aria-hidden="true"></div><p>Clientes, atendimentos e estoque do salão em um só lugar.</p></aside><section class="login">${corpo}</section></div>`;
+}
+function telaNovaSenha(){
+  return telaMarca(false,`<h2>Nova senha</h2><p class="muted">Escolha a senha que você vai usar para entrar.</p>
+  <form data-form="novasenha"><label for="n-senha">Nova senha</label><input id="n-senha" name="senha" type="password" required minlength="8" autocomplete="new-password">
+  <label for="n-senha2">Repita a senha</label><input id="n-senha2" name="senha2" type="password" required minlength="8" autocomplete="new-password">
+  <p class="erro" id="a-erro" role="alert"></p><div class="acts"><button class="btn">Salvar senha</button></div></form>`);
+}
+function telaSuspenso(){
+  return telaMarca(false,`<h2>Acesso suspenso</h2><p class="muted">O acesso do seu salão ou o seu acesso está suspenso (assinatura pendente ou usuário desativado). Fale com o proprietário do salão ou com o suporte do Agendio.</p><div class="acts"><button class="btn ghost" data-act="sair">Sair</button></div>`);
+}
+function telaCtxErro(){
+  return telaMarca(false,`<h2>Não foi possível carregar</h2><p class="muted">Verifique a internet e tente de novo.</p><div class="acts"><button class="btn" data-act="tentarCtx">Tentar de novo</button><button class="btn ghost" data-act="sair">Sair</button></div>`);
+}
+function telaSemSalaoAdmin(){
+  return telaMarca(false,`<h2>Administrador da plataforma</h2><p class="muted">Este login é de administrador e não tem salão próprio. O painel da plataforma chega na Etapa 5.</p><div class="acts"><button class="btn ghost" data-act="sair">Sair</button></div>`);
+}
+function telaCadastroSalao(){
+  const em=(S.sessao&&S.sessao.user&&S.sessao.user.email)||'';
+  const f=(id,rot,extra)=>`<label for="s-${id}">${rot}</label><input id="s-${id}" name="${id}" ${extra||''}>`;
+  return telaMarca(true,`<h2>Cadastre o seu salão</h2><p class="muted">Você entra como proprietário(a), com ${esc(em)}. Leva um minuto e começa com teste grátis.</p>
+  <form data-form="salao">
+  ${f('nome','Nome do estabelecimento','required maxlength="120" autocomplete="organization"')}
+  ${f('razao_social','Razão social (opcional)','maxlength="160"')}
+  ${f('documento','CPF ou CNPJ (opcional)','inputmode="numeric" maxlength="18"')}
+  ${f('proprietario_nome','Seu nome','required maxlength="120" autocomplete="name"')}
+  <div class="g2"><div>${f('telefone','Telefone','type="tel" maxlength="20" autocomplete="tel"')}</div><div>${f('whatsapp','WhatsApp','type="tel" maxlength="20"')}</div></div>
+  <div class="g2"><div>${f('cep','CEP','inputmode="numeric" maxlength="9" autocomplete="postal-code"')}</div><div>${f('numero','Número','maxlength="12"')}</div></div>
+  ${f('logradouro','Rua','maxlength="160" autocomplete="address-line1"')}
+  ${f('complemento','Complemento','maxlength="80"')}
+  ${f('bairro','Bairro','maxlength="80"')}
+  <div class="g2"><div>${f('cidade','Cidade','maxlength="80"')}</div><div>${f('uf','UF','maxlength="2" autocapitalize="characters"')}</div></div>
+  <p class="erro" id="a-erro" role="alert"></p><div class="acts"><button class="btn">Criar meu salão</button><button type="button" class="btn ghost" data-act="sair">Sair</button></div></form>`);
+}
 function telaLogin(){
+  const m=S.auth;
+  if(m==='criar')return telaMarca(false,`<h2>Criar conta</h2><p class="muted">Depois de criar a conta, você cadastra o seu salão.</p>
+  <form data-form="criar"><label for="c-email">E-mail</label><input id="c-email" name="email" type="email" required autocomplete="username" autocapitalize="none">
+  <label for="c-senha">Senha (8 caracteres ou mais)</label><input id="c-senha" name="senha" type="password" required minlength="8" autocomplete="new-password">
+  <label for="c-senha2">Repita a senha</label><input id="c-senha2" name="senha2" type="password" required minlength="8" autocomplete="new-password">
+  <p class="erro" id="a-erro" role="alert"></p><div class="acts"><button class="btn">Criar conta</button></div></form>
+  <div class="auth-links"><button class="linkbtn" data-auth="entrar">Já tenho conta</button></div>`);
+  if(m==='recuperar')return telaMarca(false,`<h2>Recuperar senha</h2><p class="muted">Enviamos um link para o seu e-mail.</p>
+  <form data-form="recuperar"><label for="r-email">E-mail</label><input id="r-email" name="email" type="email" required autocomplete="username" autocapitalize="none">
+  <p class="erro" id="a-erro" role="alert"></p><div class="acts"><button class="btn">Enviar link</button></div></form>
+  <div class="auth-links"><button class="linkbtn" data-auth="entrar">Voltar para entrar</button></div>`);
   return `<div class="entrada"><aside class="entrada-marca"><span class="mono" aria-hidden="true">A</span><h1>Agendio</h1><div class="tone" aria-hidden="true"></div><p>Clientes, atendimentos e estoque do salão em um só lugar.</p></aside>
-  <section class="login"><h2>Entrar</h2><p class="muted">Use o e-mail e a senha que você recebeu.</p>
+  <section class="login"><h2>Entrar</h2><p class="muted">Use o e-mail e a senha da sua conta.</p>${S.aviso?`<p class="ok-msg" role="status">${esc(S.aviso)}</p>`:''}
   <form data-form="login"><label for="l-email">E-mail</label><input id="l-email" name="email" type="email" required autocomplete="username" autocapitalize="none">
   <label for="l-senha">Senha</label><input id="l-senha" name="senha" type="password" required autocomplete="current-password">
-  <p class="erro" id="l-erro" role="alert"></p><p class="muted" id="l-det" style="font-size:12px;overflow-wrap:anywhere;margin:4px 0 0"></p><div class="acts"><button class="btn">Entrar</button></div></form></section></div>`;
+  <p class="erro" id="l-erro" role="alert"></p><p class="muted" id="l-det" style="font-size:12px;overflow-wrap:anywhere;margin:4px 0 0"></p><div class="acts"><button class="btn">Entrar</button></div></form>
+  <div class="auth-links"><button class="linkbtn" data-auth="criar">Criar conta</button><button class="linkbtn" data-auth="recuperar">Esqueci a senha</button></div></section></div>`;
+}
+
+/* ---------- Equipe ---------- */
+const PAPEIS={proprietario:'Proprietário(a)',gerente:'Gerente',recepcionista:'Recepcionista',profissional:'Profissional'};
+const MODS=[['clientes','Clientes'],['agenda','Agenda e atendimentos'],['financeiro','Financeiro (despesas e relatórios)'],['estoque','Estoque'],['equipe','Equipe'],['config','Configurações do salão']];
+const NIVEIS={nenhum:'Sem acesso',proprio:'Só os próprios',leitura:'Só ver',escrita:'Ver e editar'};
+async function carregarEquipe(){
+  try{
+    const [m,c]=await Promise.all([sb.from('tenant_users').select('*').order('criado_em'),NV('equipe')!=='nenhum'?sb.from('convites').select('*').is('usado_em',null).order('criado_em'):{data:[]}]);
+    if(m.error)throw m.error;
+    S.eq={ok:true,membros:m.data||[],convites:(c&&c.data)||[]};
+  }catch(e){S.eq={ok:true,membros:[],convites:[],erro:true}}
+  if(S.view==='equipe')render();
+}
+function telaEquipe(){
+  if(!S.eq.ok)return '<p class="muted">Carregando…</p>';
+  const pl=S.ctx&&S.ctx.plano,ativos=S.eq.membros.filter(x=>x.ativo).length,pend=S.eq.convites.filter(c=>new Date(c.expira_em)>new Date()).length;
+  const dono=S.ctx&&S.ctx.role==='proprietario',pode=NV('equipe')==='escrita';
+  const eu=S.sessao&&S.sessao.user&&S.sessao.user.id;
+  const uso=pl?`<p class="muted" style="margin:0 0 14px">Plano ${esc(pl.nome)}: ${ativos}${pend?` (+${pend} convite${pend>1?'s':''})`:''} de ${pl.max_usuarios} usuários.</p>`:'';
+  const lm=S.eq.membros.map(m=>`<div class="item${dono?' click':''}" ${dono?`tabindex="0" role="button" data-act="editMembro" data-id="${esc(m.user_id)}"`:''}>${avatar(m.nome||m.email)}<div class="grow"><div class="t">${esc(m.nome||m.email||'Sem nome')}${m.user_id===eu?' <span class="muted">(você)</span>':''}</div><div class="muted">${esc(m.email||'')}${m.profissional_nome?' · atende como '+esc(m.profissional_nome):''}</div></div><div class="side"><span class="tag">${esc(PAPEIS[m.role]||m.role)}</span>${m.ativo?'':' <span class="tag late">Desativado</span>'}${Object.keys(m.permissoes||{}).length?' <span class="tag">Permissões ajustadas</span>':''}</div></div>`).join('');
+  const lc=S.eq.convites.length?`<h3 style="margin:22px 0 8px;font-size:15px">Convites pendentes</h3><div class="list">`+S.eq.convites.map(c=>{const venc=new Date(c.expira_em)<new Date();return `<div class="item"><div class="grow"><div class="t">${esc(c.nome||c.email)}</div><div class="muted">${esc(c.email)} · ${esc(PAPEIS[c.role]||c.role)}${venc?' · vencido':''}</div></div>${pode?`<button class="btn ghost sm" data-act="cancelaConvite" data-id="${esc(c.id)}">Cancelar</button>`:''}</div>`}).join('')+'</div>':'';
+  return `<div class="bar"><span class="muted grow">${dono?'Toque em uma pessoa para mudar o perfil e as permissões.':'Somente o proprietário altera a equipe.'}</span>${pode?'<button class="btn" data-act="novoConvite">Convidar pessoa</button>':''}</div>${uso}<div class="list">${lm}</div>${lc}`;
+}
+function formConvite(){
+  abrir(`<h2>Convidar pessoa</h2><form data-form="convite"><p class="muted">A pessoa cria a conta no site com este mesmo e-mail e entra direto no seu salão.</p>
+  <label for="cv-nome">Nome *</label><input id="cv-nome" name="nome" required maxlength="120" autocomplete="off">
+  <label for="cv-email">E-mail *</label><input id="cv-email" name="email" type="email" required maxlength="160" autocomplete="off" autocapitalize="none">
+  <label for="cv-role">Perfil *</label><select id="cv-role" name="role"><option value="recepcionista">Recepcionista: clientes e agenda</option><option value="profissional">Profissional: só os próprios atendimentos</option><option value="gerente">Gerente: tudo, menos configurações</option></select>
+  <p class="muted" style="font-size:13px">Para profissional, o nome acima é o que aparece nos atendimentos.</p>
+  <div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Enviar convite</button></div></form>`);
+}
+async function salvarConvite(d){
+  const r=await sb.rpc('convidar',{p:{nome:String(d.nome||'').trim(),email:String(d.email||'').trim(),role:d.role}});
+  if(r.error)throw r.error;
+  await carregarEquipe();
+  const link=location.origin+location.pathname,em=String(d.email||'').trim();
+  const txt=`Olá! Você foi convidado(a) para usar o Agendio no salão ${(S.ctx&&S.ctx.tenant&&S.ctx.tenant.nome)||''}. Abra ${link}, toque em "Criar conta" e use este e-mail: ${em}. Depois de confirmar o e-mail, você já entra no salão.`;
+  abrir(`<h2>Convite criado</h2><p class="muted">Envie esta mensagem para ${esc(d.nome||em)}. O convite vale por 14 dias.</p><textarea readonly rows="5" id="cv-txt" style="width:100%">${esc(txt)}</textarea>
+  <div class="acts"><button type="button" class="btn ghost" data-act="copiaConvite">Copiar mensagem</button><a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(txt)}">Enviar por WhatsApp</a><button type="button" class="btn ghost" data-act="fechar">Fechar</button></div>`);
+  throw Object.assign(new Error('mantem'),{mantem:true});
+}
+function formMembro(uid){
+  const m=S.eq.membros.find(x=>x.user_id===uid);if(!m)return;
+  const eu=S.sessao&&S.sessao.user&&S.sessao.user.id,sou=m.user_id===eu,pm=m.permissoes||{};
+  abrir(`<h2>${esc(m.nome||m.email)}</h2><form data-form="membro" data-id="${esc(uid)}">
+  <label for="mb-nome">Nome</label><input id="mb-nome" name="nome" maxlength="120" value="${esc(m.nome||'')}">
+  <label for="mb-prof">Nome nos atendimentos (se atende clientes)</label><input id="mb-prof" name="profissional_nome" maxlength="80" value="${esc(m.profissional_nome||'')}">
+  <label for="mb-role">Perfil</label><select id="mb-role" name="role" ${sou?'disabled':''}>${Object.keys(PAPEIS).map(k=>`<option value="${k}" ${k===m.role?'selected':''}>${PAPEIS[k]}</option>`).join('')}</select>
+  <label><input type="checkbox" name="ativo" ${m.ativo?'checked':''} ${sou?'disabled':''}> Pode entrar no sistema</label>
+  <h3 style="margin:16px 0 4px;font-size:15px">Permissões desta pessoa</h3><p class="muted" style="font-size:13px;margin:0 0 6px">Deixe em "Padrão do perfil" para seguir o perfil escolhido.</p>
+  ${MODS.map(([k,l])=>`<label for="pm-${k}">${l}</label><select id="pm-${k}" name="pm_${k}"><option value="">Padrão do perfil</option>${Object.keys(NIVEIS).map(n=>`<option value="${n}" ${pm[k]===n?'selected':''}>${NIVEIS[n]}</option>`).join('')}</select>`).join('')}
+  <div class="acts">${sou?'':`<button type="button" class="btn danger" data-act="delMembro" data-id="${esc(uid)}">Remover da equipe</button>`}<button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Salvar</button></div></form>`);
+}
+async function salvarMembro(uid,d){
+  const m=S.eq.membros.find(x=>x.user_id===uid);if(!m)return;
+  const eu=S.sessao&&S.sessao.user&&S.sessao.user.id,perm={};
+  MODS.forEach(([k])=>{if(d['pm_'+k])perm[k]=d['pm_'+k]});
+  const p={nome:String(d.nome||'').trim(),profissional_nome:String(d.profissional_nome||'').trim(),permissoes:perm};
+  if(uid!==eu){p.role=d.role;p.ativo=d.ativo==='on'}
+  const r=await sb.rpc('equipe_salvar',{p_user:uid,p});
+  if(r.error)throw r.error;
+  await carregarEquipe();await carregarCtx();toast('Equipe atualizada.');
+}
+function pedirDelMembro(uid){
+  const m=S.eq.membros.find(x=>x.user_id===uid);if(!m)return;
+  confirmar('Remover '+(m.nome||m.email)+' da equipe?','A pessoa perde o acesso ao salão. Os atendimentos e clientes dela continuam no sistema.','Remover',async()=>{
+    const r=await sb.rpc('equipe_remover',{p_user:uid});if(r.error)throw r.error;
+    await carregarEquipe();toast('Pessoa removida.');
+  });
+}
+
+/* ---------- Dados do salão ---------- */
+async function carregarSalao(){
+  try{const r=await sb.from('tenants').select('*').eq('id',S.ctx.tenant.id);if(r.error)throw r.error;S.salao=(r.data&&r.data[0])||null;S.logoNovo=undefined}
+  catch(_){S.salao=false}
+  if(S.view==='salao')render();
+}
+function telaSalao(){
+  if(S.salao===null)return '<p class="muted">Carregando…</p>';
+  if(!S.salao)return aviso('Não foi possível carregar os dados do salão','Verifique a conexão e tente de novo.','<div class="row-actions"><button class="btn" data-go="salao">Tentar de novo</button></div>');
+  const t=S.salao,ro=NV('config')!=='escrita'?'disabled':'';
+  const f=(id,rot,extra,v)=>`<div><label for="cf-${id}">${rot}</label><input id="cf-${id}" name="${id}" value="${esc(v!==undefined?v:(t[id]||''))}" ${ro} ${extra||''}></div>`;
+  const logo=S.logoNovo!==undefined?S.logoNovo:t.logo_url;
+  return `<form data-form="config" class="panel" style="max-width:640px">
+  <h3 style="margin:0 0 10px;font-size:16px">Marca</h3>
+  <div class="logo-linha"><div class="logo-prev" id="cf-prev">${logo?`<img src="${esc(logo)}" alt="Logotipo">`:'<span class="muted">Sem logotipo</span>'}</div>
+  <div><input id="cf-logo" type="file" accept="image/png,image/jpeg,image/webp" ${ro}> ${logo&&!ro?'<button type="button" class="btn ghost sm" data-act="tiraLogo">Remover logotipo</button>':''}<p class="muted" style="font-size:12.5px;margin:6px 0 0">A imagem é reduzida automaticamente.</p></div></div>
+  <label for="cf-cor">Cor principal do sistema</label><input id="cf-cor" name="cor_principal" type="color" value="${esc(t.cor_principal||'#9b2f58')}" ${ro} style="height:44px;padding:4px;max-width:120px">
+  <h3 style="margin:20px 0 10px;font-size:16px">Dados do estabelecimento</h3>
+  ${f('nome','Nome do estabelecimento','required maxlength="120"')}${f('razao_social','Razão social','maxlength="160"')}${f('documento','CPF ou CNPJ','inputmode="numeric" maxlength="18"')}${f('proprietario_nome','Nome do proprietário','maxlength="120"')}
+  <div class="g2">${f('telefone','Telefone','type="tel" maxlength="20"')}${f('whatsapp','WhatsApp','type="tel" maxlength="20"')}</div>
+  ${f('email','E-mail comercial','type="email" maxlength="160"')}
+  <div class="g2">${f('cep','CEP','maxlength="9"')}${f('numero','Número','maxlength="12"')}</div>
+  ${f('logradouro','Rua','maxlength="160"')}${f('complemento','Complemento','maxlength="80"')}${f('bairro','Bairro','maxlength="80"')}
+  <div class="g2">${f('cidade','Cidade','maxlength="80"')}${f('uf','UF','maxlength="2"')}</div>
+  <p class="erro" id="a-erro" role="alert"></p>${ro?'<p class="muted">Você pode ver, mas não alterar estes dados.</p>':'<div class="acts"><button class="btn">Salvar alterações</button></div>'}</form>
+  <div class="panel" style="max-width:640px;margin-top:16px"><b>Suporte do Agendio</b><p class="muted">Se precisar de ajuda com os seus dados, você pode liberar o acesso do suporte por um tempo limitado. Tudo fica registrado.</p>${S.ctx.role==='proprietario'?'<button class="btn ghost" data-act="liberaSuporte">Liberar suporte…</button>':''}</div>`;
+}
+function reduzLogo(file){
+  return new Promise((ok,no)=>{
+    const url=URL.createObjectURL(file),im=new Image();
+    im.onload=()=>{
+      const mx=256,k=Math.min(1,mx/Math.max(im.width,im.height)),c=document.createElement('canvas');
+      c.width=Math.max(1,Math.round(im.width*k));c.height=Math.max(1,Math.round(im.height*k));
+      c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);
+      let d=c.toDataURL('image/png');if(d.length>150000)d=c.toDataURL('image/jpeg',.85);
+      d.length>190000?no(new Error('grande')):ok(d);
+    };
+    im.onerror=()=>{URL.revokeObjectURL(url);no(new Error('imagem'))};
+    im.src=url;
+  });
+}
+function formSuporte(){
+  abrir(`<h2>Liberar suporte</h2><form data-form="suporte"><p class="muted">Uma pessoa do suporte do Agendio poderá apenas ler os dados do seu salão, por tempo limitado. Você pode encerrar a qualquer momento e tudo fica registrado.</p>
+  <label for="sp-m">Motivo (mínimo 15 letras) *</label><textarea id="sp-m" name="motivo" required minlength="15" maxlength="300" rows="3"></textarea>
+  <label for="sp-h">Por quanto tempo</label><select id="sp-h" name="horas"><option value="2">2 horas</option><option value="24" selected>24 horas</option><option value="72">72 horas</option></select>
+  <div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Liberar</button></div></form>`);
+}
+async function salvarSuporte(d){
+  const r=await sb.rpc('conceder_suporte',{p_justificativa:String(d.motivo||'').trim(),p_horas:Number(d.horas)||24});
+  if(r.error)throw r.error;
+  toast('Suporte liberado.');
+}
+
+
+/* ---------- Plataforma (administrador do SaaS) ---------- */
+const ST_SAL={teste:'Em teste',ativa:'Ativa',vencida:'Vencida',cancelada:'Cancelada',bloqueada:'Bloqueada'};
+const ST_PAG={pendente:'Pendente',pago:'Pago',atrasado:'Atrasado',cancelado:'Cancelado'};
+const tagSt=(st,lab)=>`<span class="tag${/vencida|atrasado|bloqueada|cancelada|cancelado/.test(st)?' late':''}">${esc(lab[st]||st)}</span>`;
+async function carregarPlataforma(){
+  if(!ehAdmin())return;
+  try{
+    const q=(n,a)=>sb.rpc(n,a);
+    const [i,sl,cr,pl,pg,lg]=await Promise.all([q('plataforma_indicadores'),q('plataforma_saloes'),q('plataforma_crescimento'),
+      sb.from('plans').select('*').order('preco_mensal'),sb.from('pagamentos').select('*').order('vencimento',{ascending:false}).limit(300),
+      sb.from('audit_logs').select('*').order('criado_em',{ascending:false}).limit(300)]);
+    const e=[i,sl,cr,pl,pg,lg].find(x=>x.error);if(e)throw e.error;
+    S.pl=Object.assign(S.pl,{ok:true,erro:false,ind:i.data,saloes:sl.data||[],cresc:cr.data||[],planos:pl.data||[],pags:pg.data||[],logs:lg.data||[]});
+  }catch(_){S.pl.erro=true;S.pl.ok=true}
+  if(S.view==='plataforma')render();
+}
+function headPlataforma(){return `<div class="page-head"><div><h1>Plataforma</h1><p class="muted">Salões, assinaturas e pagamentos do Agendio</p></div></div>`}
+const nomeSalao=id=>{const s=S.pl.saloes.find(x=>x.id===id);return s?s.nome:'—'};
+function telaPlataforma(){
+  if(!S.pl.ok)return '<p class="muted">Carregando…</p>';
+  if(S.pl.erro)return aviso('Não foi possível carregar a plataforma','Rode o arquivo 04-plataforma.sql no Supabase e tente de novo.','<div class="row-actions"><button class="btn" data-act="plRecarrega">Tentar de novo</button></div>');
+  const ab=S.pl.aba,A=[['painel','Painel'],['saloes','Salões'],['pagamentos','Pagamentos'],['auditoria','Auditoria']];
+  const nav=`<div class="segs" role="tablist">${A.map(([k,l])=>`<button class="btn ghost sm" role="tab" aria-pressed="${ab===k}" data-act="plAba" data-id="${k}">${l}</button>`).join('')}</div>`;
+  return nav+(ab==='saloes'?plSaloes():ab==='pagamentos'?plPagamentos():ab==='auditoria'?plAuditoria():plPainel());
+}
+function plPainel(){
+  const i=S.pl.ind||{},k=(v,l)=>`<div class="stat"><b>${v}</b><span>${l}</span></div>`;
+  const vw=Math.max(300,Math.min(640,window.innerWidth>=860?640:window.innerWidth-32)),int=v=>String(Math.round(v));
+  const cats=(S.pl.cresc||[]).map(x=>({rot:mesCurto(x.mes),nome:mesNome(x.mes),vals:[x.novos,x.cancelados],tip:`${mesNome(x.mes)}\nNovos salões: ${x.novos}\nCancelamentos: ${x.cancelados}`}));
+  const g=cats.length?grafColunas({W:vw,titulo:'Novos salões e cancelamentos por mês',sub:'Últimos 12 meses',series:['Novos salões','Cancelamentos'],catRot:'Mês',cats,fmt:int,inteiro:true}):'';
+  return `<div class="stats">${k(i.saloes||0,'salões cadastrados')}${k(i.ativos||0,'assinantes ativos')}${k(i.em_teste||0,'em período de teste')}${k(i.vencidos||0,'assinaturas vencidas')}</div>
+  <div class="stats">${k(i.cancelados||0,'canceladas')}${k(i.bloqueados||0,'bloqueadas')}${k(brl(i.mrr||0),'receita mensal (MRR)')}${k(brl(i.arr||0),'receita anual (ARR)')}</div>
+  <div class="row-actions" style="margin:6px 0 16px"><button class="btn ghost" data-act="plSituacoes">Atualizar situações</button><button class="btn ghost" data-act="plCobrancas">Gerar cobranças</button><button class="btn" data-act="plNovoSalao">Cadastrar salão</button></div>
+  <p class="muted" style="font-size:13px">MRR soma o valor do plano dos salões com assinatura ativa. "Atualizar situações" marca como vencidos os salões com data passada. "Gerar cobranças" cria a mensalidade de cada salão ativo que não tem cobrança em aberto.</p>${g}`;
+}
+function plLista(){
+  const q=S.pl.q.trim().toLowerCase(),st=S.pl.st;
+  const L=S.pl.saloes.filter(x=>(!st||x.status===st)&&(!q||[x.nome,x.email,x.proprietario_nome,x.cidade].join(' ').toLowerCase().includes(q)));
+  if(!L.length)return '<div class="empty"><p>Nenhum salão encontrado.</p></div>';
+  return '<div class="list">'+L.map(x=>`<div class="item click" tabindex="0" role="button" data-act="plSalao" data-id="${esc(x.id)}">${avatar(x.nome)}<div class="grow"><div class="t">${esc(x.nome)}</div><div class="muted">${esc(x.proprietario_nome||x.email||'')}${x.convite_dono?' · convite enviado para '+esc(x.convite_dono):''}</div></div><div class="side">${tagSt(x.status,ST_SAL)} <span class="tag">${esc(x.plano||'Sem plano')}</span><div class="muted" style="font-size:12.5px">${x.vencimento?'vence '+esc(fd(x.vencimento)):'sem vencimento'} · ${x.usuarios}${x.max_usuarios?'/'+x.max_usuarios:''} usuários</div></div></div>`).join('')+'</div>';
+}
+function plSaloes(){
+  return `<div class="bar"><input id="pl-q" type="search" placeholder="Buscar por nome, e-mail ou cidade" value="${esc(S.pl.q)}" aria-label="Buscar salão" style="max-width:340px"><select id="pl-st" aria-label="Filtrar por situação"><option value="">Todas as situações</option>${Object.keys(ST_SAL).map(k=>`<option value="${k}" ${S.pl.st===k?'selected':''}>${ST_SAL[k]}</option>`).join('')}</select><span class="grow"></span><button class="btn" data-act="plNovoSalao">Cadastrar salão</button></div><div id="pl-lista">${plLista()}</div>`;
+}
+function plPagamentos(){
+  const ord={atrasado:0,pendente:1,pago:2,cancelado:3},L=[...S.pl.pags].sort((a,b)=>(ord[a.status]-ord[b.status])||String(a.vencimento).localeCompare(String(b.vencimento)));
+  const aberto=L.filter(x=>x.status==='pendente'||x.status==='atrasado').reduce((t,x)=>t+Number(x.valor),0);
+  return `<div class="stats"><div class="stat"><b>${brl(aberto)}</b><span>a receber (pendente e atrasado)</span></div><div class="stat"><b>${L.filter(x=>x.status==='atrasado').length}</b><span>cobranças atrasadas</span></div></div>
+  <div class="row-actions" style="margin:0 0 14px"><button class="btn ghost" data-act="plCobrancas">Gerar cobranças</button><button class="btn ghost" data-act="plSituacoes">Atualizar situações</button></div>
+  ${L.length?'<div class="list">'+L.slice(0,S.pl.lim).map(x=>`<div class="item"><div class="grow"><div class="t">${esc(nomeSalao(x.tenant_id))}</div><div class="muted">vence ${esc(fd(x.vencimento))}${x.pago_em?' · pago em '+esc(fd(x.pago_em)):''}</div></div><div class="side"><b>${brl(x.valor)}</b> ${tagSt(x.status,ST_PAG)}${x.status==='pendente'||x.status==='atrasado'?` <button class="btn sm" data-act="plPagar" data-id="${esc(x.id)}">Marcar pago</button>`:''}</div></div>`).join('')+'</div>':'<div class="empty"><p>Nenhuma cobrança registrada. Use "Gerar cobranças" para criar a mensalidade dos salões ativos.</p></div>'}`;
+}
+function resumoLog(l){
+  const d=l.detalhes||{};
+  if(d.status)return 'situação: '+(ST_SAL[d.status]||d.status)+(d.motivo?' ('+d.motivo+')':'');
+  if(d.plano)return 'plano alterado';
+  if(d.vencimento)return 'vencimento: '+fd(d.vencimento);
+  if(d.criado_pela_plataforma)return 'salão cadastrado pela plataforma';
+  if(d.aceito)return 'convite aceito';
+  if(d.role)return 'convite: '+(PAPEIS[d.role]||d.role);
+  if(d.colunas)return 'campos: '+d.colunas.join(', ');
+  if(d.valor!==undefined)return 'pagamento '+brl(d.valor);
+  return '';
+}
+function plAuditoria(){
+  const L=S.pl.logs;
+  return `<p class="muted" style="font-size:13px">Registro de ações. Mostra apenas o que mudou, nunca o conteúdo dos dados dos clientes.</p>`+(L.length?'<div class="list">'+L.slice(0,S.pl.lim).map(l=>`<div class="item"><div class="grow"><div class="t">${esc(l.acao)} · ${esc(l.tabela||'')}</div><div class="muted">${esc(l.tenant_id?nomeSalao(l.tenant_id):'Plataforma')}${resumoLog(l)?' · '+esc(resumoLog(l)):''}</div></div><div class="side muted" style="font-size:12.5px">${esc(new Date(l.criado_em).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}))}</div></div>`).join('')+'</div>':'<div class="empty"><p>Nenhum registro.</p></div>');
+}
+async function detSalao(id){
+  const x=S.pl.saloes.find(v=>v.id===id);if(!x)return;
+  let sub=[],pg=[];
+  try{const [a,b]=await Promise.all([sb.from('subscriptions').select('*').eq('tenant_id',id).order('criado_em',{ascending:false}),sb.from('pagamentos').select('*').eq('tenant_id',id).order('vencimento',{ascending:false})]);sub=a.data||[];pg=b.data||[]}catch(_){}
+  const L=(t,v)=>v?`<div><span class="muted">${t}</span><br>${esc(v)}</div>`:'';
+  abrir(`<h2>${esc(x.nome)}</h2><p>${tagSt(x.status,ST_SAL)} <span class="tag">${esc(x.plano||'Sem plano')}</span></p>
+  <div class="grid2" style="gap:10px 16px;margin:6px 0 12px">${L('Proprietário',x.proprietario_nome)}${L('E-mail',x.email)}${L('Telefone',x.telefone||x.whatsapp)}${L('Cidade',[x.cidade,x.uf].filter(Boolean).join(' / '))}${L('Cadastro em',fd(String(x.criado_em).slice(0,10)))}${L('Vencimento',fd(x.vencimento))}${L('Usuários',x.usuarios+(x.max_usuarios?' de '+x.max_usuarios:''))}</div>
+  <h3 style="margin:14px 0 6px;font-size:15px">Plano</h3><div class="bar"><select id="pd-plano" aria-label="Plano">${S.pl.planos.map(p=>`<option value="${esc(p.id)}" ${p.id===x.plano_id?'selected':''}>${esc(p.nome)} · ${brl(p.preco_mensal)}${p.ativo?'':' (inativo)'}</option>`).join('')}</select><button class="btn ghost" data-act="plSetPlano" data-id="${esc(id)}">Trocar plano</button></div>
+  <h3 style="margin:14px 0 6px;font-size:15px">Situação</h3><div class="bar"><select id="pd-st" aria-label="Situação">${Object.keys(ST_SAL).map(k=>`<option value="${k}" ${k===x.status?'selected':''}>${ST_SAL[k]}</option>`).join('')}</select><input id="pd-mot" placeholder="Motivo (opcional)" maxlength="200" aria-label="Motivo"><button class="btn ghost" data-act="plSetStatus" data-id="${esc(id)}">Aplicar</button></div>
+  <h3 style="margin:14px 0 6px;font-size:15px">Vencimento</h3><div class="bar"><input id="pd-venc" type="date" value="${esc(x.vencimento||'')}" aria-label="Vencimento"><button class="btn ghost" data-act="plSetVenc" data-id="${esc(id)}">Salvar data</button></div>
+  <h3 style="margin:14px 0 6px;font-size:15px">Cobranças</h3>${pg.length?'<div class="list">'+pg.slice(0,6).map(g=>`<div class="item"><div class="grow">vence ${esc(fd(g.vencimento))}</div><div class="side"><b>${brl(g.valor)}</b> ${tagSt(g.status,ST_PAG)}${g.status==='pendente'||g.status==='atrasado'?` <button class="btn sm" data-act="plPagar" data-id="${esc(g.id)}">Marcar pago</button>`:''}</div></div>`).join('')+'</div>':'<p class="muted">Nenhuma cobrança.</p>'}
+  <div class="bar" style="margin-top:8px"><input id="pd-val" type="number" step="0.01" min="0" placeholder="Valor" aria-label="Valor" value="${esc(x.preco||'')}"><input id="pd-vc" type="date" aria-label="Vencimento da cobrança" value="${esc(x.vencimento||hoje())}"><button class="btn ghost" data-act="plNovaCobranca" data-id="${esc(id)}">Nova cobrança</button></div>
+  <h3 style="margin:14px 0 6px;font-size:15px">Histórico da assinatura</h3>${sub.length?'<div class="list">'+sub.slice(0,8).map(g=>`<div class="item"><div class="grow">${esc(fd(g.inicio))}${g.fim?' a '+esc(fd(g.fim)):' até agora'}</div><div class="side">${tagSt(g.status,ST_SAL)} <span class="muted">${brl(g.valor)}</span></div></div>`).join('')+'</div>':'<p class="muted">Sem histórico.</p>'}
+  <div class="acts"><button type="button" class="btn ghost" data-act="fechar">Fechar</button></div>`);
+}
+function formNovoSalao(){
+  const pl=S.pl.planos.filter(p=>p.ativo);
+  abrir(`<h2>Cadastrar salão</h2><form data-form="plsalao"><p class="muted">O ambiente é criado agora. O proprietário entra criando a conta com o e-mail abaixo.</p>
+  <label for="ns-nome">Nome do salão *</label><input id="ns-nome" name="nome" required maxlength="120">
+  <label for="ns-dono">Nome do proprietário</label><input id="ns-dono" name="proprietario_nome" maxlength="120">
+  <label for="ns-email">E-mail do proprietário *</label><input id="ns-email" name="email_dono" type="email" required maxlength="160" autocapitalize="none">
+  <label for="ns-tel">Telefone</label><input id="ns-tel" name="telefone" type="tel" maxlength="20">
+  <label for="ns-plano">Plano *</label><select id="ns-plano" name="plano_id" required>${pl.map(p=>`<option value="${esc(p.id)}">${esc(p.nome)} · ${brl(p.preco_mensal)} · teste de ${p.trial_dias} dias</option>`).join('')}</select>
+  <div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Cadastrar</button></div></form>`);
+}
+async function salvarNovoSalao(d){
+  const r=await sb.rpc('plataforma_criar_salao',{p:{nome:String(d.nome||'').trim(),proprietario_nome:String(d.proprietario_nome||'').trim(),email_dono:String(d.email_dono||'').trim(),telefone:String(d.telefone||'').trim(),plano_id:d.plano_id}});
+  if(r.error)throw r.error;
+  await carregarPlataforma();
+  const link=location.origin+location.pathname,em=String(d.email_dono||'').trim();
+  const txt=`Olá! O seu salão ${d.nome} já está criado no Agendio. Abra ${link}, toque em "Criar conta" e use este e-mail: ${em}. Depois de confirmar o e-mail, você entra direto no seu salão.`;
+  abrir(`<h2>Salão cadastrado</h2><p class="muted">Envie esta mensagem para o proprietário. O convite vale por 30 dias.</p><textarea readonly rows="5" id="cv-txt" style="width:100%">${esc(txt)}</textarea>
+  <div class="acts"><button type="button" class="btn ghost" data-act="copiaConvite">Copiar mensagem</button><a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(txt)}">Enviar por WhatsApp</a><button type="button" class="btn ghost" data-act="fechar">Fechar</button></div>`);
+  throw Object.assign(new Error('mantem'),{mantem:true});
+}
+async function plRpc(nome,args,msg,reabre){
+  try{
+    const r=await sb.rpc(nome,args);if(r.error)throw r.error;
+    await carregarPlataforma();if(reabre)await detSalao(reabre);
+    if(msg)toast(typeof msg==='function'?msg(r.data):msg);
+  }catch(e){falha(e)}
 }
 
 /* ---------- Clientes ---------- */
@@ -506,8 +926,8 @@ function formAtend(id,clienteId,data){
   if(!S.clientes.length){toast('Cadastre uma cliente primeiro.',true);return}
   const a=id?S.atend.find(x=>x.id===id):{data:data||hoje(),clienteId:clienteId||''};if(id&&!a)return;
   const procs=[...PROCS];if(a.procedimento&&!procs.includes(a.procedimento))procs.push(a.procedimento);
-  const profs=[PROF];if(a.profissional&&a.profissional!==PROF)profs.push(a.profissional);
-  const profSel=a.profissional||PROF,parcSel=PARC(a.parcelas),credito=a.pagamento==='Cartão de crédito',cartao=credito||a.pagamento==='Cartão de débito';
+  const profs=listaProfs();if(a.profissional&&!profs.includes(a.profissional))profs.push(a.profissional);
+  const profSel=a.profissional||profPadrao(),parcSel=PARC(a.parcelas),credito=a.pagamento==='Cartão de crédito',cartao=credito||a.pagamento==='Cartão de débito';
   const pags=['Pix','Dinheiro','Cartão de débito','Cartão de crédito',FIADO,'Outro'];
   const cls=[...S.clientes].sort((x,y)=>(x.nome||'').localeCompare(y.nome||'','pt-BR'));
   abrir(`<h2>${id?'Editar atendimento':'Novo atendimento'}</h2><form data-form="atend" data-id="${esc(id||'')}">
@@ -551,12 +971,16 @@ function atualizaParc(){
 }
 async function salvarAtend(id,d){
   const cred=d.pagamento==='Cartão de crédito',cartao=cred||d.pagamento==='Cartão de débito';
-  const o={cliente_id:d.clienteId,data:d.data,procedimento:d.procedimento.trim(),profissional:(d.profissional||PROF).trim(),
+  const o={cliente_id:d.clienteId,data:d.data,procedimento:d.procedimento.trim(),profissional:(d.profissional||profPadrao()||PROF).trim(),
     valor:Math.max(0,Number(d.valor)||0),pagamento:d.pagamento||'',parcelas:cred?PARC(d.parcelas):1,gasto_produtos:din(d.gastoProdutos),taxa_maquina:cartao?din(d.taxaMaquina):0,retorno:d.retorno||null,obs:(d.obs||'').trim()};
   if(!S.semEst)o.hora=d.hora||null;
   const aid=id||novoId();
   if(!id)o.id=aid;
-  const r=id?await sb.from('atendimentos').update(o).eq('id',id):await sb.from('atendimentos').insert(o);
+  const grava=x=>id?sb.from('atendimentos').update(x).eq('id',id):sb.from('atendimentos').insert(x);
+  let r=await grava(o);
+  if(r.error&&/hora/i.test(String(r.error.message||''))&&(r.error.code==='42703'||r.error.code==='PGRST204'||/column/i.test(r.error.message||''))){
+    delete o.hora;r=await grava(o);S.semHora=true;
+  }
   if(r.error)throw r.error;
   /* Estoque: refaz a baixa deste atendimento (devolve a anterior e dá a nova). */
   let msg=id?'Atendimento atualizado.':'Atendimento registrado.';
@@ -963,7 +1387,7 @@ const mesCurto=m=>{const [y,mo]=m.split('-');return new Date(+y,+mo-1,1).toLocal
 const colTopo=(x,y,w,h,r)=>{if(h<=0)return '';r=Math.min(r,w/2,h);return `M${x},${y+h}V${y+r}Q${x},${y} ${x+r},${y}H${x+w-r}Q${x+w},${y} ${x+w},${y+r}V${y+h}Z`};
 function grafColunas(o){
   const W=o.W,H=212,ml=48,mr=8,mt=20,mb=28,iw=W-ml-mr,ih=H-mt-mb,n=o.cats.length,ns=o.series.length;
-  const max=Math.max(1,...o.cats.flatMap(c=>c.vals)),passo=nice(max/4),nt=Math.ceil(max/passo-1e-9),topo=passo*nt;
+  const max=Math.max(1,...o.cats.flatMap(c=>c.vals)),passo=o.inteiro?Math.max(1,Math.ceil(nice(max/4))):nice(max/4),nt=Math.ceil(max/passo-1e-9),topo=passo*nt;
   const banda=iw/n,bw=Math.max(4,Math.min(24,(banda-8)/ns-2)),grupo=bw*ns+2*(ns-1),y=v=>mt+ih-v/topo*ih;
   let g='';
   for(let i=0;i<=nt;i++){const v=i*passo;g+=`<line class="vz-grid" x1="${ml}" x2="${W-mr}" y1="${y(v)}" y2="${y(v)}"/><text class="vz-ax" x="${ml-6}" y="${y(v)+4}" text-anchor="end">${eixoVal(v)}</text>`}
@@ -976,9 +1400,9 @@ function grafColunas(o){
   });
   const m0=o.cats[mi],vm=m0&&m0.vals[mk];
   if(vm>0){const cx=ml+banda*mi+(banda-grupo)/2+mk*(bw+2)+bw/2,al=cx<ml+36?'start':cx>W-mr-36?'end':'middle',lx=al==='start'?cx-bw/2:al==='end'?cx+bw/2:cx;
-    g+=`<text class="vz-lab" x="${lx}" y="${y(vm)-6}" text-anchor="${al}">${brl0(vm)}</text>`}
+    g+=`<text class="vz-lab" x="${lx}" y="${y(vm)-6}" text-anchor="${al}">${(o.fmt||brl0)(vm)}</text>`}
   const keys=ns>1?`<div class="vz-keys">${o.series.map((t,k)=>`<span><i class="s${k}"></i>${esc(t)}</span>`).join('')}</div>`:'';
-  const tab=`<details><summary>Ver como tabela</summary><table><thead><tr><th>${esc(o.catRot||'')}</th>${o.series.map(t=>`<th>${esc(t)}</th>`).join('')}</tr></thead><tbody>${o.cats.map(c=>`<tr><td>${esc(c.nome)}</td>${c.vals.map(v=>`<td>${brl(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></details>`;
+  const tab=`<details><summary>Ver como tabela</summary><table><thead><tr><th>${esc(o.catRot||'')}</th>${o.series.map(t=>`<th>${esc(t)}</th>`).join('')}</tr></thead><tbody>${o.cats.map(c=>`<tr><td>${esc(c.nome)}</td>${c.vals.map(v=>`<td>${(o.fmt||brl)(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></details>`;
   return `<div class="panel vz"><b>${esc(o.titulo)}</b><p class="muted sub">${esc(o.sub)}</p>${keys}<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.titulo)}">${g}</svg>${tab}</div>`;
 }
 function mesResumo(mes){
@@ -1329,17 +1753,25 @@ function toast(m,erro){
 function falha(e){
   const c=e&&(e.code||e.status),m=String(e&&e.message||'');
   if(e&&e.aviso){toast(e.aviso,true);return}
-  toast(c==='42501'||c===401||c==='401'||/jwt|row-level|permission/i.test(m)?'Você não tem permissão ou a sessão expirou. Saia e entre de novo.':
-    /fetch|network|failed/i.test(m)?'Sem conexão com a internet. Tente de novo.':
-    c==='23503'?'Esta cliente não existe mais. Atualize a página.':
-    'Não foi possível salvar. Tente de novo.',true);
+  const det=(c?' ['+c+']':'');
+  if(['22023','23505','53400','P0002'].includes(c)||(c==='42501'&&/[ãõçé]/.test(m)&&!/row-level|permission/i.test(m))){toast(m,true);return}
+  toast(/n[ãa]o pertence a um sal[ãa]o/i.test(m)?'Seu login ainda não tem um salão. Saia e entre de novo para cadastrar o salão.':
+    /limite de (usu|profis)/i.test(m)?m:
+    c==='42703'||c==='PGRST204'||/column .* (does not exist|of relation)|could not find the .* column/i.test(m)?'O banco de dados está desatualizado. Rode o arquivo atualizar-banco-3.sql no Supabase.'+det:
+    c==='42501'&&/row-level|permission/i.test(m)?'Seu perfil não tem permissão para esta ação.'+det:
+    c==='42501'||c===401||c==='401'||/jwt/i.test(m)?'A sessão expirou. Saia e entre de novo.'+det:
+    /fetch|network|failed to/i.test(m)?'Sem conexão com a internet. Tente de novo.':
+    c==='23503'?'Esta cliente não existe mais. Atualize a página.'+det:
+    c==='23514'?'Algum valor está fora do permitido (confira valor e parcelas).'+det:
+    'Não foi possível salvar. Tente de novo.'+det,true);
 }
 
 /* ---------- Eventos ---------- */
 document.addEventListener('click',e=>{
   const lem=e.target.closest('[data-lem]');if(lem){const o=enviados();o[lem.dataset.lem]=hoje();LS.set('salao_lembretes',JSON.stringify(o));setTimeout(render,400)}
+  const au=e.target.closest('[data-auth]');if(au){S.auth=au.dataset.auth;S.aviso='';render();return}
   const g=e.target.closest('[data-go]');
-  if(g){S.view=g.dataset.go;S.sel=null;render();window.scrollTo(0,0);return}
+  if(g){S.view=g.dataset.go;S.sel=null;render();window.scrollTo(0,0);if(S.view==='equipe')carregarEquipe();if(S.view==='salao')carregarSalao();if(S.view==='plataforma')carregarPlataforma();return}
   const a=e.target.closest('[data-act]');if(!a)return;
   const id=a.dataset.id;
   const f={
@@ -1348,12 +1780,33 @@ document.addEventListener('click',e=>{
     abrir:()=>{S.view='clientes';S.sel=id;render();window.scrollTo(0,0)},
     relAba:()=>{S.relAba=id;render()},mais:()=>{S.lim[id]=(S.lim[id]||100)+200;render()},voltar:()=>{S.sel=null;render()},estAba:()=>{S.estAba=id;render()},novoProd:()=>formProd(),editProd:()=>formProd(id),delProd:()=>pedirDelProd(id),movProd:()=>formMov(id),histProd:()=>histProd(id),novaFicha:()=>formFicha(id),editFicha:()=>formFicha(null,id),delFicha:()=>pedirDelFicha(id),exportJson,exportCsv,exportXlsx,novaDesp:()=>formDesp(),editDesp:()=>formDesp(id),delDesp:()=>pedirDelDesp(id),fechar:()=>$('dlg').close(),
     recarregar:()=>{S.erro='';render();recarregar()},
-    sair:async()=>{try{await sb.auth.signOut()}catch(_){}}
+    tentarCtx:()=>{parar();iniciar()},
+    plAba:()=>{S.pl.aba=id;S.pl.lim=60;render()},plRecarrega:()=>{S.pl.ok=false;render();carregarPlataforma()},
+    plSalao:()=>detSalao(id),plNovoSalao:()=>formNovoSalao(),
+    plSetPlano:()=>plRpc('plataforma_definir_plano',{p_tenant:id,p_plano:$('pd-plano').value},'Plano alterado.',id),
+    plSetStatus:()=>plRpc('plataforma_definir_status',{p_tenant:id,p_status:$('pd-st').value,p_motivo:$('pd-mot').value.trim()},'Situação atualizada.',id),
+    plSetVenc:()=>{const v=$('pd-venc').value;if(!v){toast('Escolha a data.',true);return}plRpc('plataforma_vencimento',{p_tenant:id,p_data:v},'Vencimento salvo.',id)},
+    plNovaCobranca:()=>{const v=Number($('pd-val').value),d=$('pd-vc').value;if(!(v>=0)||!d||$('pd-val').value===''){toast('Informe valor e vencimento.',true);return}plRpc('plataforma_pagamento',{p:{tenant_id:id,valor:v,vencimento:d}},'Cobrança criada.',id)},
+    plPagar:()=>{const g=S.pl.pags.find(x=>x.id===id);if(!g)return;const dlgAberto=$('dlg').open;plRpc('plataforma_pagamento',{p:{id:g.id,tenant_id:g.tenant_id,valor:g.valor,vencimento:g.vencimento,status:'pago'}},'Pagamento registrado.',dlgAberto?g.tenant_id:null)},
+    plCobrancas:()=>plRpc('plataforma_gerar_cobrancas',{},n=>n?n+(n===1?' cobrança criada.':' cobranças criadas.'):'Nenhuma cobrança nova.'),
+    plSituacoes:()=>plRpc('plataforma_atualizar_situacoes',{},r=>`${r.saloes_vencidos} salão(ões) vencido(s) e ${r.cobrancas_atrasadas} cobrança(s) atrasada(s).`),novoConvite:()=>formConvite(),editMembro:()=>formMembro(id),delMembro:()=>pedirDelMembro(id),
+    cancelaConvite:async()=>{try{const r=await sb.rpc('cancelar_convite',{p_id:id});if(r.error)throw r.error;await carregarEquipe();toast('Convite cancelado.')}catch(e){falha(e)}},
+    copiaConvite:async()=>{const t=$('cv-txt');try{await navigator.clipboard.writeText(t.value);toast('Mensagem copiada.')}catch(_){t.select();toast('Selecione e copie a mensagem.')}},
+    tiraLogo:()=>{S.logoNovo=null;const pv=$('cf-prev');if(pv)pv.innerHTML='<span class="muted">Sem logotipo</span>';a.remove()},liberaSuporte:()=>formSuporte(),
+    sair:async()=>{S.auth='entrar';S.recuperando=false;try{await sb.auth.signOut()}catch(_){}}
   }[a.dataset.act];
   if(f){e.preventDefault();f()}
 });
 document.addEventListener('keydown',e=>{
   if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.item.click')){e.preventDefault();e.target.click()}
+});
+document.addEventListener('input',e=>{if(e.target.id==='pl-q'){S.pl.q=e.target.value;const l=$('pl-lista');if(l)l.innerHTML=plLista()}});
+document.addEventListener('change',e=>{if(e.target.id==='pl-st'){S.pl.st=e.target.value;const l=$('pl-lista');if(l)l.innerHTML=plLista()}});
+document.addEventListener('change',async e=>{
+  if(e.target.id!=='cf-logo'||!e.target.files||!e.target.files[0])return;
+  const er=$('a-erro');
+  try{S.logoNovo=await reduzLogo(e.target.files[0]);const pv=$('cf-prev');if(pv)pv.innerHTML=`<img src="${esc(S.logoNovo)}" alt="Logotipo">`;if(er)er.textContent=''}
+  catch(x){if(er)er.textContent=x&&x.message==='grande'?'A imagem é muito grande. Escolha uma menor.':'Não consegui ler esta imagem.';e.target.value=''}
 });
 document.addEventListener('input',e=>{
   if(e.target.id==='busca'){S.busca=e.target.value;$('lista').innerHTML=itensClientes()}
@@ -1391,6 +1844,10 @@ $('dlg').addEventListener('submit',async e=>{
     else if(k==='mov')await salvarMov(id,dados);
     else if(k==='ficha')await salvarFicha(id,dados);
     else if(k==='receber')await salvarReceber(id,dados);
+    else if(k==='convite'){try{await salvarConvite(dados)}catch(x){if(x&&x.mantem)return;throw x}}
+    else if(k==='membro')await salvarMembro(id,dados);
+    else if(k==='suporte')await salvarSuporte(dados);
+    else if(k==='plsalao'){try{await salvarNovoSalao(dados)}catch(x){if(x&&x.mantem)return;throw x}}
     else if(k==='meta'){LS.set('salao_meta',String(din(dados.valor)));toast('Meta salva.');render()}
     else if(k==='confirmar')await S.conf();
     $('dlg').close();
@@ -1405,6 +1862,55 @@ function falhaLogin(){const o=lerLock();o.n++;if(o.n>=LIM){const seg=Math.min(90
 function esperaLogin(){const o=lerLock();return Math.max(0,Math.ceil((o.ate-Date.now())/1000))}
 function tempoTxt(sg){return sg>=60?Math.ceil(sg/60)+' min':sg+' s'}
 
+document.addEventListener('submit',async e=>{
+  const f=e.target,k=f.dataset&&f.dataset.form;
+  if(!['criar','recuperar','novasenha','salao','config'].includes(k))return;
+  e.preventDefault();if(S.busy||!sb)return;
+  const d=Object.fromEntries(new FormData(f)),bt=f.querySelector('button'),er=$('a-erro');
+  const ver=(c,m)=>{if(c){er.textContent=m;return true}return false};
+  er.textContent='';
+  if(k==='criar'||k==='novasenha'){
+    if(ver(String(d.senha||'').length<8,'A senha precisa ter 8 caracteres ou mais.'))return;
+    if(ver(d.senha!==d.senha2,'As duas senhas não são iguais.'))return;
+  }
+  S.busy=true;bt.disabled=true;
+  try{
+    if(k==='criar'){
+      const em=String(d.email||'').trim();
+      const r=await sb.auth.signUp({email:em,password:d.senha,options:{emailRedirectTo:location.origin+location.pathname}});
+      if(r.error){er.textContent=msgAuth(r.error.message,r.error.status);return}
+      const u=r.data&&r.data.user;
+      if(u&&Array.isArray(u.identities)&&u.identities.length===0){er.textContent='Este e-mail já tem cadastro. Entre ou recupere a senha.';return}
+      if(!(r.data&&r.data.session)){S.auth='entrar';S.aviso='Conta criada. Enviamos um link de confirmação para '+em+'. Confirme o e-mail e depois entre aqui.';render()}
+    }else if(k==='recuperar'){
+      const r=await sb.auth.resetPasswordForEmail(String(d.email||'').trim(),{redirectTo:location.origin+location.pathname});
+      if(r.error){er.textContent=msgAuth(r.error.message,r.error.status);return}
+      S.auth='entrar';S.aviso='Se o e-mail estiver cadastrado, você vai receber um link para criar uma nova senha.';render();
+    }else if(k==='novasenha'){
+      const r=await sb.auth.updateUser({password:d.senha});
+      if(r.error){er.textContent=msgAuth(r.error.message,r.error.status);return}
+      S.recuperando=false;try{history.replaceState(null,'',location.pathname)}catch(_){}
+      render();toast('Senha alterada.');
+    }else if(k==='config'){
+      const p={};['nome','razao_social','documento','proprietario_nome','telefone','whatsapp','email','cep','numero','logradouro','complemento','bairro','cidade','uf'].forEach(x=>{p[x]=String(d[x]||'').trim()});
+      p.uf=p.uf.toUpperCase();p.cor_principal=d.cor_principal;
+      const dg=p.documento.replace(/\D/g,'');
+      if(dg&&dg.length!==11&&dg.length!==14){er.textContent='CPF deve ter 11 números e CNPJ 14.';return}
+      p.doc_tipo=dg.length===11?'cpf':dg.length===14?'cnpj':null;p.documento=dg||null;
+      if(S.logoNovo!==undefined)p.logo_url=S.logoNovo;
+      const r=await sb.from('tenants').update(p).eq('id',S.ctx.tenant.id);
+      if(r.error){er.textContent=r.error.code==='23514'?'Confira a cor, o logotipo e os dados digitados.':'Não foi possível salvar. Tente de novo.';return}
+      await carregarCtx();await carregarSalao();render();toast('Dados do salão salvos.');
+    }else if(k==='salao'){
+      const p={};Object.keys(d).forEach(x=>{p[x]=String(d[x]||'').trim()});
+      p.email=(S.sessao&&S.sessao.user&&S.sessao.user.email)||'';p.uf=p.uf.toUpperCase();
+      const r=await sb.rpc('criar_salao',{p});
+      if(r.error){er.textContent=String(r.error.message||'Não foi possível cadastrar o salão.');return}
+      S.view='inicio';parar();iniciar();
+    }
+  }catch(err){er.textContent='Sem conexão. Verifique a internet e tente de novo.'}
+  finally{S.busy=false;if(bt)bt.disabled=false}
+});
 document.addEventListener('submit',async e=>{
   const f=e.target;if(!f.dataset||f.dataset.form!=='login')return;
   e.preventDefault();if(S.busy||!sb)return;
@@ -1445,6 +1951,8 @@ async function boot(){
   try{const r=await sb.auth.getSession();S.sessao=(r&&r.data&&r.data.session)||null}catch(_){S.sessao=null}
   sb.auth.onAuthStateChange((ev,ses)=>{
     const antes=!!S.sessao;S.sessao=ses||null;
+    if(ev==='PASSWORD_RECOVERY'){S.recuperando=true;render()}
+    if(ev==='SIGNED_OUT'){S.recuperando=false;S.auth='entrar'}
     if(ses){setTimeout(iniciar,0)}else parar();
     if(antes!==!!ses)render();
   });
