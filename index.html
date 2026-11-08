@@ -231,7 +231,7 @@ dialog h2{margin-top:0;font-size:28px}
   body.logado .brand-name{display:block}
   body.logado .mono{width:42px;height:42px;font-size:19px}
   body.logado .tone{order:2;margin:10px 10px 18px;height:5px}
-  body.logado .tabs{order:3;flex-direction:column;overflow:visible;gap:2px;padding:0}
+  body.logado .tabs{order:3;flex-direction:column;overflow-x:hidden;overflow-y:auto;flex:1 1 auto;min-height:0;scrollbar-width:thin;gap:2px;padding:0 14px;margin-inline:-14px}
   body.logado .tabs button{width:100%;text-align:left;border-radius:10px;padding:11px 12px;gap:12px;position:relative}
   body.logado .tabs button[aria-current="page"]::before{content:"";position:absolute;left:-14px;top:9px;bottom:9px;width:3px;border-radius:0 3px 3px 0;background:var(--gold)}
   body.logado .sync{order:4;margin-top:auto;padding:14px 10px 0;border-top:1px solid rgba(255,255,255,.1);flex-wrap:wrap}
@@ -277,6 +277,15 @@ body.logado .salao-id div{display:flex;flex-direction:column;min-width:0}
 .segs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 16px}
 .segs .btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .bar select,.bar input[type=search],.bar input[type=date],.bar input[type=number]{min-width:0}
+
+.msg-grid{display:grid;gap:16px;max-width:680px}
+.msg-card textarea{width:100%;min-height:150px;line-height:1.45;resize:vertical}
+.msg-vars{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0}
+.msg-prev{margin-top:10px}
+.wa-bolha{margin-top:6px;padding:10px 12px;border-radius:4px 14px 14px 14px;background:#e7f6e2;color:#1d2b1a;white-space:pre-wrap;font-size:14px;line-height:1.45;max-width:420px;overflow-wrap:anywhere}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .wa-bolha{background:#1e3a2a;color:#e4f3e0}}
+:root[data-theme="dark"] .wa-bolha{background:#1e3a2a;color:#e4f3e0}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 </style>
 </head>
 <body>
@@ -321,7 +330,7 @@ function listaProfs(){
 }
 const PARC=n=>Math.min(12,Math.max(1,parseInt(n,10)||1));
 
-const S={pl:{aba:'painel',ok:false,q:'',st:'',saloes:[],cresc:[],ind:null,pags:[],logs:[],planos:[],lim:60},eq:{ok:false,membros:[],convites:[]},salao:null,logoNovo:undefined,auth:'entrar',ctx:null,ctxPronto:false,ctxErro:false,suspenso:false,legado:false,recuperando:false,aviso:'',clientes:[],atend:[],view:'inicio',agSem:0,sel:null,busca:'',mesFiltro:'',mesRel:'',relAba:'fat',lim:{at:100,desp:100,gasto:100},gastos:[],produtos:[],fichas:[],movs:[],semEst:false,estAba:'prod',estCat:'',estBusca:'',mesDesp:hoje().slice(0,7),semDesp:false,
+const S={msgs:null,msgsLocal:false,pl:{aba:'painel',ok:false,q:'',st:'',saloes:[],cresc:[],ind:null,pags:[],logs:[],planos:[],lim:60},eq:{ok:false,membros:[],convites:[]},salao:null,logoNovo:undefined,auth:'entrar',ctx:null,ctxPronto:false,ctxErro:false,suspenso:false,legado:false,recuperando:false,aviso:'',clientes:[],atend:[],view:'inicio',agSem:0,sel:null,busca:'',mesFiltro:'',mesRel:'',relAba:'fat',lim:{at:100,desp:100,gasto:100},gastos:[],produtos:[],fichas:[],movs:[],semEst:false,estAba:'prod',estCat:'',estBusca:'',mesDesp:hoje().slice(0,7),semDesp:false,
   pronto:false,semConfig:false,semLib:false,sessao:null,got:false,erro:'',busy:false,prog:'',conf:null,
   iniciado:false,canal:null,sig:''};
 const cli=id=>S.clientes.find(c=>c.id===id);
@@ -389,11 +398,12 @@ async function iniciar(){
   if(!temSalao()&&ehAdmin()){S.view='plataforma'}
   render();
   if(!temSalao()){if(ehAdmin())carregarPlataforma();return}
+  carregarMsgs();
   recarregar();
   try{S.canal=sb.channel('salao-mudancas').on('postgres_changes',{event:'*',schema:'public'},agendar).subscribe()}catch(_){}
 }
 function parar(){
-  S.iniciado=false;S.got=false;S.clientes=[];S.atend=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;
+  S.iniciado=false;S.got=false;S.clientes=[];S.atend=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;
   if(S.canal&&sb){try{sb.removeChannel(S.canal)}catch(_){}}
   S.canal=null;
 }
@@ -411,6 +421,7 @@ const ICONES={
   relatorios:IC('<path d="M4 20V4M4 20h16"/><path d="M8 16v-4M12 16V8M16 16v-6"/>'),
   backup:IC('<path d="M12 4v11m0 0-4-4m4 4 4-4"/><path d="M5 19h14"/>'),
   plataforma:IC('<path d="M12 3 4 6.5v5.3c0 4.4 3.1 7.4 8 9.2 4.9-1.8 8-4.8 8-9.2V6.5z"/><path d="m9 12 2.2 2.2L15.5 10"/>'),
+  mensagens:IC('<path d="M5 6h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-7l-4 3.5V16H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/><path d="M8 10h8M8 13h5"/>'),
   equipe:IC('<circle cx="9" cy="8.5" r="3"/><path d="M3.5 19c.5-3 2.6-4.6 5.5-4.6s5 1.6 5.5 4.6"/><path d="M17 8v6M14 11h6"/>'),
   salao:IC('<path d="M4 10 5.5 5h13L20 10"/><path d="M5 10v9h14v-9"/><path d="M9 19v-5h6v5"/>')
 };
@@ -426,7 +437,7 @@ function cabecalho(){
   const n=(k,a,b)=>`${k} ${k===1?a:b}`;
   const T={inicio:['Início','Resumo do mês e do dia'],agenda:['Agenda','Semana, horários e lembretes de amanhã'],clientes:['Clientes',n(S.clientes.length,'cadastrada','cadastradas')],atendimentos:['Atendimentos',n(S.atend.length,'registro','registros')+' e lembretes de WhatsApp'],
     despesas:['Despesas','Contas do salão: aluguel, luz, água, anúncios…'],estoque:['Estoque','Produtos, fichas técnicas e custo por atendimento'],retornos:['Retornos','Clientes para chamar de volta'],
-    relatorios:['Relatórios','Faturamento, despesas e resultado'],equipe:['Equipe','Quem usa o sistema e o que cada pessoa pode ver'],plataforma:['Plataforma','Salões, assinaturas e pagamentos do Agendio'],salao:['Salão','Dados, logotipo e cor da sua marca'],backup:['Backup','Planilha Excel e cópia de segurança']}[S.view]||['',''];
+    relatorios:['Relatórios','Faturamento, despesas e resultado'],equipe:['Equipe','Quem usa o sistema e o que cada pessoa pode ver'],plataforma:['Plataforma','Salões, assinaturas e pagamentos do Agendio'],mensagens:['Mensagens','Textos enviados às clientes pelo WhatsApp'],salao:['Salão','Dados, logotipo e cor da sua marca'],backup:['Backup','Planilha Excel e cópia de segurança']}[S.view]||['',''];
   let d=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});d=d.charAt(0).toUpperCase()+d.slice(1);
   const tn=S.ctx&&S.ctx.tenant,fx=tn&&tn.status==='teste'&&tn.vencimento?`<p class="faixa">${tn.vencimento<hoje()?'Seu período de teste terminou em ':'Período de teste grátis até '}${esc(fd(tn.vencimento))}.</p>`:'';
   return fx+`<div class="page-head"><div><h1>${esc(T[0])}</h1><p class="muted">${esc(T[1])}</p></div><div class="muted hoje">${esc(d)}</div></div>`;
@@ -443,10 +454,10 @@ function render(){
 function renderTop(){
   const logado=!!S.sessao&&!S.recuperando&&S.ctxPronto&&temAcesso();
   document.body.classList.toggle('logado',logado);
-  const t=[['inicio','Início'],['agenda','Agenda'],['clientes','Clientes'],['atendimentos','Atendimentos'],['retornos','Retornos'],['despesas','Despesas'],['estoque','Estoque'],['relatorios','Relatórios'],['equipe','Equipe'],['salao','Salão'],['plataforma','Plataforma'],['backup','Backup']];
+  const t=[['inicio','Início'],['agenda','Agenda'],['clientes','Clientes'],['atendimentos','Atendimentos'],['retornos','Retornos'],['despesas','Despesas'],['estoque','Estoque'],['relatorios','Relatórios'],['equipe','Equipe'],['mensagens','Mensagens'],['salao','Salão'],['plataforma','Plataforma'],['backup','Backup']];
   $('tabs').hidden=!logado;
   $('tabs').innerHTML=logado?t.filter(([k])=>podeVer(k)).map(([k,l],i,a)=>{
-    const GEST=['despesas','estoque','relatorios','equipe','salao','plataforma','backup'];
+    const GEST=['despesas','estoque','relatorios','equipe','mensagens','salao','plataforma','backup'];
     const pr=a.find(x=>GEST.includes(x[0])),g=(k==='inicio'||(pr&&k===pr[0]))?`<span class="grp" aria-hidden="true">${k==='inicio'?'Dia a dia':'Gestão'}</span>`:'';
     return g+`<button data-go="${k}" ${S.view===k?'aria-current="page"':''}>${ICONES[k]}<span>${l}</span></button>`}).join(''):'';
   const sid=$('salaoId'),tn=S.ctx&&S.ctx.tenant;
@@ -484,12 +495,13 @@ function conteudo(){
   if(v==='retornos')return telaRet()+blocoSumidas();
   if(v==='relatorios')return telaRel();
   if(v==='plataforma'&&ehAdmin())return telaPlataforma();
+  if(v==='mensagens')return telaMensagens();
   if(v==='equipe')return telaEquipe();
   if(v==='salao')return telaSalao();
   return telaBackup();
 }
 const NV=k=>S.ctx?((S.ctx.permissoes&&S.ctx.permissoes[k])||'nenhum'):'escrita';
-const ROTAS={equipe:'equipe',salao:'config',clientes:'clientes',agenda:'agenda',atendimentos:'agenda',retornos:'clientes',despesas:'financeiro',relatorios:'financeiro',estoque:'estoque',backup:'config'};
+const ROTAS={mensagens:'config',equipe:'equipe',salao:'config',clientes:'clientes',agenda:'agenda',atendimentos:'agenda',retornos:'clientes',despesas:'financeiro',relatorios:'financeiro',estoque:'estoque',backup:'config'};
 const podeVer=v=>v==='plataforma'?ehAdmin():(!temSalao()&&ehAdmin())?false:(S.legado&&(v==='equipe'||v==='salao'))?false:(!ROTAS[v]||NV(ROTAS[v])!=='nenhum');
 const temSalao=()=>S.legado||!!(S.ctx&&S.ctx.tenant);
 const ehAdmin=()=>!!(S.ctx&&S.ctx.admin);
@@ -535,6 +547,14 @@ function aplicaTema(){
   st.setProperty('--accent-soft','color-mix(in srgb, '+rgbCss(acc)+' '+(dark?22:12)+'%, var(--surface))');
 }
 try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',aplicaTema)}catch(_){}
+async function carregarMsgs(){
+  if(S.legado||!S.ctx||!S.ctx.tenant){S.msgs=null;return}
+  try{const r=await sb.from('tenants').select('mensagens').eq('id',S.ctx.tenant.id);
+    if(r.error)throw r.error;
+    const m=r.data&&r.data[0]&&r.data[0].mensagens;S.msgs=m&&typeof m==='object'?m:{};S.msgsLocal=false;
+  }catch(_){S.msgs=null;S.msgsLocal=true}
+  if(S.view==='mensagens')render();
+}
 function msgAuth(m,st){
   m=String(m||'');
   if(st===429||/rate limit|too many/i.test(m))return 'Muitas tentativas. Aguarde alguns minutos e tente de novo.';
@@ -835,6 +855,32 @@ async function plRpc(nome,args,msg,reabre){
   }catch(e){falha(e)}
 }
 
+
+/* ---------- Mensagens (textos do WhatsApp) ---------- */
+const AMOSTRA={nome:'Maria',nome_completo:'Maria Souza',data:'12/12/2026',hora:'14:30',procedimento:'Mechas',profissional:'Fabiana',valor:'R$ 350,00'};
+function previaMsg(chave,texto){
+  const salvo=S.msgs;S.msgs=Object.assign({},msgsSalvas(),{[chave]:texto});
+  try{return montaMsg(chave,Object.assign({},AMOSTRA))}finally{S.msgs=salvo}
+}
+function telaMensagens(){
+  const pode=NV('config')==='escrita',sv=msgsSalvas();
+  const nota=S.msgsLocal&&!S.legado?'<p class="faixa">Os textos estão sendo salvos só neste aparelho. Rode o arquivo 06-mensagens.sql no Supabase para valer em todos.</p>':'';
+  const card=k=>{const m=MSG_DEF[k],txt=(sv[k]||'').trim()||m.d;
+    return `<div class="panel msg-card"><b>${esc(m.t)}</b><p class="muted" style="margin:2px 0 8px">${esc(m.q)}</p>
+    <label for="mg-${k}" class="sr-only">Texto: ${esc(m.t)}</label><textarea id="mg-${k}" name="${k}" class="msg-ta" data-k="${k}" rows="8" maxlength="1000" ${pode?'':'disabled'}>${esc(txt)}</textarea>
+    ${pode?`<div class="msg-vars"><span class="muted">Inserir:</span>${m.v.map(v=>`<button type="button" class="btn ghost sm" data-act="insVar" data-id="${k}" data-v="${v}">${esc(VAR_ROT[v])}</button>`).join('')}<button type="button" class="btn ghost sm" data-act="padraoMsg" data-id="${k}">Restaurar original</button></div>`:''}
+    <div class="msg-prev"><span class="muted">Como a cliente vai ler (exemplo)</span><div class="wa-bolha" id="pv-${k}">${esc(previaMsg(k,txt))}</div></div></div>`};
+  return `${nota}<p class="muted" style="max-width:640px">Escreva do seu jeito. Os campos entre chaves, como <b>{nome}</b>, são trocados pelos dados da cliente na hora de enviar. Linhas com horário ou profissional em branco somem sozinhas.</p>
+  <form data-form="mensagens" class="msg-grid">${Object.keys(MSG_DEF).map(card).join('')}<p class="erro" id="a-erro" role="alert"></p>${pode?'<div class="acts"><button class="btn">Salvar mensagens</button></div>':'<p class="muted">Só quem administra o salão altera os textos.</p>'}</form>`;
+}
+async function salvarMensagens(d){
+  const m={};
+  Object.keys(MSG_DEF).forEach(k=>{const t=String(d[k]||'').replace(/\r/g,'').trim();if(t&&t!==MSG_DEF[k].d)m[k]=t.slice(0,1000)});
+  if(S.legado){LS.set('salao_mensagens',JSON.stringify(m));S.msgs=null;return 'local'}
+  const r=await sb.from('tenants').update({mensagens:m}).eq('id',S.ctx.tenant.id);
+  if(r.error){LS.set('salao_mensagens',JSON.stringify(m));S.msgs=null;S.msgsLocal=true;return 'local'}
+  S.msgs=m;S.msgsLocal=false;return 'ok';
+}
 /* ---------- Clientes ---------- */
 function lista(){
   return `<div class="bar"><input id="busca" type="search" placeholder="Buscar por nome ou telefone" value="${esc(S.busca)}" autocomplete="off" aria-label="Buscar cliente"><button class="btn" data-act="novaCliente">Nova cliente</button></div><div id="lista">${itensClientes()}</div>`;
@@ -893,12 +939,35 @@ function pedirDelCliente(id){
 
 /* ---------- Atendimentos ---------- */
 /* ---------- Lembrete de WhatsApp (envio manual: a pessoa aperta Enviar no WhatsApp) ---------- */
-function msgLembrete(a){
-  const L=['✨ Olá! Tudo bem? \u{1F495}','','Passando para lembrar que você tem um horário agendado conosco!','','\u{1F4C5} Data: '+fd(a.data)];
-  if(a.hora)L.push('⏰ Horário: '+a.hora);
-  L.push('\u{1F487}‍♀️ Procedimento: '+a.procedimento,'','Estamos esperando você com muito carinho para proporcionar um momento especial de cuidado e beleza! ❤️','','Até breve!',SALAO+' \u{1F337}');
-  return L.join('\n');
+const MSG_DEF={
+  lembrete:{t:'Lembrete do atendimento',q:'Enviado pela Agenda e pelos lembretes de amanhã.',v:['nome','salao','data','hora','procedimento','profissional'],
+    d:'✨ Olá! Tudo bem? \u{1F495}\n\nPassando para lembrar que você tem um horário agendado conosco!\n\n\u{1F4C5} Data: {data}\n⏰ Horário: {hora}\n\u{1F487}‍♀️ Procedimento: {procedimento}\n\nEstamos esperando você com muito carinho para proporcionar um momento especial de cuidado e beleza! ❤️\n\nAté breve!\n{salao} \u{1F337}'},
+  retorno:{t:'Retorno (saudade)',q:'Enviado na aba Retornos, para quem está sem voltar.',v:['nome','nome_completo','salao'],
+    d:'Olá, {nome}! \u{1F495}\n\nEstamos com saudade de você aqui no {salao}. Que tal agendar um horário para cuidar de você? ✨'},
+  aniversario:{t:'Aniversário',q:'Enviado para as aniversariantes do mês.',v:['nome','nome_completo','salao'],
+    d:'\u{1F389} Parabéns, {nome}! \u{1F495}\n\nA equipe do {salao} deseja um dia muito especial e um novo ciclo cheio de beleza e alegria! \u{1F337}'},
+  agradecimento:{t:'Agradecimento',q:'Enviado depois do atendimento, pelo botão Agradecer.',v:['nome','nome_completo','salao','procedimento','data','profissional'],
+    d:'Olá, {nome}! \u{1F495}\n\nFoi um prazer cuidar de você ({procedimento}) no {salao}! Qualquer dúvida sobre os cuidados em casa, é só me chamar. Até a próxima! \u{1F337}'},
+  cobranca:{t:'Cobrança (a receber)',q:'Enviado pelo botão Cobrar, nos valores a receber.',v:['nome','nome_completo','salao','valor','procedimento','data'],
+    d:'Olá, {nome}! Tudo bem? \u{1F495}\n\nPassando para lembrar do valor de {valor} referente a {procedimento} do dia {data}. Quando puder, é só me avisar por aqui. Obrigada! \u{1F337}\n{salao}'}
+};
+const VAR_ROT={nome:'Primeiro nome',nome_completo:'Nome completo',salao:'Nome do salão',data:'Data',hora:'Horário',procedimento:'Procedimento',profissional:'Profissional',valor:'Valor'};
+const salaoNome=()=>(S.ctx&&S.ctx.tenant&&S.ctx.tenant.nome)||SALAO;
+function msgsSalvas(){
+  if(S.msgs)return S.msgs;
+  try{const o=JSON.parse(LS.get('salao_mensagens','{}'));return o&&typeof o==='object'?o:{}}catch(_){return {}}
 }
+function montaMsg(chave,v){
+  const t=(msgsSalvas()[chave]||'').trim()||MSG_DEF[chave].d;
+  const val=Object.assign({salao:salaoNome()},v);
+  const L=String(t).replace(/\r/g,'').split('\n').filter(l=>{
+    const m=l.match(/\{(\w+)\}/g);
+    return !m||m.every(x=>{const k=x.slice(1,-1);return !(k in val)||String(val[k]||'')!==''||!(k in {hora:1,profissional:1,procedimento:1,data:1,valor:1})});
+  });
+  return L.join('\n').replace(/\{(\w+)\}/g,(x,k)=>k in val?String(val[k]||''):x).replace(/\n{3,}/g,'\n\n').trim();
+}
+const vCli=c=>({nome:primeiro(c&&c.nome),nome_completo:String((c&&c.nome)||'').trim()});
+function msgLembrete(a){const c=cli(a.clienteId);return montaMsg('lembrete',Object.assign(vCli(c),{data:fd(a.data),hora:a.hora||'',procedimento:a.procedimento||'',profissional:a.profissional||''}))}
 function btnLembrete(a){
   const c=cli(a.clienteId),tel=c?String(c.telefone||'').replace(/\D/g,'').replace(/^0+/,''):'';
   if(tel.length<10){const m=tel?'telefone sem DDD':'cliente sem telefone';return `<button class="btn ghost sm" disabled title="${m==='telefone sem DDD'?'O telefone da cliente está sem DDD. Edite o cadastro dela.':'Esta cliente não tem telefone cadastrado'}">Lembrete WhatsApp</button><div class="muted" style="font-size:12px">${m}</div>`}
@@ -1240,8 +1309,8 @@ function telaRet(){
 /* ---------- A receber (fiado), agradecimento e cobrança ---------- */
 const FIADO='A receber (fiado)';
 const isFiado=a=>a.pagamento===FIADO;
-const msgAgradece=(c,a)=>`Olá, ${primeiro(c.nome)}! \u{1F495}\n\nFoi um prazer cuidar de você${a&&a.procedimento?' ('+a.procedimento+')':''} no ${SALAO}! Qualquer dúvida sobre os cuidados em casa, é só me chamar. Até a próxima! \u{1F337}`;
-const msgCobranca=(c,a)=>`Olá, ${primeiro(c.nome)}! Tudo bem? \u{1F495}\n\nPassando para lembrar do valor de ${brl(a.valor)} referente a ${a.procedimento} do dia ${fd(a.data)}. Quando puder, é só me avisar por aqui. Obrigada! \u{1F337}\n${SALAO}`;
+const msgAgradece=(c,a)=>montaMsg('agradecimento',Object.assign(vCli(c),{procedimento:(a&&a.procedimento)||'',data:a?fd(a.data):'',profissional:(a&&a.profissional)||''}));
+const msgCobranca=(c,a)=>montaMsg('cobranca',Object.assign(vCli(c),{valor:brl(a.valor),procedimento:a.procedimento||'',data:fd(a.data)}));
 function btnAgradece(a){
   const c=cli(a.clienteId);if(!telOk(c)||String(a.data)>hoje())return '';
   return `<a class="btn sm wa-btn ghost" href="${esc(linkZap(c,msgAgradece(c,a)))}" target="_blank" rel="noopener" title="Abre o WhatsApp com a mensagem de agradecimento pronta">Agradecer</a>`;
@@ -1272,8 +1341,9 @@ const byHora=(a,b)=>String(a.hora||'99:99').localeCompare(String(b.hora||'99:99'
 const enviados=()=>{try{return JSON.parse(LS.get('salao_lembretes','{}'))||{}}catch(_){return {}}};
 const telOk=c=>!!c&&String(c.telefone||'').replace(/\D/g,'').replace(/^0+/,'').length>=10;
 const primeiro=n=>String(n||'').trim().split(/\s+/)[0]||'';
-const msgAniv=c=>`\u{1F389} Parabéns, ${primeiro(c.nome)}! \u{1F495}\n\nA equipe do ${SALAO} deseja um dia muito especial e um novo ciclo cheio de beleza e alegria! \u{1F337}`;
-const msgSaudade=c=>`Olá, ${primeiro(c.nome)}! \u{1F495}\n\nEstamos com saudade de você aqui no ${SALAO}. Que tal agendar um horário para cuidar de você? ✨`;
+const msgAniv=c=>montaMsg('aniversario',vCli(c));
+const msgSaudade=c=>montaMsg('retorno',vCli(c));
+if(window.__TESTE__)window.__t={msgAniv,msgSaudade,msgLembrete,msgAgradece,msgCobranca};
 const linkZap=(c,m)=>zap(c.telefone)+'?text='+encodeURIComponent(m);
 function sumidas(){
   const lim=addDia(hoje(),-60);
@@ -1443,7 +1513,7 @@ function telaRel(){
   const tot=L.reduce((s,x)=>s+x.v,0),nCli=new Set(feitos.map(a=>a.clienteId)).size,mm=atual.slice(5,7);
   const parc=m&&S.atend.some(a=>a.pagamento==='Cartão de crédito'&&PARC(a.parcelas)>1);
   const aniv=S.clientes.filter(c=>c.nascimento&&String(c.nascimento).slice(5,7)===mm).sort((a,b)=>String(a.nascimento).slice(8).localeCompare(String(b.nascimento).slice(8)));
-  const head=`<p class="so-print">${esc(S.nomeSalao||SALAO)} — ${m?esc(mesNome(m)):'todo o período'}</p><div class="bar"><button class="btn ghost" data-act="imprimir">Imprimir / salvar em PDF</button><select id="mesRel" aria-label="Período"><option value="">Todo o período</option>${meses.map(x=>`<option value="${x}" ${x===m?'selected':''}>${esc(mesNome(x))}</option>`).join('')}</select></div>${segRel()}`;
+  const head=`<p class="so-print">${esc(S.nomeSalao||salaoNome())} — ${m?esc(mesNome(m)):'todo o período'}</p><div class="bar"><button class="btn ghost" data-act="imprimir">Imprimir / salvar em PDF</button><select id="mesRel" aria-label="Período"><option value="">Todo o período</option>${meses.map(x=>`<option value="${x}" ${x===m?'selected':''}>${esc(mesNome(x))}</option>`).join('')}</select></div>${segRel()}`;
   const despAt=feitos.reduce((x,a)=>x+desp(a),0),G=gastosDoMes(m),despTot=despAt+soma(G),res=tot-despTot;
   const resumo=`<div class="stats"><div class="stat"><b>${brl(tot)}</b><span>${m?'recebido no mês':'faturado'}</span></div><div class="stat"><b>${brl(despTot)}</b><span>despesas (atendimentos + contas)</span></div><div class="stat"><b class="${res<0?'neg':''}">${brl(res)}</b><span>resultado (${m?'recebido':'faturado'} − despesas)</span></div></div>`;
   if(S.relAba==='desp')return head+resumo+relDesp(m,feitos,G);
@@ -1781,6 +1851,8 @@ document.addEventListener('click',e=>{
     relAba:()=>{S.relAba=id;render()},mais:()=>{S.lim[id]=(S.lim[id]||100)+200;render()},voltar:()=>{S.sel=null;render()},estAba:()=>{S.estAba=id;render()},novoProd:()=>formProd(),editProd:()=>formProd(id),delProd:()=>pedirDelProd(id),movProd:()=>formMov(id),histProd:()=>histProd(id),novaFicha:()=>formFicha(id),editFicha:()=>formFicha(null,id),delFicha:()=>pedirDelFicha(id),exportJson,exportCsv,exportXlsx,novaDesp:()=>formDesp(),editDesp:()=>formDesp(id),delDesp:()=>pedirDelDesp(id),fechar:()=>$('dlg').close(),
     recarregar:()=>{S.erro='';render();recarregar()},
     tentarCtx:()=>{parar();iniciar()},
+    insVar:()=>{const t=$('mg-'+id);if(!t)return;const v='{'+a.dataset.v+'}',i=t.selectionStart??t.value.length,f=t.selectionEnd??i;t.value=t.value.slice(0,i)+v+t.value.slice(f);t.focus();t.selectionStart=t.selectionEnd=i+v.length;t.dispatchEvent(new Event('input',{bubbles:true}))},
+    padraoMsg:()=>{const t=$('mg-'+id);if(!t)return;t.value=MSG_DEF[id].d;t.dispatchEvent(new Event('input',{bubbles:true}))},
     plAba:()=>{S.pl.aba=id;S.pl.lim=60;render()},plRecarrega:()=>{S.pl.ok=false;render();carregarPlataforma()},
     plSalao:()=>detSalao(id),plNovoSalao:()=>formNovoSalao(),
     plSetPlano:()=>plRpc('plataforma_definir_plano',{p_tenant:id,p_plano:$('pd-plano').value},'Plano alterado.',id),
@@ -1800,6 +1872,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('keydown',e=>{
   if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.item.click')){e.preventDefault();e.target.click()}
 });
+document.addEventListener('input',e=>{if(e.target.classList&&e.target.classList.contains('msg-ta')){const k=e.target.dataset.k,pv=$('pv-'+k);if(pv)pv.textContent=previaMsg(k,e.target.value)}});
 document.addEventListener('input',e=>{if(e.target.id==='pl-q'){S.pl.q=e.target.value;const l=$('pl-lista');if(l)l.innerHTML=plLista()}});
 document.addEventListener('change',e=>{if(e.target.id==='pl-st'){S.pl.st=e.target.value;const l=$('pl-lista');if(l)l.innerHTML=plLista()}});
 document.addEventListener('change',async e=>{
@@ -1864,7 +1937,7 @@ function tempoTxt(sg){return sg>=60?Math.ceil(sg/60)+' min':sg+' s'}
 
 document.addEventListener('submit',async e=>{
   const f=e.target,k=f.dataset&&f.dataset.form;
-  if(!['criar','recuperar','novasenha','salao','config'].includes(k))return;
+  if(!['criar','recuperar','novasenha','salao','config','mensagens'].includes(k))return;
   e.preventDefault();if(S.busy||!sb)return;
   const d=Object.fromEntries(new FormData(f)),bt=f.querySelector('button'),er=$('a-erro');
   const ver=(c,m)=>{if(c){er.textContent=m;return true}return false};
@@ -1891,6 +1964,9 @@ document.addEventListener('submit',async e=>{
       if(r.error){er.textContent=msgAuth(r.error.message,r.error.status);return}
       S.recuperando=false;try{history.replaceState(null,'',location.pathname)}catch(_){}
       render();toast('Senha alterada.');
+    }else if(k==='mensagens'){
+      const r=await salvarMensagens(d);render();
+      toast(r==='ok'?'Mensagens salvas.':'Mensagens salvas neste aparelho.');
     }else if(k==='config'){
       const p={};['nome','razao_social','documento','proprietario_nome','telefone','whatsapp','email','cep','numero','logradouro','complemento','bairro','cidade','uf'].forEach(x=>{p[x]=String(d[x]||'').trim()});
       p.uf=p.uf.toUpperCase();p.cor_principal=d.cor_principal;
