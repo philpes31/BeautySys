@@ -286,6 +286,9 @@ body.logado .salao-id div{display:flex;flex-direction:column;min-width:0}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .wa-bolha{background:#1e3a2a;color:#e4f3e0}}
 :root[data-theme="dark"] .wa-bolha{background:#1e3a2a;color:#e4f3e0}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+.chk{display:flex;align-items:center;gap:8px;margin:8px 0;font-weight:500}
+.chk input{width:auto;margin:0}
 </style>
 </head>
 <body>
@@ -693,9 +696,23 @@ function pedirDelMembro(uid){
 
 /* ---------- Dados do salão ---------- */
 async function carregarSalao(){
-  try{const r=await sb.from('tenants').select('*').eq('id',S.ctx.tenant.id);if(r.error)throw r.error;S.salao=(r.data&&r.data[0])||null;S.logoNovo=undefined}
+  try{const r=await sb.from('tenants').select('*').eq('id',S.ctx.tenant.id);if(r.error)throw r.error;S.salao=(r.data&&r.data[0])||null;S.logoNovo=undefined
+    S.assin={planos:[],pags:[]};
+    if(S.ctx.role==='proprietario'){try{const [a,b]=await Promise.all([sb.from('plans').select('*').eq('ativo',true).order('preco_mensal'),sb.from('pagamentos').select('*').order('vencimento',{ascending:false}).limit(6)]);S.assin={planos:a.data||[],pags:b.data||[]}}catch(_){}}}
   catch(_){S.salao=false}
   if(S.view==='salao')render();
+}
+function blocoAssinatura(){
+  if(S.ctx.role!=='proprietario'||!S.ctx.tenant)return '';
+  const tn=S.ctx.tenant,pl=S.ctx.plano,A=S.assin||{planos:[],pags:[]};
+  const venc=tn.vencimento?(tn.vencimento<hoje()?'venceu em ':'vence em ')+fd(tn.vencimento):'';
+  const pags=A.pags.length?'<div class="list" style="margin-top:8px">'+A.pags.map(g=>`<div class="item"><div class="grow">vence ${esc(fd(g.vencimento))}</div><div class="side"><b>${brl(g.valor)}</b> ${tagSt(g.status,ST_PAG)}${(g.status==='pendente'||g.status==='atrasado')&&g.link_pagamento?` <a class="btn sm" href="${esc(g.link_pagamento)}" target="_blank" rel="noopener">Pagar</a>`:''}</div></div>`).join('')+'</div>':'<p class="muted" style="margin:6px 0 0">Nenhuma cobrança até agora.</p>';
+  const outros=A.planos.filter(p=>!pl||p.nome!==pl.nome);
+  return `<div class="panel" style="max-width:640px;margin-bottom:16px"><h3 style="margin:0 0 6px;font-size:16px">Plano e assinatura</h3>
+  <p style="margin:0">${pl?`<b>${esc(pl.nome)}</b> · `:''}${tagSt(tn.status,ST_SAL)} ${venc?`<span class="muted">${esc(venc)}</span>`:''}</p>
+  ${pl?`<p class="muted" style="margin:4px 0 0">${pl.max_usuarios} usuários · ${pl.max_profissionais} profissionais</p>`:''}
+  <h4 style="margin:14px 0 0;font-size:14px">Cobranças</h4>${pags}
+  ${outros.length?`<h4 style="margin:14px 0 6px;font-size:14px">Outros planos</h4><div class="list">${outros.map(p=>`<div class="item"><div class="grow"><div class="t">${esc(p.nome)}</div><div class="muted">${p.max_usuarios} usuários · ${p.max_profissionais} profissionais${Object.keys(RECURSOS).filter(k=>p.recursos&&p.recursos[k]===false).map(k=>' · sem '+RECURSOS[k].toLowerCase()).join('')}</div></div><div class="side"><b>${brl(p.preco_mensal)}</b>/mês <button class="btn ghost sm" data-act="pedePlano" data-id="${esc(p.id)}">Quero este</button></div></div>`).join('')}</div>`:''}</div>`;
 }
 function telaSalao(){
   if(S.salao===null)return '<p class="muted">Carregando…</p>';
@@ -703,7 +720,7 @@ function telaSalao(){
   const t=S.salao,ro=NV('config')!=='escrita'?'disabled':'';
   const f=(id,rot,extra,v)=>`<div><label for="cf-${id}">${rot}</label><input id="cf-${id}" name="${id}" value="${esc(v!==undefined?v:(t[id]||''))}" ${ro} ${extra||''}></div>`;
   const logo=S.logoNovo!==undefined?S.logoNovo:t.logo_url;
-  return `<form data-form="config" class="panel" style="max-width:640px">
+  return blocoAssinatura()+`<form data-form="config" class="panel" style="max-width:640px">
   <h3 style="margin:0 0 10px;font-size:16px">Marca</h3>
   <div class="logo-linha"><div class="logo-prev" id="cf-prev">${logo?`<img src="${esc(logo)}" alt="Logotipo">`:'<span class="muted">Sem logotipo</span>'}</div>
   <div><input id="cf-logo" type="file" accept="image/png,image/jpeg,image/webp" ${ro}> ${logo&&!ro?'<button type="button" class="btn ghost sm" data-act="tiraLogo">Remover logotipo</button>':''}<p class="muted" style="font-size:12.5px;margin:6px 0 0">A imagem é reduzida automaticamente.</p></div></div>
@@ -766,9 +783,9 @@ const nomeSalao=id=>{const s=S.pl.saloes.find(x=>x.id===id);return s?s.nome:'—
 function telaPlataforma(){
   if(!S.pl.ok)return '<p class="muted">Carregando…</p>';
   if(S.pl.erro)return aviso('Não foi possível carregar a plataforma','Rode o arquivo 04-plataforma.sql no Supabase e tente de novo.','<div class="row-actions"><button class="btn" data-act="plRecarrega">Tentar de novo</button></div>');
-  const ab=S.pl.aba,A=[['painel','Painel'],['saloes','Salões'],['pagamentos','Pagamentos'],['auditoria','Auditoria']];
+  const ab=S.pl.aba,A=[['painel','Painel'],['saloes','Salões'],['planos','Planos'],['pagamentos','Pagamentos'],['auditoria','Auditoria']];
   const nav=`<div class="segs" role="tablist">${A.map(([k,l])=>`<button class="btn ghost sm" role="tab" aria-pressed="${ab===k}" data-act="plAba" data-id="${k}">${l}</button>`).join('')}</div>`;
-  return nav+(ab==='saloes'?plSaloes():ab==='pagamentos'?plPagamentos():ab==='auditoria'?plAuditoria():plPainel());
+  return nav+(ab==='saloes'?plSaloes():ab==='planos'?plPlanos():ab==='pagamentos'?plPagamentos():ab==='auditoria'?plAuditoria():plPainel());
 }
 function plPainel(){
   const i=S.pl.ind||{},k=(v,l)=>`<div class="stat"><b>${v}</b><span>${l}</span></div>`;
@@ -778,7 +795,13 @@ function plPainel(){
   return `<div class="stats">${k(i.saloes||0,'salões cadastrados')}${k(i.ativos||0,'assinantes ativos')}${k(i.em_teste||0,'em período de teste')}${k(i.vencidos||0,'assinaturas vencidas')}</div>
   <div class="stats">${k(i.cancelados||0,'canceladas')}${k(i.bloqueados||0,'bloqueadas')}${k(brl(i.mrr||0),'receita mensal (MRR)')}${k(brl(i.arr||0),'receita anual (ARR)')}</div>
   <div class="row-actions" style="margin:6px 0 16px"><button class="btn ghost" data-act="plSituacoes">Atualizar situações</button><button class="btn ghost" data-act="plCobrancas">Gerar cobranças</button><button class="btn" data-act="plNovoSalao">Cadastrar salão</button></div>
+  ${plPedidos()}
   <p class="muted" style="font-size:13px">MRR soma o valor do plano dos salões com assinatura ativa. "Atualizar situações" marca como vencidos os salões com data passada. "Gerar cobranças" cria a mensalidade de cada salão ativo que não tem cobrança em aberto.</p>${g}`;
+}
+function plPedidos(){
+  const L=S.pl.logs.filter(l=>l.detalhes&&l.detalhes.solicitacao_plano).slice(0,5);
+  if(!L.length)return '';
+  return `<div class="panel" style="margin-bottom:14px"><b>Pedidos de troca de plano</b><div class="list" style="margin-top:8px">${L.map(l=>`<div class="item click" tabindex="0" role="button" data-act="plSalao" data-id="${esc(l.tenant_id)}"><div class="grow"><div class="t">${esc(nomeSalao(l.tenant_id))}</div><div class="muted">quer o plano ${esc(l.detalhes.solicitacao_plano)}${l.detalhes.mensagem?' · '+esc(l.detalhes.mensagem):''}</div></div><div class="side muted" style="font-size:12.5px">${esc(new Date(l.criado_em).toLocaleDateString('pt-BR'))}</div></div>`).join('')}</div></div>`;
 }
 function plLista(){
   const q=S.pl.q.trim().toLowerCase(),st=S.pl.st;
@@ -799,6 +822,7 @@ function plPagamentos(){
 function resumoLog(l){
   const d=l.detalhes||{};
   if(d.status)return 'situação: '+(ST_SAL[d.status]||d.status)+(d.motivo?' ('+d.motivo+')':'');
+  if(d.solicitacao_plano)return 'pediu o plano '+d.solicitacao_plano+(d.mensagem?' ('+d.mensagem+')':'');
   if(d.plano)return 'plano alterado';
   if(d.vencimento)return 'vencimento: '+fd(d.vencimento);
   if(d.criado_pela_plataforma)return 'salão cadastrado pela plataforma';
@@ -812,6 +836,30 @@ function plAuditoria(){
   const L=S.pl.logs;
   return `<p class="muted" style="font-size:13px">Registro de ações. Mostra apenas o que mudou, nunca o conteúdo dos dados dos clientes.</p>`+(L.length?'<div class="list">'+L.slice(0,S.pl.lim).map(l=>`<div class="item"><div class="grow"><div class="t">${esc(l.acao)} · ${esc(l.tabela||'')}</div><div class="muted">${esc(l.tenant_id?nomeSalao(l.tenant_id):'Plataforma')}${resumoLog(l)?' · '+esc(resumoLog(l)):''}</div></div><div class="side muted" style="font-size:12.5px">${esc(new Date(l.criado_em).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}))}</div></div>`).join('')+'</div>':'<div class="empty"><p>Nenhum registro.</p></div>');
 }
+
+const RECURSOS={estoque:'Estoque e fichas técnicas',financeiro:'Despesas e relatórios'};
+function plPlanos(){
+  const L=S.pl.planos,uso=id=>S.pl.saloes.filter(x=>x.plano_id===id).length;
+  return `<div class="bar"><span class="muted grow">Preços e limites valem na hora, sem mexer no código. Salões que já assinaram mantêm o histórico.</span><button class="btn" data-act="plNovoPlano">Novo plano</button></div>
+  ${L.length?'<div class="list">'+L.map(p=>`<div class="item click" tabindex="0" role="button" data-act="plEditaPlano" data-id="${esc(p.id)}"><div class="grow"><div class="t">${esc(p.nome)} ${p.ativo?'':'<span class="tag late">Inativo</span>'}</div><div class="muted">${p.max_usuarios} usuários · ${p.max_profissionais} profissionais · ${p.trial_dias} dias de teste${Object.keys(RECURSOS).filter(k=>p.recursos&&p.recursos[k]===false).map(k=>' · sem '+RECURSOS[k].toLowerCase()).join('')}</div></div><div class="side"><b>${brl(p.preco_mensal)}</b><div class="muted" style="font-size:12.5px">${uso(p.id)} ${uso(p.id)===1?'salão':'salões'}</div></div></div>`).join('')+'</div>':'<div class="empty"><p>Nenhum plano cadastrado.</p></div>'}`;
+}
+function formPlano(id){
+  const p=S.pl.planos.find(x=>x.id===id)||{nome:'',preco_mensal:'',max_usuarios:3,max_profissionais:2,trial_dias:14,ativo:true,recursos:{}};
+  abrir(`<h2>${id?'Editar plano':'Novo plano'}</h2><form data-form="plplano" data-id="${esc(id||'')}">
+  <label for="pp-nome">Nome do plano *</label><input id="pp-nome" name="nome" required maxlength="60" value="${esc(p.nome)}">
+  <div class="g2"><div><label for="pp-preco">Preço mensal (R$) *</label><input id="pp-preco" name="preco_mensal" type="number" step="0.01" min="0" required value="${esc(p.preco_mensal)}"></div><div><label for="pp-trial">Teste grátis (dias)</label><input id="pp-trial" name="trial_dias" type="number" min="0" max="90" value="${esc(p.trial_dias)}"></div></div>
+  <div class="g2"><div><label for="pp-u">Usuários *</label><input id="pp-u" name="max_usuarios" type="number" min="1" required value="${esc(p.max_usuarios)}"></div><div><label for="pp-p">Profissionais *</label><input id="pp-p" name="max_profissionais" type="number" min="0" required value="${esc(p.max_profissionais)}"></div></div>
+  <h3 style="margin:14px 0 4px;font-size:15px">Recursos liberados</h3>
+  ${Object.keys(RECURSOS).map(k=>`<label class="chk"><input type="checkbox" name="rec_${k}" ${p.recursos&&p.recursos[k]===false?'':'checked'}> ${RECURSOS[k]}</label>`).join('')}
+  <label class="chk"><input type="checkbox" name="ativo" ${p.ativo?'checked':''}> Plano ativo (pode ser contratado)</label>
+  <div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Salvar plano</button></div></form>`);
+}
+async function salvarPlano(id,d){
+  const rec={};Object.keys(RECURSOS).forEach(k=>{rec[k]=d['rec_'+k]==='on'});
+  const p={id:id||null,nome:String(d.nome||'').trim(),preco_mensal:Number(d.preco_mensal),max_usuarios:Number(d.max_usuarios),max_profissionais:Number(d.max_profissionais),trial_dias:Number(d.trial_dias||0),ativo:d.ativo==='on',recursos:rec};
+  const r=await sb.rpc('plataforma_salvar_plano',{p});if(r.error)throw r.error;
+  await carregarPlataforma();toast('Plano salvo.');
+}
 async function detSalao(id){
   const x=S.pl.saloes.find(v=>v.id===id);if(!x)return;
   let sub=[],pg=[];
@@ -823,7 +871,7 @@ async function detSalao(id){
   <h3 style="margin:14px 0 6px;font-size:15px">Situação</h3><div class="bar"><select id="pd-st" aria-label="Situação">${Object.keys(ST_SAL).map(k=>`<option value="${k}" ${k===x.status?'selected':''}>${ST_SAL[k]}</option>`).join('')}</select><input id="pd-mot" placeholder="Motivo (opcional)" maxlength="200" aria-label="Motivo"><button class="btn ghost" data-act="plSetStatus" data-id="${esc(id)}">Aplicar</button></div>
   <h3 style="margin:14px 0 6px;font-size:15px">Vencimento</h3><div class="bar"><input id="pd-venc" type="date" value="${esc(x.vencimento||'')}" aria-label="Vencimento"><button class="btn ghost" data-act="plSetVenc" data-id="${esc(id)}">Salvar data</button></div>
   <h3 style="margin:14px 0 6px;font-size:15px">Cobranças</h3>${pg.length?'<div class="list">'+pg.slice(0,6).map(g=>`<div class="item"><div class="grow">vence ${esc(fd(g.vencimento))}</div><div class="side"><b>${brl(g.valor)}</b> ${tagSt(g.status,ST_PAG)}${g.status==='pendente'||g.status==='atrasado'?` <button class="btn sm" data-act="plPagar" data-id="${esc(g.id)}">Marcar pago</button>`:''}</div></div>`).join('')+'</div>':'<p class="muted">Nenhuma cobrança.</p>'}
-  <div class="bar" style="margin-top:8px"><input id="pd-val" type="number" step="0.01" min="0" placeholder="Valor" aria-label="Valor" value="${esc(x.preco||'')}"><input id="pd-vc" type="date" aria-label="Vencimento da cobrança" value="${esc(x.vencimento||hoje())}"><button class="btn ghost" data-act="plNovaCobranca" data-id="${esc(id)}">Nova cobrança</button></div>
+  <div class="bar" style="margin-top:8px"><input id="pd-val" type="number" step="0.01" min="0" placeholder="Valor" aria-label="Valor" value="${esc(x.preco||'')}"><input id="pd-vc" type="date" aria-label="Vencimento da cobrança" value="${esc(x.vencimento||hoje())}"><input id="pd-link" type="url" placeholder="Link de pagamento (https://…)" aria-label="Link de pagamento" maxlength="500"><button class="btn ghost" data-act="plNovaCobranca" data-id="${esc(id)}">Nova cobrança</button></div>
   <h3 style="margin:14px 0 6px;font-size:15px">Histórico da assinatura</h3>${sub.length?'<div class="list">'+sub.slice(0,8).map(g=>`<div class="item"><div class="grow">${esc(fd(g.inicio))}${g.fim?' a '+esc(fd(g.fim)):' até agora'}</div><div class="side">${tagSt(g.status,ST_SAL)} <span class="muted">${brl(g.valor)}</span></div></div>`).join('')+'</div>':'<p class="muted">Sem histórico.</p>'}
   <div class="acts"><button type="button" class="btn ghost" data-act="fechar">Fechar</button></div>`);
 }
@@ -1851,6 +1899,8 @@ document.addEventListener('click',e=>{
     relAba:()=>{S.relAba=id;render()},mais:()=>{S.lim[id]=(S.lim[id]||100)+200;render()},voltar:()=>{S.sel=null;render()},estAba:()=>{S.estAba=id;render()},novoProd:()=>formProd(),editProd:()=>formProd(id),delProd:()=>pedirDelProd(id),movProd:()=>formMov(id),histProd:()=>histProd(id),novaFicha:()=>formFicha(id),editFicha:()=>formFicha(null,id),delFicha:()=>pedirDelFicha(id),exportJson,exportCsv,exportXlsx,novaDesp:()=>formDesp(),editDesp:()=>formDesp(id),delDesp:()=>pedirDelDesp(id),fechar:()=>$('dlg').close(),
     recarregar:()=>{S.erro='';render();recarregar()},
     tentarCtx:()=>{parar();iniciar()},
+    plNovoPlano:()=>formPlano(''),plEditaPlano:()=>formPlano(id),
+    pedePlano:()=>{const p=(S.assin&&S.assin.planos||[]).find(x=>x.id===id);if(!p)return;confirmar('Pedir o plano '+p.nome+'?','Avisamos a equipe do Agendio, que conclui a troca e envia a cobrança.','Pedir plano',async()=>{const r=await sb.rpc('solicitar_plano',{p_plano:id,p_msg:''});if(r.error)throw r.error;toast('Pedido enviado.')})},
     insVar:()=>{const t=$('mg-'+id);if(!t)return;const v='{'+a.dataset.v+'}',i=t.selectionStart??t.value.length,f=t.selectionEnd??i;t.value=t.value.slice(0,i)+v+t.value.slice(f);t.focus();t.selectionStart=t.selectionEnd=i+v.length;t.dispatchEvent(new Event('input',{bubbles:true}))},
     padraoMsg:()=>{const t=$('mg-'+id);if(!t)return;t.value=MSG_DEF[id].d;t.dispatchEvent(new Event('input',{bubbles:true}))},
     plAba:()=>{S.pl.aba=id;S.pl.lim=60;render()},plRecarrega:()=>{S.pl.ok=false;render();carregarPlataforma()},
@@ -1858,7 +1908,7 @@ document.addEventListener('click',e=>{
     plSetPlano:()=>plRpc('plataforma_definir_plano',{p_tenant:id,p_plano:$('pd-plano').value},'Plano alterado.',id),
     plSetStatus:()=>plRpc('plataforma_definir_status',{p_tenant:id,p_status:$('pd-st').value,p_motivo:$('pd-mot').value.trim()},'Situação atualizada.',id),
     plSetVenc:()=>{const v=$('pd-venc').value;if(!v){toast('Escolha a data.',true);return}plRpc('plataforma_vencimento',{p_tenant:id,p_data:v},'Vencimento salvo.',id)},
-    plNovaCobranca:()=>{const v=Number($('pd-val').value),d=$('pd-vc').value;if(!(v>=0)||!d||$('pd-val').value===''){toast('Informe valor e vencimento.',true);return}plRpc('plataforma_pagamento',{p:{tenant_id:id,valor:v,vencimento:d}},'Cobrança criada.',id)},
+    plNovaCobranca:()=>{const v=Number($('pd-val').value),d=$('pd-vc').value;if(!(v>=0)||!d||$('pd-val').value===''){toast('Informe valor e vencimento.',true);return}plRpc('plataforma_pagamento',{p:{tenant_id:id,valor:v,vencimento:d,link_pagamento:$('pd-link').value.trim()}},'Cobrança criada.',id)},
     plPagar:()=>{const g=S.pl.pags.find(x=>x.id===id);if(!g)return;const dlgAberto=$('dlg').open;plRpc('plataforma_pagamento',{p:{id:g.id,tenant_id:g.tenant_id,valor:g.valor,vencimento:g.vencimento,status:'pago'}},'Pagamento registrado.',dlgAberto?g.tenant_id:null)},
     plCobrancas:()=>plRpc('plataforma_gerar_cobrancas',{},n=>n?n+(n===1?' cobrança criada.':' cobranças criadas.'):'Nenhuma cobrança nova.'),
     plSituacoes:()=>plRpc('plataforma_atualizar_situacoes',{},r=>`${r.saloes_vencidos} salão(ões) vencido(s) e ${r.cobrancas_atrasadas} cobrança(s) atrasada(s).`),novoConvite:()=>formConvite(),editMembro:()=>formMembro(id),delMembro:()=>pedirDelMembro(id),
@@ -1920,6 +1970,7 @@ $('dlg').addEventListener('submit',async e=>{
     else if(k==='convite'){try{await salvarConvite(dados)}catch(x){if(x&&x.mantem)return;throw x}}
     else if(k==='membro')await salvarMembro(id,dados);
     else if(k==='suporte')await salvarSuporte(dados);
+    else if(k==='plplano')await salvarPlano(id,dados);
     else if(k==='plsalao'){try{await salvarNovoSalao(dados)}catch(x){if(x&&x.mantem)return;throw x}}
     else if(k==='meta'){LS.set('salao_meta',String(din(dados.valor)));toast('Meta salva.');render()}
     else if(k==='confirmar')await S.conf();
