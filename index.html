@@ -2,7 +2,12 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Agendio">
 <meta name="robots" content="noindex,nofollow">
 <title>Agendio</title>
 <meta name="theme-color" content="#2a1722">
@@ -289,6 +294,72 @@ body.logado .salao-id div{display:flex;flex-direction:column;min-width:0}
 
 .chk{display:flex;align-items:center;gap:8px;margin:8px 0;font-weight:500}
 .chk input{width:auto;margin:0}
+
+/* ===== Celular: aparência de aplicativo (barra de baixo, folhas, botão +) ===== */
+html{-webkit-tap-highlight-color:transparent}
+.bnav,.fab{display:none}
+.bnav[hidden],.fab[hidden]{display:none!important}
+@media (max-width:859px){
+  body{overscroll-behavior-y:none}
+  button,.btn,.item,.bnav,summary{touch-action:manipulation}
+  body.logado .top{padding-top:env(safe-area-inset-top,0px);background:color-mix(in srgb,var(--side) 94%,transparent);-webkit-backdrop-filter:saturate(1.4) blur(14px);backdrop-filter:saturate(1.4) blur(14px)}
+  body.logado .top .wrap{padding-block:0}
+  body.logado .top .tone,body.logado .top .tabs,body.logado .top .salao-id{display:none}
+  body.logado .brand-row{flex-wrap:nowrap;padding-block:9px}
+  body.logado .brand{font-size:19px;gap:9px}
+  body.logado .mono{width:30px;height:30px;font-size:14px}
+  body.logado .sync{font-size:0;gap:0}
+  body.logado .sync .dot{width:10px;height:10px}
+  body.logado .sync .linkbtn,body.logado .sync .who{display:none}
+  body.logado main.wrap{padding-block:10px calc(104px + env(safe-area-inset-bottom,0px))}
+  .page-head{margin:2px 0 12px}
+  .page-head p,.page-head .hoje{display:none}
+  .page-head h1{font-family:var(--font-body);font-weight:800;font-size:30px;letter-spacing:-.02em}
+  .btn{min-height:44px}
+  .btn.sm{min-height:36px}
+  input,select,textarea{min-height:46px}
+  textarea{min-height:88px}
+  .bar{gap:8px}
+  main[data-view=agenda] .bar [data-act=novoAtend],main[data-view=atendimentos] .bar [data-act=novoAtend],main[data-view=clientes] .bar [data-act=novaCliente]{display:none}
+  .bar .btn{flex:1 1 auto}
+  body.logado .bnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:30;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));background:color-mix(in srgb,var(--surface) 88%,transparent);-webkit-backdrop-filter:saturate(1.6) blur(18px);backdrop-filter:saturate(1.6) blur(18px);border-top:1px solid var(--line);user-select:none;-webkit-user-select:none}
+  .bnav button{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:none;padding:6px 2px 4px;border-radius:12px;font:inherit;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer}
+  .bnav button span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bnav .ic{width:25px;height:25px}
+  .bnav button[aria-current="page"]{color:var(--accent)}
+  .bnav button:active{background:var(--line-2)}
+  body.logado .fab{display:grid;place-items:center;position:fixed;right:16px;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:29;width:56px;height:56px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-ink);box-shadow:0 10px 22px -8px rgba(20,8,16,.55);cursor:pointer}
+  .fab .ic{width:26px;height:26px;stroke-width:2.2}
+  .fab:active{transform:scale(.94)}
+  #toast{bottom:calc(72px + env(safe-area-inset-bottom,0px))}
+  .item.click:active,.item[data-act]:active{background:var(--line-2)}
+  .btn:active{transform:scale(.97)}
+  .entrada-marca{padding-top:calc(32px + env(safe-area-inset-top,0px))}
+  /* menu "Mais" */
+  .sheet-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .sheet-head b{display:block;font-size:17px;line-height:1.2}
+  .sheet-head span.muted{font-size:13px}
+  .sheet-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .sheet-grid button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 6px;border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--ink);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+  .sheet-grid button[aria-current="page"]{border-color:var(--accent);color:var(--accent)}
+  .sheet-grid button:active{background:var(--line-2)}
+  .sheet-grid .ic{width:26px;height:26px}
+  .sheet-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+  .sheet-foot .muted{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+}
+@media (max-width:640px){
+  dialog{margin:auto 0 0;width:100%;max-width:none;max-height:92dvh;border-radius:24px 24px 0 0;border-width:1px 0 0;padding:14px 18px calc(18px + env(safe-area-inset-bottom,0px));overscroll-behavior:contain}
+  dialog::before{content:"";display:block;width:42px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 14px}
+  dialog h2{font-size:24px}
+  dialog .acts{flex-direction:row;gap:10px}
+  dialog .acts .btn{flex:1 1 0;min-height:48px}
+}
+@media (max-width:859px) and (prefers-reduced-motion:no-preference){
+  dialog[open]{animation:sheet .24s cubic-bezier(.2,.8,.2,1)}
+  @keyframes sheet{from{transform:translateY(40px);opacity:0}}
+  main.vt{animation:vtela .18s ease-out}
+  @keyframes vtela{from{opacity:0;transform:translateY(8px)}}
+}
 </style>
 </head>
 <body>
@@ -301,6 +372,8 @@ body.logado .salao-id div{display:flex;flex-direction:column;min-width:0}
   </div>
 </header>
 <main class="wrap" id="main"></main>
+<nav class="bnav" id="bnav" aria-label="Menu principal" hidden></nav>
+<button class="fab" id="fab" type="button" hidden></button>
 <dialog id="dlg"></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 
@@ -416,6 +489,8 @@ function parar(){
 /* ---------- Estrutura ---------- */
 const IC=(d)=>`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const ICONES={
+  mais:IC('<circle cx="5.5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18.5" cy="12" r="1.4"/>'),
+  mais_plus:IC('<path d="M12 5v14M5 12h14"/>'),
   inicio:IC('<path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v10h12V10"/><path d="M10 20v-5h4v5"/>'),
   agenda:IC('<rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M4 10h16M8 3v4M16 3v4"/><path d="M8 14h2M12 14h2M8 17h2"/>'),
   clientes:IC('<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><path d="M16 5.2a3 3 0 0 1 0 5.6M17.5 14.4c1.7.6 2.9 2.2 3.3 4.6"/>'),
@@ -454,6 +529,8 @@ function render(){
   const fid=ae&&ae.id&&m.contains(ae)?ae.id:null;
   const pos=fid&&typeof ae.selectionStart==='number'?ae.selectionStart:null;
   m.innerHTML=cabecalho()+conteudo();
+  m.dataset.view=S.view;
+  if(S._vv!==S.view){S._vv=S.view;m.classList.remove('vt');void m.offsetWidth;m.classList.add('vt')}
   if(fid){const e=$(fid);if(e){e.focus();if(pos!=null&&e.setSelectionRange){try{e.setSelectionRange(pos,pos)}catch(_){}}}}
 }
 function renderTop(){
@@ -465,6 +542,12 @@ function renderTop(){
     const GEST=['despesas','estoque','relatorios','equipe','mensagens','salao','plataforma','backup'];
     const pr=a.find(x=>GEST.includes(x[0])),g=(k==='inicio'||(pr&&k===pr[0]))?`<span class="grp" aria-hidden="true">${k==='inicio'?'Dia a dia':'Gestão'}</span>`:'';
     return g+`<button data-go="${k}" ${S.view===k?'aria-current="page"':''}>${ICONES[k]}<span>${l}</span></button>`}).join(''):'';
+  const vis=logado?t.filter(([k])=>podeVer(k)):[],prim=['inicio','agenda','clientes','atendimentos','plataforma','relatorios'].filter(k=>vis.some(x=>x[0]===k)).slice(0,4),resto=vis.filter(x=>!prim.includes(x[0]));
+  $('bnav').hidden=!logado||!vis.length;
+  $('bnav').innerHTML=logado?prim.map(k=>`<button data-go="${k}" ${S.view===k?'aria-current="page"':''}>${ICONES[k]}<span>${esc(k==='atendimentos'?'Atend.':vis.find(x=>x[0]===k)[1])}</span></button>`).join('')+(true?`<button data-act="maisMenu" ${resto.some(x=>x[0]===S.view)?'aria-current="page"':''} aria-haspopup="dialog">${ICONES.mais}<span>Mais</span></button>`:''):'';
+  const fa={agenda:['novoAtend','Novo atendimento','agenda'],atendimentos:['novoAtend','Novo atendimento','agenda'],clientes:['novaCliente','Nova cliente','clientes']}[S.view],fb=$('fab');
+  const okf=logado&&fa&&!S.legado&&NV(fa[2])==='escrita'&&!(S.view==='clientes'&&S.sel)||logado&&fa&&S.legado&&!(S.view==='clientes'&&S.sel);
+  fb.hidden=!okf;if(okf){fb.dataset.act=fa[0];fb.setAttribute('aria-label',fa[1]);fb.innerHTML=ICONES.mais_plus}
   const sid=$('salaoId'),tn=S.ctx&&S.ctx.tenant;
   sid.hidden=!(logado&&tn);
   if(logado&&tn){const R={proprietario:'Proprietário(a)',gerente:'Gerente',recepcionista:'Recepcionista',profissional:'Profissional'};sid.innerHTML=(tn.logo_url?`<img src="${esc(tn.logo_url)}" alt="">`:'')+`<div><b>${esc(tn.nome)}</b><span>${esc(R[S.ctx.role]||'')}</span></div>`}
@@ -1968,6 +2051,15 @@ async function importar(file){
 }
 
 /* ---------- Janelas e avisos ---------- */
+function menuMais(){
+  const tn=S.ctx&&S.ctx.tenant,R={proprietario:'Proprietário(a)',gerente:'Gerente',recepcionista:'Recepcionista',profissional:'Profissional'};
+  const t=[...document.querySelectorAll('#tabs button[data-go]')].map(b=>[b.dataset.go,b.textContent.trim()]);
+  const prim=[...document.querySelectorAll('#bnav button[data-go]')].map(b=>b.dataset.go);
+  const em=S.sessao&&S.sessao.user&&S.sessao.user.email||'';
+  abrir(`<div class="sheet-head"><span class="mono" aria-hidden="true">A</span><div><b>${esc(tn?tn.nome:'Agendio')}</b><span class="muted">${esc(S.ctx&&R[S.ctx.role]||(ehAdmin()?'Administrador(a) da plataforma':''))}</span></div></div>
+  ${t.some(([k])=>!prim.includes(k))?'<div class="sheet-grid">':'<div hidden>'}${t.filter(([k])=>!prim.includes(k)).map(([k,l])=>`<button data-go="${k}" ${S.view===k?'aria-current="page"':''}>${ICONES[k]}<span>${esc(l)}</span></button>`).join('')}</div>
+  <div class="sheet-foot"><span class="muted">${esc(em)}</span><button class="btn ghost" data-act="sair">Sair</button></div>`);
+}
 function abrir(html){const d=$('dlg');d.innerHTML=html;if(!d.open)d.showModal()}
 function confirmar(titulo,txt,rotulo,fn){
   S.conf=fn;
@@ -1999,11 +2091,11 @@ document.addEventListener('click',e=>{
   const lem=e.target.closest('[data-lem]');if(lem){const o=enviados();o[lem.dataset.lem]=hoje();LS.set('salao_lembretes',JSON.stringify(o));setTimeout(render,400)}
   const au=e.target.closest('[data-auth]');if(au){S.auth=au.dataset.auth;S.aviso='';render();return}
   const g=e.target.closest('[data-go]');
-  if(g){S.view=g.dataset.go;S.sel=null;render();window.scrollTo(0,0);if(S.view==='equipe')carregarEquipe();if(S.view==='salao')carregarSalao();if(S.view==='plataforma')carregarPlataforma();return}
+  if(g){const dl=$('dlg');if(dl&&dl.open)dl.close();S.view=g.dataset.go;S.sel=null;render();window.scrollTo(0,0);if(S.view==='equipe')carregarEquipe();if(S.view==='salao')carregarSalao();if(S.view==='plataforma')carregarPlataforma();return}
   const a=e.target.closest('[data-act]');if(!a)return;
   const id=a.dataset.id;
   const f={
-    novaCliente:()=>formCliente(),editCliente:()=>formCliente(id),delCliente:()=>pedirDelCliente(id),pagarMP:()=>pagarCobranca(id,a),setStatus:()=>mudarStatus(id,a.dataset.st).catch(x=>toast(falha(x))),anonCliente:()=>pedirAnonCliente(id),exportaSalao:()=>exportarSalao().catch(x=>toast(falha(x))),excluiSalao:formExcluirSalao,
+    novaCliente:()=>formCliente(),editCliente:()=>formCliente(id),delCliente:()=>pedirDelCliente(id),maisMenu:menuMais,pagarMP:()=>pagarCobranca(id,a),setStatus:()=>mudarStatus(id,a.dataset.st).catch(x=>toast(falha(x))),anonCliente:()=>pedirAnonCliente(id),exportaSalao:()=>exportarSalao().catch(x=>toast(falha(x))),excluiSalao:formExcluirSalao,
     novoAtend:()=>formAtend(null,a.dataset.cliente,a.dataset.data),receber:()=>formReceber(id),agSem:()=>{S.agSem=id==='0'?0:(S.agSem||0)+Number(id);render()},meta:()=>formMeta(),imprimir:()=>window.print(),editAtend:()=>formAtend(id),delAtend:()=>pedirDelAtend(id),
     abrir:()=>{S.view='clientes';S.sel=id;render();window.scrollTo(0,0)},
     relAba:()=>{S.relAba=id;render()},mais:()=>{S.lim[id]=(S.lim[id]||100)+200;render()},voltar:()=>{S.sel=null;render()},estAba:()=>{S.estAba=id;render()},novoProd:()=>formProd(),editProd:()=>formProd(id),delProd:()=>pedirDelProd(id),movProd:()=>formMov(id),histProd:()=>histProd(id),novaFicha:()=>formFicha(id),editFicha:()=>formFicha(null,id),delFicha:()=>pedirDelFicha(id),exportJson,exportCsv,exportXlsx,novaDesp:()=>formDesp(),editDesp:()=>formDesp(id),delDesp:()=>pedirDelDesp(id),fechar:()=>$('dlg').close(),
@@ -2025,7 +2117,7 @@ document.addEventListener('click',e=>{
     cancelaConvite:async()=>{try{const r=await sb.rpc('cancelar_convite',{p_id:id});if(r.error)throw r.error;await carregarEquipe();toast('Convite cancelado.')}catch(e){falha(e)}},
     copiaConvite:async()=>{const t=$('cv-txt');try{await navigator.clipboard.writeText(t.value);toast('Mensagem copiada.')}catch(_){t.select();toast('Selecione e copie a mensagem.')}},
     tiraLogo:()=>{S.logoNovo=null;const pv=$('cf-prev');if(pv)pv.innerHTML='<span class="muted">Sem logotipo</span>';a.remove()},liberaSuporte:()=>formSuporte(),
-    sair:async()=>{S.auth='entrar';S.recuperando=false;try{await sb.auth.signOut()}catch(_){}}
+    sair:async()=>{const dl=$('dlg');if(dl&&dl.open)dl.close();S.auth='entrar';S.recuperando=false;try{await sb.auth.signOut()}catch(_){}}
   }[a.dataset.act];
   if(f){e.preventDefault();f()}
 });
