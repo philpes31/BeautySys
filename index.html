@@ -359,8 +359,10 @@ const pagTxt=a=>{
 
 /* ---------- Dados (Supabase) ---------- */
 const rowC=r=>({id:r.id,nome:r.nome||'',telefone:r.telefone||'',nascimento:r.nascimento||'',obs:r.obs||''});
+const STATUS_OK=['agendado','confirmado','cancelado','faltou'],STATUS_ROT={agendado:'Agendado',confirmado:'Confirmado',cancelado:'Cancelou',faltou:'Faltou'};
+const inativo=a=>a.status==='cancelado'||a.status==='faltou';
 const rowA=r=>({id:r.id,clienteId:r.cliente_id,data:r.data,procedimento:r.procedimento||'',profissional:r.profissional||'',
-  hora:String(r.hora||'').slice(0,5),valor:Number(r.valor)||0,pagamento:r.pagamento||'',parcelas:PARC(r.parcelas),gastoProdutos:Number(r.gasto_produtos)||0,taxaMaquina:Number(r.taxa_maquina)||0,retorno:r.retorno||'',obs:r.obs||''});
+  hora:String(r.hora||'').slice(0,5),valor:Number(r.valor)||0,pagamento:r.pagamento||'',parcelas:PARC(r.parcelas),gastoProdutos:Number(r.gasto_produtos)||0,taxaMaquina:Number(r.taxa_maquina)||0,retorno:r.retorno||'',obs:r.obs||'',status:STATUS_OK.includes(r.status)?r.status:'agendado'});
 const CATS=['Anúncio Instagram','Água','Internet','Produtos de limpeza','Luz','Manutenção','Aluguel','Condomínio','Outros'];
 const rowD=r=>({id:r.id,data:r.data,categoria:r.categoria||'Outros',descricao:r.descricao||'',valor:Number(r.valor)||0});
 const gastosDoMes=m=>m?S.gastos.filter(g=>String(g.data).startsWith(m)):S.gastos;
@@ -389,7 +391,7 @@ async function recarregar(){
     const sig=JSON.stringify([c,a,g,pr,fi,mv]);
     const mudou=sig!==S.sig||tinhaErro||!S.got;
     S.sig=sig;S.erro='';
-    if(mudou){S.clientes=c.map(rowC);S.atend=a.map(rowA);S.gastos=g.map(rowD);S.produtos=pr.map(rowP);S.fichas=fi.map(rowF);S.movs=mv.map(rowM);S.got=true;render()}
+    if(mudou){S.clientes=c.map(rowC);S.atendTodos=a.map(rowA);S.atend=S.atendTodos.filter(x=>!inativo(x));S.gastos=g.map(rowD);S.produtos=pr.map(rowP);S.fichas=fi.map(rowF);S.movs=mv.map(rowM);S.got=true;render()}
   }catch(e){S.erro=(e&&(e.code||e.message))||'erro';render()}
 }
 let tmr;
@@ -406,7 +408,7 @@ async function iniciar(){
   try{S.canal=sb.channel('salao-mudancas').on('postgres_changes',{event:'*',schema:'public'},agendar).subscribe()}catch(_){}
 }
 function parar(){
-  S.iniciado=false;S.got=false;S.clientes=[];S.atend=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;
+  S.iniciado=false;S.got=false;S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;
   if(S.canal&&sb){try{sb.removeChannel(S.canal)}catch(_){}}
   S.canal=null;
 }
@@ -550,10 +552,38 @@ function aplicaTema(){
   st.setProperty('--accent-soft','color-mix(in srgb, '+rgbCss(acc)+' '+(dark?22:12)+'%, var(--surface))');
 }
 try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',aplicaTema)}catch(_){}
+function comissoes(){
+  if(S.com)return S.com;
+  try{const o=JSON.parse(LS.get('salao_comissoes','{}'));return o&&typeof o==='object'?o:{}}catch(_){return {}}
+}
+async function salvarComissao(prof,pct){
+  const m=Object.assign({},comissoes()),v=Math.min(100,Math.max(0,Math.round((Number(String(pct).replace(',','.'))||0)*100)/100));
+  if(v>0)m[prof]=v;else delete m[prof];
+  if(!S.legado&&!S.semCom){
+    const r=await sb.from('tenants').update({comissoes:m}).eq('id',S.ctx.tenant.id);
+    if(r.error){if(/comissoes/i.test(String(r.error.message||''))){S.semCom=true}else throw r.error}
+    else{S.com=m;render();toast('Comissão salva.');return}
+  }
+  LS.set('salao_comissoes',JSON.stringify(m));S.com=null;render();
+  toast(S.semCom?'Salvo só neste aparelho. Rode o 09-comissoes.sql no Supabase para valer em todos.':'Comissão salva.');
+}
+function blocoComissao(m,L){
+  const by={};L.forEach(x=>{const n=x.a.profissional||'(sem profissional)';(by[n]=by[n]||{n:0,v:0});by[n].n++;by[n].v+=x.v});
+  const nomes=Object.keys(by).sort((a,b)=>by[b].v-by[a].v);if(!nomes.length)return '';
+  if(!recOk('comissoes'))return `<h3>Comissão por profissional</h3><p class="muted" style="max-width:640px">Este recurso faz parte de um plano superior. Peça a troca em Salão, Plano e assinatura.</p>`;
+  const C=comissoes(),pode=NV('config')==='escrita'&&!(S.ctx&&S.ctx.role==='profissional');
+  let tot=0;
+  const linhas=nomes.map(n=>{const pct=Number(C[n])||0,com=Math.round(by[n].v*pct)/100;tot+=com;
+    return `<div class="item"><div class="grow"><div class="t">${esc(n)}</div><div class="muted num">${by[n].n} ${by[n].n===1?'atendimento':'atendimentos'} · ${brl(by[n].v)} ${m?'recebidos':'faturados'}</div></div>
+    <div class="side" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end"><label class="sr-only" for="com-${esc(n)}">Comissão de ${esc(n)} em %</label><input id="com-${esc(n)}" class="com-pct" data-prof="${esc(n)}" type="number" min="0" max="100" step="0.5" inputmode="decimal" style="width:84px" value="${pct||''}" placeholder="0" ${pode&&n!=='(sem profissional)'?'':'disabled'}><span class="muted">%</span><b class="num">${brl(com)}</b></div></div>`}).join('');
+  return `<h3>Comissão por profissional</h3><p class="muted" style="margin:0 0 8px;max-width:640px">Calculada sobre o valor ${m?'recebido no mês':'faturado'}. ${pode?'Digite o percentual de cada pessoa; ele fica salvo.':'Só quem administra o salão altera os percentuais.'}</p><div class="list">${linhas}</div><p class="num" style="margin:8px 0 0"><b>Total de comissões: ${brl(tot)}</b></p>`;
+}
 async function carregarMsgs(){
   if(S.legado||!S.ctx||!S.ctx.tenant){S.msgs=null;return}
-  try{const r=await sb.from('tenants').select('mensagens').eq('id',S.ctx.tenant.id);
+  try{let r=await sb.from('tenants').select('mensagens,comissoes').eq('id',S.ctx.tenant.id);
+    if(r.error&&/comissoes/i.test(String(r.error.message||''))){S.semCom=true;r=await sb.from('tenants').select('mensagens').eq('id',S.ctx.tenant.id)}
     if(r.error)throw r.error;
+    const cm=r.data&&r.data[0]&&r.data[0].comissoes;S.com=cm&&typeof cm==='object'&&Object.keys(cm).length?cm:null;
     const m=r.data&&r.data[0]&&r.data[0].mensagens;S.msgs=m&&typeof m==='object'?m:{};S.msgsLocal=false;
   }catch(_){S.msgs=null;S.msgsLocal=true}
   if(S.view==='mensagens')render();
@@ -702,11 +732,33 @@ async function carregarSalao(){
   catch(_){S.salao=false}
   if(S.view==='salao')render();
 }
+async function pagarCobranca(id,btn){
+  if(btn){btn.disabled=true;btn.dataset.t=btn.textContent;btn.textContent='Abrindo…'}
+  const volta=()=>{if(btn){btn.disabled=false;btn.textContent=btn.dataset.t||'Pagar agora'}};
+  const g=((S.assin&&S.assin.pags)||[]).find(x=>x.id===id);
+  try{
+    const ses=await sb.auth.getSession(),tk=ses&&ses.data&&ses.data.session&&ses.data.session.access_token;
+    if(!tk)throw new Error('Entre de novo para pagar.');
+    const r=await fetch('/api/mp-criar',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+tk},body:JSON.stringify({pagamento_id:id})});
+    let j=null;try{j=await r.json()}catch(_){}
+    if(r.ok&&j&&/^https:\/\//.test(j.url||'')){location.href=j.url;return}
+    if(g&&/^https:\/\//.test(g.link_pagamento||'')){window.open(g.link_pagamento,'_blank','noopener');volta();return}
+    throw new Error((j&&j.erro)||'O pagamento online ainda não está disponível. Fale com o suporte do Agendio.');
+  }catch(x){volta();toast((x&&x.message)||'Não foi possível abrir o pagamento.',true)}
+}
+(function(){
+  try{
+    const q=new URLSearchParams(location.search),pg=q.get('pg');if(!pg)return;
+    const msg={ok:'Pagamento enviado! A confirmação chega em instantes e libera o seu plano.',pendente:'Pagamento pendente. Assim que o Mercado Pago confirmar, o seu plano é liberado.',falha:'O pagamento não foi concluído. Você pode tentar de novo em Salão, Plano e assinatura.'}[pg];
+    q.delete('pg');history.replaceState(null,'',location.pathname+(q.toString()?'?'+q:'')+location.hash);
+    if(msg)setTimeout(()=>toast(msg,pg==='falha'),1200);
+  }catch(_){}
+})();
 function blocoAssinatura(){
   if(S.ctx.role!=='proprietario'||!S.ctx.tenant)return '';
   const tn=S.ctx.tenant,pl=S.ctx.plano,A=S.assin||{planos:[],pags:[]};
   const venc=tn.vencimento?(tn.vencimento<hoje()?'venceu em ':'vence em ')+fd(tn.vencimento):'';
-  const pags=A.pags.length?'<div class="list" style="margin-top:8px">'+A.pags.map(g=>`<div class="item"><div class="grow">vence ${esc(fd(g.vencimento))}</div><div class="side"><b>${brl(g.valor)}</b> ${tagSt(g.status,ST_PAG)}${(g.status==='pendente'||g.status==='atrasado')&&g.link_pagamento?` <a class="btn sm" href="${esc(g.link_pagamento)}" target="_blank" rel="noopener">Pagar</a>`:''}</div></div>`).join('')+'</div>':'<p class="muted" style="margin:6px 0 0">Nenhuma cobrança até agora.</p>';
+  const pags=A.pags.length?'<div class="list" style="margin-top:8px">'+A.pags.map(g=>`<div class="item"><div class="grow">vence ${esc(fd(g.vencimento))}</div><div class="side"><b>${brl(g.valor)}</b> ${tagSt(g.status,ST_PAG)}${g.status==='pendente'||g.status==='atrasado'?` <button class="btn sm" data-act="pagarMP" data-id="${esc(g.id)}">Pagar agora</button>`:''}</div></div>`).join('')+'</div>':'<p class="muted" style="margin:6px 0 0">Nenhuma cobrança até agora.</p>';
   const outros=A.planos.filter(p=>!pl||p.nome!==pl.nome);
   return `<div class="panel" style="max-width:640px;margin-bottom:16px"><h3 style="margin:0 0 6px;font-size:16px">Plano e assinatura</h3>
   <p style="margin:0">${pl?`<b>${esc(pl.nome)}</b> · `:''}${tagSt(tn.status,ST_SAL)} ${venc?`<span class="muted">${esc(venc)}</span>`:''}</p>
@@ -714,13 +766,33 @@ function blocoAssinatura(){
   <h4 style="margin:14px 0 0;font-size:14px">Cobranças</h4>${pags}
   ${outros.length?`<h4 style="margin:14px 0 6px;font-size:14px">Outros planos</h4><div class="list">${outros.map(p=>`<div class="item"><div class="grow"><div class="t">${esc(p.nome)}</div><div class="muted">${p.max_usuarios} usuários · ${p.max_profissionais} profissionais${Object.keys(RECURSOS).filter(k=>p.recursos&&p.recursos[k]===false).map(k=>' · sem '+RECURSOS[k].toLowerCase()).join('')}</div></div><div class="side"><b>${brl(p.preco_mensal)}</b>/mês <button class="btn ghost sm" data-act="pedePlano" data-id="${esc(p.id)}">Quero este</button></div></div>`).join('')}</div>`:''}</div>`;
 }
+function blocoLgpd(){
+  if(S.ctx.role!=='proprietario'||!S.ctx.tenant)return '';
+  return `<div class="panel" style="max-width:640px;margin:16px 0"><h3 style="margin:0 0 6px;font-size:16px">Seus dados (LGPD)</h3>
+  <p class="muted" style="margin:0 0 10px">Você pode levar uma cópia de tudo do salão ou encerrar a conta e apagar os dados.</p>
+  <div class="row-actions"><button class="btn ghost" data-act="exportaSalao">Baixar todos os dados do salão</button><button class="btn danger" data-act="excluiSalao">Excluir meu salão</button></div></div>`;
+}
+async function exportarSalao(){
+  const r=await sb.rpc('exportar_dados_salao');if(r.error)throw r.error;
+  salvarArquivo('agendio-dados-'+hoje()+'.json',JSON.stringify(r.data,null,2),'application/json');
+}
+function formExcluirSalao(){
+  abrir(`<h2>Excluir meu salão</h2><p>Isto apaga <b>para sempre</b> clientes, atendimentos, despesas, estoque e a equipe. Não dá para desfazer. Baixe uma cópia antes.</p>
+  <form data-form="exclsalao"><label for="ex-nome">Digite o nome do salão (${esc(S.ctx.tenant.nome)}) para confirmar</label><input id="ex-nome" name="nome" required autocomplete="off">
+  <p class="erro" id="a-erro" role="alert"></p><div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn danger">Excluir para sempre</button></div></form>`);
+}
+async function excluirSalao(nome){
+  const r=await sb.rpc('excluir_meu_salao',{p_confirmacao:nome});if(r.error)throw r.error;
+  S.auth='entrar';try{await sb.auth.signOut()}catch(_){}
+  toast('Salão excluído.');
+}
 function telaSalao(){
   if(S.salao===null)return '<p class="muted">Carregando…</p>';
   if(!S.salao)return aviso('Não foi possível carregar os dados do salão','Verifique a conexão e tente de novo.','<div class="row-actions"><button class="btn" data-go="salao">Tentar de novo</button></div>');
   const t=S.salao,ro=NV('config')!=='escrita'?'disabled':'';
   const f=(id,rot,extra,v)=>`<div><label for="cf-${id}">${rot}</label><input id="cf-${id}" name="${id}" value="${esc(v!==undefined?v:(t[id]||''))}" ${ro} ${extra||''}></div>`;
   const logo=S.logoNovo!==undefined?S.logoNovo:t.logo_url;
-  return blocoAssinatura()+`<form data-form="config" class="panel" style="max-width:640px">
+  return blocoAssinatura()+blocoLgpd()+`<form data-form="config" class="panel" style="max-width:640px">
   <h3 style="margin:0 0 10px;font-size:16px">Marca</h3>
   <div class="logo-linha"><div class="logo-prev" id="cf-prev">${logo?`<img src="${esc(logo)}" alt="Logotipo">`:'<span class="muted">Sem logotipo</span>'}</div>
   <div><input id="cf-logo" type="file" accept="image/png,image/jpeg,image/webp" ${ro}> ${logo&&!ro?'<button type="button" class="btn ghost sm" data-act="tiraLogo">Remover logotipo</button>':''}<p class="muted" style="font-size:12.5px;margin:6px 0 0">A imagem é reduzida automaticamente.</p></div></div>
@@ -837,11 +909,12 @@ function plAuditoria(){
   return `<p class="muted" style="font-size:13px">Registro de ações. Mostra apenas o que mudou, nunca o conteúdo dos dados dos clientes.</p>`+(L.length?'<div class="list">'+L.slice(0,S.pl.lim).map(l=>`<div class="item"><div class="grow"><div class="t">${esc(l.acao)} · ${esc(l.tabela||'')}</div><div class="muted">${esc(l.tenant_id?nomeSalao(l.tenant_id):'Plataforma')}${resumoLog(l)?' · '+esc(resumoLog(l)):''}</div></div><div class="side muted" style="font-size:12.5px">${esc(new Date(l.criado_em).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}))}</div></div>`).join('')+'</div>':'<div class="empty"><p>Nenhum registro.</p></div>');
 }
 
-const RECURSOS={estoque:'Estoque e fichas técnicas',financeiro:'Despesas e relatórios'};
+const RECURSOS={estoque:'Estoque e fichas técnicas',financeiro:'Despesas e relatórios',comissoes:'Comissão por profissional',mensagens:'Textos editáveis das mensagens'};
+const recOk=k=>{const r=S.ctx&&S.ctx.plano&&S.ctx.plano.recursos;return !r||r[k]!==false};
 function plPlanos(){
   const L=S.pl.planos,uso=id=>S.pl.saloes.filter(x=>x.plano_id===id).length;
   return `<div class="bar"><span class="muted grow">Preços e limites valem na hora, sem mexer no código. Salões que já assinaram mantêm o histórico.</span><button class="btn" data-act="plNovoPlano">Novo plano</button></div>
-  ${L.length?'<div class="list">'+L.map(p=>`<div class="item click" tabindex="0" role="button" data-act="plEditaPlano" data-id="${esc(p.id)}"><div class="grow"><div class="t">${esc(p.nome)} ${p.ativo?'':'<span class="tag late">Inativo</span>'}</div><div class="muted">${p.max_usuarios} usuários · ${p.max_profissionais} profissionais · ${p.trial_dias} dias de teste${Object.keys(RECURSOS).filter(k=>p.recursos&&p.recursos[k]===false).map(k=>' · sem '+RECURSOS[k].toLowerCase()).join('')}</div></div><div class="side"><b>${brl(p.preco_mensal)}</b><div class="muted" style="font-size:12.5px">${uso(p.id)} ${uso(p.id)===1?'salão':'salões'}</div></div></div>`).join('')+'</div>':'<div class="empty"><p>Nenhum plano cadastrado.</p></div>'}`;
+  ${L.length?'<div class="list">'+L.map(p=>`<div class="item click" tabindex="0" role="button" data-act="plEditaPlano" data-id="${esc(p.id)}"><div class="grow"><div class="t">${esc(p.nome)} ${p.ativo?'':'<span class="tag late">Inativo</span>'}</div><div class="muted">${p.max_usuarios} ${p.max_usuarios===1?'usuário':'usuários'} · ${p.max_profissionais} ${p.max_profissionais===1?'profissional':'profissionais'} · ${p.trial_dias} dias de teste${Object.keys(RECURSOS).filter(k=>p.recursos&&p.recursos[k]===false).map(k=>' · sem '+RECURSOS[k].toLowerCase()).join('')}</div></div><div class="side"><b>${brl(p.preco_mensal)}</b><div class="muted" style="font-size:12.5px">${uso(p.id)} ${uso(p.id)===1?'salão':'salões'}</div></div></div>`).join('')+'</div>':'<div class="empty"><p>Nenhum plano cadastrado.</p></div>'}`;
 }
 function formPlano(id){
   const p=S.pl.planos.find(x=>x.id===id)||{nome:'',preco_mensal:'',max_usuarios:3,max_profissionais:2,trial_dias:14,ativo:true,recursos:{}};
@@ -913,8 +986,8 @@ function previaMsg(chave,texto){
   try{const c=cfgTaxa();return montaMsg(chave,Object.assign({},AMOSTRA,{taxa:c.taxa||'R$ 30,00',pix:c.pix||'seuemail@exemplo.com'}))}finally{S.msgs=salvo}
 }
 function telaMensagens(){
-  const pode=NV('config')==='escrita',sv=msgsSalvas();
-  const nota=S.msgsLocal&&!S.legado?'<p class="faixa">Os textos estão sendo salvos só neste aparelho. Rode o arquivo 06-mensagens.sql no Supabase para valer em todos.</p>':'';
+  const liberado=recOk('mensagens'),pode=NV('config')==='escrita'&&liberado,sv=msgsSalvas();
+  const nota=(liberado?'':'<p class="faixa">O seu plano usa os textos padrão das mensagens. Para editar os textos, peça um plano superior em Salão, Plano e assinatura.</p>')+(S.msgsLocal&&!S.legado?'<p class="faixa">Os textos estão sendo salvos só neste aparelho. Rode o arquivo 06-mensagens.sql no Supabase para valer em todos.</p>':'');
   const card=k=>{const m=MSG_DEF[k],txt=(sv[k]||'').trim()||m.d;
     return `<div class="panel msg-card"><b>${esc(m.t)}</b><p class="muted" style="margin:2px 0 8px">${esc(m.q)}</p>
     <label for="mg-${k}" class="sr-only">Texto: ${esc(m.t)}</label><textarea id="mg-${k}" name="${k}" class="msg-ta" data-k="${k}" rows="8" maxlength="1000" ${pode?'':'disabled'}>${esc(txt)}</textarea>
@@ -960,8 +1033,9 @@ function detalhe(){
   <div class="head-card">${avatar(c.nome)}<div class="grow"><h2>${esc(c.nome)}</h2>
     <div class="muted">${c.telefone?`${esc(c.telefone)} · <a class="wa" href="${zap(c.telefone)}" target="_blank" rel="noopener">WhatsApp</a>`:'sem telefone'}</div>
     ${c.nascimento?`<div class="muted">Nascimento: ${fd(c.nascimento)}</div>`:''}
+    ${(()=>{const f=S.atendTodos.filter(x=>x.clienteId===c.id&&x.status==='faltou').length,k=S.atendTodos.filter(x=>x.clienteId===c.id&&x.status==='cancelado').length;return f||k?`<div class="muted">${f?`<span class="tag late">${f} ${f===1?'falta':'faltas'}</span> `:''}${k?`${k} ${k===1?'cancelamento':'cancelamentos'}`:''}</div>`:''})()}
     ${c.obs?`<p class="obs">${esc(c.obs)}</p>`:''}</div>
-    <div class="item-acts"><button class="btn ghost sm" data-act="editCliente" data-id="${esc(c.id)}">Editar</button><button class="btn danger sm" data-act="delCliente" data-id="${esc(c.id)}">Excluir</button></div></div>
+    <div class="item-acts"><button class="btn ghost sm" data-act="editCliente" data-id="${esc(c.id)}">Editar</button>${!S.legado&&NV('clientes')==='escrita'&&c.nome!=='Cliente removida'?`<button class="btn ghost sm" data-act="anonCliente" data-id="${esc(c.id)}">Apagar dados pessoais</button>`:''}<button class="btn danger sm" data-act="delCliente" data-id="${esc(c.id)}">Excluir</button></div></div>
   <div class="stats"><div class="stat"><b>${a.length}</b><span>atendimentos</span></div><div class="stat"><b>${brl(soma(a))}</b><span>total gasto</span></div>${a.filter(isFiado).length?`<div class="stat"><b>${brl(soma(a.filter(isFiado)))}</b><span>a receber (fiado)</span></div>`:''}</div>
   ${(()=>{const u=a.find(x=>x.obs);return u?`<div class="panel"><b>Última fórmula / observação</b> <span class="muted num">${fd(u.data)} · ${esc(u.procedimento)}</span><p class="obs" style="margin:6px 0 0">${esc(u.obs)}</p></div>`:''})()}
   <div class="bar"><button class="btn" data-act="novoAtend" data-cliente="${esc(c.id)}">Novo atendimento</button></div>
@@ -982,6 +1056,13 @@ async function salvarCliente(id,d){
   if(r.error)throw r.error;
   await recarregar();
   toast(id?'Cliente atualizada.':'Cliente cadastrada.');
+}
+function pedirAnonCliente(id){
+  const c=cli(id);if(!c)return;
+  confirmar('Apagar os dados pessoais de '+c.nome+'?','O nome, telefone, aniversário e anotações dela serão removidos. Os valores dos atendimentos continuam no financeiro. Não dá para desfazer.','Apagar dados',async()=>{
+    const r=await sb.rpc('anonimizar_cliente',{p_id:id});if(r.error)throw r.error;
+    S.sel=null;await recarregar();render();toast('Dados da cliente apagados.');
+  });
 }
 function pedirDelCliente(id){
   const c=cli(id);if(!c)return;const n=atends(id).length;
@@ -1056,7 +1137,7 @@ function telaAtend(){
 }
 function formAtend(id,clienteId,data){
   if(!S.clientes.length){toast('Cadastre uma cliente primeiro.',true);return}
-  const a=id?S.atend.find(x=>x.id===id):{data:data||hoje(),clienteId:clienteId||''};if(id&&!a)return;
+  const a=id?S.atendTodos.find(x=>x.id===id):{data:data||hoje(),clienteId:clienteId||''};if(id&&!a)return;
   const procs=[...PROCS];if(a.procedimento&&!procs.includes(a.procedimento))procs.push(a.procedimento);
   const profs=listaProfs();if(a.profissional&&!profs.includes(a.profissional))profs.push(a.profissional);
   const profSel=a.profissional||profPadrao(),parcSel=PARC(a.parcelas),credito=a.pagamento==='Cartão de crédito',cartao=credito||a.pagamento==='Cartão de débito';
@@ -1106,6 +1187,7 @@ async function salvarAtend(id,d){
   const o={cliente_id:d.clienteId,data:d.data,procedimento:d.procedimento.trim(),profissional:(d.profissional||profPadrao()||PROF).trim(),
     valor:Math.max(0,Number(d.valor)||0),pagamento:d.pagamento||'',parcelas:cred?PARC(d.parcelas):1,gasto_produtos:din(d.gastoProdutos),taxa_maquina:cartao?din(d.taxaMaquina):0,retorno:d.retorno||null,obs:(d.obs||'').trim()};
   if(!S.semEst)o.hora=d.hora||null;
+  if(!id&&!S.semStatus)o.status='agendado';
   const aid=id||novoId();
   if(!id)o.id=aid;
   const grava=x=>id?sb.from('atendimentos').update(x).eq('id',id):sb.from('atendimentos').insert(x);
@@ -1412,10 +1494,23 @@ function sumidas(){
   const lim=addDia(hoje(),-60);
   return S.clientes.map(c=>{const l=atends(c.id);return {c,ult:l.length?l[0].data:null}}).filter(x=>x.ult&&String(x.ult)<lim).sort((a,b)=>String(a.ult).localeCompare(String(b.ult)));
 }
+function btnStatus(a){
+  if(S.semStatus)return '';
+  const b=(st,t)=>`<button class="btn ghost sm" data-act="setStatus" data-id="${esc(a.id)}" data-st="${st}">${t}</button>`;
+  if(inativo(a))return b('agendado','Reativar');
+  return (a.status!=='confirmado'?b('confirmado','Confirmou'):'')+b('cancelado','Cancelou')+(String(a.data)<=hoje()?b('faltou','Faltou'):'');
+}
+async function mudarStatus(id,st){
+  if(!STATUS_OK.includes(st))return;
+  const r=await sb.from('atendimentos').update({status:st}).eq('id',id);
+  if(r.error){if(/status/i.test(String(r.error.message||''))){S.semStatus=true;toast('Rode o arquivo 08-agenda-status.sql no Supabase para usar o status.',true);render();return}throw r.error}
+  await recarregar();render();toast(st==='cancelado'?'Marcado como cancelado.':st==='faltou'?'Marcado como falta.':st==='confirmado'?'Confirmado.':'Reativado.');
+}
 function linhaAg(a){
   const c=cli(a.clienteId)||{nome:'(cliente removida)'};
-  return `<div class="item"><div class="side-val" style="min-width:56px">${esc(a.hora||'—')}</div>${avatar(c.nome)}<div class="grow"><div class="t">${esc(c.nome)}</div><div class="muted">${esc(a.procedimento)}${a.profissional?' · '+esc(a.profissional):''}</div></div>
-  <div class="item-acts">${btnLembrete(a)}${btnTaxa(a)}<button class="btn ghost sm" data-act="editAtend" data-id="${esc(a.id)}">Editar</button></div></div>`;
+  const tag=a.status==='confirmado'?' <span class="tag ok">Confirmado</span>':inativo(a)?` <span class="tag late">${STATUS_ROT[a.status]}</span>`:'';
+  return `<div class="item"${inativo(a)?' style="opacity:.62"':''}><div class="side-val" style="min-width:56px">${esc(a.hora||'—')}</div>${avatar(c.nome)}<div class="grow"><div class="t">${esc(c.nome)}${tag}</div><div class="muted">${esc(a.procedimento)}${a.profissional?' · '+esc(a.profissional):''}</div></div>
+  <div class="item-acts">${inativo(a)?'':btnLembrete(a)+btnTaxa(a)}${btnStatus(a)}<button class="btn ghost sm" data-act="editAtend" data-id="${esc(a.id)}">Editar</button></div></div>`;
 }
 function telaInicio(){
   const h=hoje(),mes=h.slice(0,7),mm=h.slice(5,7);
@@ -1448,7 +1543,7 @@ function telaAgenda(){
   return `<div class="bar"><button class="btn ghost" data-act="agSem" data-id="-1">‹ Anterior</button><button class="btn ghost" data-act="agSem" data-id="0">Esta semana</button><button class="btn ghost" data-act="agSem" data-id="1">Próxima ›</button><button class="btn" data-act="novoAtend" data-data="${h}">Novo atendimento</button></div>`+
   (pend.length?`<div class="panel"><b>Lembretes de amanhã (${pend.length})</b><p class="muted" style="margin:4px 0 12px">Cada botão abre o WhatsApp com a mensagem pronta. Você só aperta Enviar.${pend.filter(a=>env[a.id]).length?` Já enviados: ${pend.filter(a=>env[a.id]).length}.`:''}</p><div class="list">${pend.map(linhaAg).join('')}</div></div>`:'')+
   `<p class="muted num" style="margin:0 0 6px">${fd(ini)} a ${fd(dias[6])} · ${total} ${total===1?'atendimento':'atendimentos'}</p>`+
-  dias.map(d=>{const l=S.atend.filter(a=>a.data===d).sort(byHora);
+  dias.map(d=>{const l=S.atendTodos.filter(a=>a.data===d).sort(byHora);
     return `<h3 style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${esc(diaTxt(d))}${d===h?' <span class="tag ok">Hoje</span>':''}<button class="btn ghost sm" data-act="novoAtend" data-data="${d}">Agendar</button></h3>`+(l.length?`<div class="list">${l.map(linhaAg).join('')}</div>`:'<p class="muted" style="margin:0">Sem atendimentos.</p>')}).join('');
 }
 function blocoSumidas(){
@@ -1584,7 +1679,7 @@ function telaRel(){
   return head+resumo+`
   <div class="stats"><div class="stat"><b>${feitos.length}</b><span>atendimentos</span></div><div class="stat"><b>${nCli}</b><span>clientes atendidas</span></div><div class="stat"><b>${brl(feitos.length?soma(feitos)/feitos.length:0)}</b><span>ticket médio</span></div></div>`+
   (parc?`<p class="muted" style="font-size:13px;margin:0 0 4px">Cartão de crédito parcelado: o valor é dividido pelas parcelas e cada parcela entra no mês em que cai. A 1ª parcela conta no mês do atendimento.</p>`:'')+
-  graficos(m,L)+bloco('Clientes que mais gastaram',L.map(x=>({a:{cliente:(cli(x.a.clienteId)||{}).nome||'(cliente removida)'},v:x.v})),'cliente',10)+bloco('Por procedimento',L,'procedimento')+bloco('Por forma de pagamento',L,'pagamento')+
+  graficos(m,L)+bloco('Clientes que mais gastaram',L.map(x=>({a:{cliente:(cli(x.a.clienteId)||{}).nome||'(cliente removida)'},v:x.v})),'cliente',10)+bloco('Por procedimento',L,'procedimento')+blocoComissao(m,L)+bloco('Por forma de pagamento',L,'pagamento')+
   `<h3>Aniversariantes do mês</h3>`+(aniv.length?'<div class="list">'+aniv.map(c=>`<div class="item"><div class="grow"><span class="t">${esc(c.nome)}</span> <span class="tag">${esc(String(c.nascimento).slice(8))}/${mm}</span></div>${c.telefone?`<a class="wa" href="${zap(c.telefone)}" target="_blank" rel="noopener">WhatsApp</a>`:''}</div>`).join('')+'</div>':'<p class="muted">Nenhuma aniversariante neste mês.</p>');
 }
 
@@ -1606,7 +1701,7 @@ function salvarArquivo(nome,txt,tipo){
   toast('Arquivo baixado.');
 }
 function exportJson(){
-  salvarArquivo(`salao-backup-${hoje()}.json`,JSON.stringify({versao:5,exportadoEm:new Date().toISOString(),clientes:S.clientes,atendimentos:S.atend,despesas:S.gastos,produtos:S.produtos,fichas:S.fichas},null,2),'application/json');
+  salvarArquivo(`salao-backup-${hoje()}.json`,JSON.stringify({versao:5,exportadoEm:new Date().toISOString(),clientes:S.clientes,atendimentos:S.atendTodos,despesas:S.gastos,produtos:S.produtos,fichas:S.fichas},null,2),'application/json');
 }
 function exportCsv(){
   const q=v=>{let t=String(v==null?'':v);if(/^[=+\-@\t\r]/.test(t)&&!/^[+-]?[\d\s().,-]+$/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"'};
@@ -1827,12 +1922,12 @@ async function importar(file){
     cm.set(o.id,{id:o.id,nome:txt(o.nome).trim(),telefone:txt(o.telefone),nascimento:dataOk(o.nascimento)?o.nascimento:null,obs:txt(o.obs)});
     ids.add(o.id);
   });
-  const am=new Map(),exA=new Map(S.atend.map(a=>[a.id,a])),dv=(novo,ant)=>(novo!==undefined&&novo!==null)?din(novo):din(ant);
+  const am=new Map(),exA=new Map(S.atendTodos.map(a=>[a.id,a])),dv=(novo,ant)=>(novo!==undefined&&novo!==null)?din(novo):din(ant);
   d.atendimentos.forEach(o=>{
     if(!o||!idOk(o.id)||!idOk(o.clienteId)||!ids.has(o.clienteId)||!dataOk(o.data)||!txt(o.procedimento).trim()){pulou++;return}
     const cred=o.pagamento==='Cartão de crédito';
     am.set(o.id,{id:o.id,cliente_id:o.clienteId,data:o.data,procedimento:txt(o.procedimento).trim(),profissional:txt(o.profissional),
-      valor:Math.max(0,Number(o.valor)||0),pagamento:txt(o.pagamento),parcelas:cred?PARC(o.parcelas):1,hora:S.semEst?undefined:(o.hora===undefined?((exA.get(o.id)||{}).hora||null):(horaOk(o.hora)?o.hora:null)),gasto_produtos:dv(o.gastoProdutos,(exA.get(o.id)||{}).gastoProdutos),taxa_maquina:dv(o.taxaMaquina,(exA.get(o.id)||{}).taxaMaquina),retorno:dataOk(o.retorno)?o.retorno:null,obs:txt(o.obs)});
+      valor:Math.max(0,Number(o.valor)||0),pagamento:txt(o.pagamento),parcelas:cred?PARC(o.parcelas):1,hora:S.semEst?undefined:(o.hora===undefined?((exA.get(o.id)||{}).hora||null):(horaOk(o.hora)?o.hora:null)),gasto_produtos:dv(o.gastoProdutos,(exA.get(o.id)||{}).gastoProdutos),taxa_maquina:dv(o.taxaMaquina,(exA.get(o.id)||{}).taxaMaquina),retorno:dataOk(o.retorno)?o.retorno:null,obs:txt(o.obs),...(STATUS_OK.includes(o.status)&&!S.semStatus?{status:o.status}:{})});
   });
   const gm=new Map();
   d.despesas.forEach(o=>{
@@ -1908,7 +2003,7 @@ document.addEventListener('click',e=>{
   const a=e.target.closest('[data-act]');if(!a)return;
   const id=a.dataset.id;
   const f={
-    novaCliente:()=>formCliente(),editCliente:()=>formCliente(id),delCliente:()=>pedirDelCliente(id),
+    novaCliente:()=>formCliente(),editCliente:()=>formCliente(id),delCliente:()=>pedirDelCliente(id),pagarMP:()=>pagarCobranca(id,a),setStatus:()=>mudarStatus(id,a.dataset.st).catch(x=>toast(falha(x))),anonCliente:()=>pedirAnonCliente(id),exportaSalao:()=>exportarSalao().catch(x=>toast(falha(x))),excluiSalao:formExcluirSalao,
     novoAtend:()=>formAtend(null,a.dataset.cliente,a.dataset.data),receber:()=>formReceber(id),agSem:()=>{S.agSem=id==='0'?0:(S.agSem||0)+Number(id);render()},meta:()=>formMeta(),imprimir:()=>window.print(),editAtend:()=>formAtend(id),delAtend:()=>pedirDelAtend(id),
     abrir:()=>{S.view='clientes';S.sel=id;render();window.scrollTo(0,0)},
     relAba:()=>{S.relAba=id;render()},mais:()=>{S.lim[id]=(S.lim[id]||100)+200;render()},voltar:()=>{S.sel=null;render()},estAba:()=>{S.estAba=id;render()},novoProd:()=>formProd(),editProd:()=>formProd(id),delProd:()=>pedirDelProd(id),movProd:()=>formMov(id),histProd:()=>histProd(id),novaFicha:()=>formFicha(id),editFicha:()=>formFicha(null,id),delFicha:()=>pedirDelFicha(id),exportJson,exportCsv,exportXlsx,novaDesp:()=>formDesp(),editDesp:()=>formDesp(id),delDesp:()=>pedirDelDesp(id),fechar:()=>$('dlg').close(),
@@ -1958,6 +2053,7 @@ document.addEventListener('change',e=>{
   const t=e.target;
   if(t.id==='mesFiltro'){S.mesFiltro=t.value;render()}
   else if(t.id==='mesRel'){S.mesRel=t.value;render()}
+  else if(t.classList&&t.classList.contains('com-pct'))salvarComissao(t.dataset.prof,t.value).catch(x=>toast(falha(x)));
   else if(t.id==='mesDesp'){S.mesDesp=t.value;S.lim.gasto=100;render()}
   else if(t.id==='a-pag'||t.id==='a-parc')atualizaParc();
   else if(t.id==='a-proc')atualizaEstq(true);
@@ -1987,6 +2083,7 @@ $('dlg').addEventListener('submit',async e=>{
     else if(k==='membro')await salvarMembro(id,dados);
     else if(k==='suporte')await salvarSuporte(dados);
     else if(k==='plplano')await salvarPlano(id,dados);
+    else if(k==='exclsalao')await excluirSalao(dados.nome);
     else if(k==='plsalao'){try{await salvarNovoSalao(dados)}catch(x){if(x&&x.mantem)return;throw x}}
     else if(k==='meta'){LS.set('salao_meta',String(din(dados.valor)));toast('Meta salva.');render()}
     else if(k==='confirmar')await S.conf();
