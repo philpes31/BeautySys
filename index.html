@@ -437,7 +437,8 @@ const pagTxt=a=>{
 const rowC=r=>({id:r.id,nome:r.nome||'',telefone:r.telefone||'',nascimento:r.nascimento||'',obs:r.obs||''});
 const STATUS_OK=['agendado','confirmado','cancelado','faltou'],STATUS_ROT={agendado:'Agendado',confirmado:'Confirmado',cancelado:'Cancelou',faltou:'Faltou'};
 const inativo=a=>a.status==='cancelado'||a.status==='faltou';
-const rowA=r=>({id:r.id,clienteId:r.cliente_id,data:r.data,procedimento:r.procedimento||'',profissional:r.profissional||'',
+const procTxt=a=>(a.procedimento||'')+(a.procedimento2?' + '+a.procedimento2:'');
+const rowA=r=>({id:r.id,clienteId:r.cliente_id,data:r.data,procedimento:r.procedimento||'',procedimento2:r.procedimento2||'',procTxt:(r.procedimento||'')+(r.procedimento2?' + '+r.procedimento2:''),profissional:r.profissional||'',
   hora:String(r.hora||'').slice(0,5),valor:Number(r.valor)||0,pagamento:r.pagamento||'',parcelas:PARC(r.parcelas),gastoProdutos:Number(r.gasto_produtos)||0,taxaMaquina:Number(r.taxa_maquina)||0,retorno:r.retorno||'',obs:r.obs||'',duracao:Math.min(720,Math.max(5,Number(r.duracao)||60)),status:STATUS_OK.includes(r.status)?r.status:'agendado'});
 const CATS=['Anúncio Instagram','Água','Internet','Produtos de limpeza','Luz','Manutenção','Aluguel','Condomínio','Outros'];
 const rowD=r=>({id:r.id,data:r.data,categoria:r.categoria||'Outros',descricao:r.descricao||'',valor:Number(r.valor)||0});
@@ -490,7 +491,7 @@ async function iniciar(){
   try{S.canal=sb.channel('salao-mudancas').on('postgres_changes',{event:'*',schema:'public'},agendar).subscribe()}catch(_){}
 }
 function parar(){
-  S.iniciado=false;S.got=false;S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;
+  S.iniciado=false;S.got=false;S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
   if(S.canal&&sb){try{sb.removeChannel(S.canal)}catch(_){}}
   S.canal=null;
 }
@@ -1132,7 +1133,7 @@ function detalhe(){
     ${c.obs?`<p class="obs">${esc(c.obs)}</p>`:''}</div>
     <div class="item-acts"><button class="btn ghost sm" data-act="editCliente" data-id="${esc(c.id)}">Editar</button>${!S.legado&&NV('clientes')==='escrita'&&c.nome!=='Cliente removida'?`<button class="btn ghost sm" data-act="anonCliente" data-id="${esc(c.id)}">Apagar dados pessoais</button>`:''}<button class="btn danger sm" data-act="delCliente" data-id="${esc(c.id)}">Excluir</button></div></div>
   <div class="stats"><div class="stat"><b>${a.length}</b><span>atendimentos</span></div><div class="stat"><b>${brl(soma(a))}</b><span>total gasto</span></div>${a.filter(isFiado).length?`<div class="stat"><b>${brl(soma(a.filter(isFiado)))}</b><span>a receber (fiado)</span></div>`:''}</div>
-  ${(()=>{const u=a.find(x=>x.obs);return u?`<div class="panel"><b>Última fórmula / observação</b> <span class="muted num">${fd(u.data)} · ${esc(u.procedimento)}</span><p class="obs" style="margin:6px 0 0">${esc(u.obs)}</p></div>`:''})()}
+  ${(()=>{const u=a.find(x=>x.obs);return u?`<div class="panel"><b>Última fórmula / observação</b> <span class="muted num">${fd(u.data)} · ${esc(procTxt(u))}</span><p class="obs" style="margin:6px 0 0">${esc(u.obs)}</p></div>`:''})()}
   <div class="bar"><button class="btn" data-act="novoAtend" data-cliente="${esc(c.id)}">Novo atendimento</button></div>
   <h3>Histórico</h3>`+(a.length?'<div class="list">'+a.map(x=>itemAtend(x,false)).join('')+'</div>':'<p class="muted">Nenhum procedimento registrado para esta cliente.</p>');
 }
@@ -1200,7 +1201,7 @@ function montaMsg(chave,v){
   return L.join('\n').replace(/\{(\w+)\}/g,(x,k)=>k in val?String(val[k]||''):x).replace(/\n{3,}/g,'\n\n').trim();
 }
 const vCli=c=>({nome:primeiro(c&&c.nome),nome_completo:String((c&&c.nome)||'').trim()});
-function msgLembrete(a){const c=cli(a.clienteId);return montaMsg('lembrete',Object.assign(vCli(c),{data:fd(a.data),hora:a.hora||'',procedimento:a.procedimento||'',profissional:a.profissional||''}))}
+function msgLembrete(a){const c=cli(a.clienteId);return montaMsg('lembrete',Object.assign(vCli(c),{data:fd(a.data),hora:a.hora||'',procedimento:procTxt(a),profissional:a.profissional||''}))}
 function btnLembrete(a){
   const c=cli(a.clienteId),tel=c?String(c.telefone||'').replace(/\D/g,'').replace(/^0+/,''):'';
   if(tel.length<10){const m=tel?'telefone sem DDD':'cliente sem telefone';return `<button class="btn ghost sm" disabled title="${m==='telefone sem DDD'?'O telefone da cliente está sem DDD. Edite o cadastro dela.':'Esta cliente não tem telefone cadastrado'}">Lembrete WhatsApp</button><div class="muted" style="font-size:12px">${m}</div>`}
@@ -1210,12 +1211,12 @@ function btnLembrete(a){
 function btnTaxa(a){
   const m=msgsSalvas(),c=cli(a.clienteId),tel=c?String(c.telefone||'').replace(/\D/g,'').replace(/^0+/,''):'';
   if(!m._pix||tel.length<10||String(a.data)<hoje())return '';
-  const msg=montaMsg('taxa',Object.assign(vCli(c),{data:fd(a.data),hora:a.hora||'',procedimento:a.procedimento||'',profissional:a.profissional||''}));
+  const msg=montaMsg('taxa',Object.assign(vCli(c),{data:fd(a.data),hora:a.hora||'',procedimento:procTxt(a),profissional:a.profissional||''}));
   return `<a class="btn ghost sm wa-btn" href="${esc(zap(c.telefone)+'?text='+encodeURIComponent(msg))}" target="_blank" rel="noopener" title="Abre o WhatsApp com a taxa de agendamento e a chave Pix">Taxa Pix</a>`;
 }
 function itemAtend(a,mostra,mes){
   const c=mostra?cli(a.clienteId):null;
-  return `<div class="item"><div class="grow"><div class="t">${esc(a.procedimento)}${c?` <span class="muted">·</span> <button class="linkbtn" data-act="abrir" data-id="${esc(c.id)}">${esc(c.nome)}</button>`:''}</div>
+  return `<div class="item"><div class="grow"><div class="t">${esc(procTxt(a))}${c?` <span class="muted">·</span> <button class="linkbtn" data-act="abrir" data-id="${esc(c.id)}">${esc(c.nome)}</button>`:''}</div>
   <div class="muted num">${fd(a.data)}${a.hora?' às '+esc(a.hora):''}${a.profissional?' · '+esc(a.profissional):''}${a.pagamento?' · '+esc(pagTxt(a)):''}${isFiado(a)?' <span class="tag late">A receber</span>':''}</div>
   ${despTxt(a)}${parcMes(a,mes)}${a.retorno?`<div class="muted">Retorno previsto: ${fd(a.retorno)}</div>`:''}${a.obs?`<div class="obs">${esc(a.obs)}</div>`:''}</div>
   <div class="side-val">${brl(a.valor)}</div>
@@ -1233,7 +1234,7 @@ function telaAtend(){
 function formAtend(id,clienteId,data){
   if(!S.clientes.length){toast('Cadastre uma cliente primeiro.',true);return}
   const a=id?S.atendTodos.find(x=>x.id===id):{data:data||hoje(),clienteId:clienteId||''};if(id&&!a)return;
-  const cat=servicosCat(),procs=cat.length?cat.map(x=>x.nome):[...PROCS];if(a.procedimento&&!procs.includes(a.procedimento))procs.push(a.procedimento);
+  const cat=servicosCat(),procs=cat.length?cat.map(x=>x.nome):[...PROCS];if(a.procedimento&&!procs.includes(a.procedimento))procs.push(a.procedimento);const procs2=[...procs];if(a.procedimento2&&!procs2.includes(a.procedimento2))procs2.push(a.procedimento2);
   const profs=listaProfs();if(a.profissional&&!profs.includes(a.profissional))profs.push(a.profissional);
   const profSel=a.profissional||profPadrao(),parcSel=PARC(a.parcelas),credito=a.pagamento==='Cartão de crédito',cartao=credito||a.pagamento==='Cartão de débito';
   const pags=['Pix','Dinheiro','Cartão de débito','Cartão de crédito',FIADO,'Outro'];
@@ -1243,9 +1244,10 @@ function formAtend(id,clienteId,data){
   <div class="grid2"><div><label for="a-data">Data *</label><input id="a-data" name="data" type="date" required value="${esc(a.data)}"></div>
   <div><label for="a-hora">Horário</label><input id="a-hora" name="hora" type="time" value="${esc(a.hora||'')}"></div>
   <div><label for="a-proc">Procedimento *</label><select id="a-proc" name="procedimento" required><option value="">Selecione…</option>${procs.map(p=>`<option value="${esc(p)}" ${p===a.procedimento?'selected':''}>${esc(p)}</option>`).join('')}</select></div>
+  ${S.semProc2?'':`<div><label for="a-proc2">Segundo procedimento (opcional)</label><select id="a-proc2" name="procedimento2"><option value="">Nenhum</option>${procs2.map(p=>`<option value="${esc(p)}" ${p===a.procedimento2?'selected':''}>${esc(p)}</option>`).join('')}</select></div>`}
   <div><label for="a-dur">Duração (min)</label><input id="a-dur" name="duracao" type="number" min="5" max="720" step="5" inputmode="numeric" value="${esc(a.duracao||60)}"></div>
   <div><label for="a-prof">Profissional</label><select id="a-prof" name="profissional">${profs.map(p=>`<option value="${esc(p)}" ${p===profSel?'selected':''}>${esc(p)}</option>`).join('')}</select></div>
-  <div><label for="a-val">Valor (R$)</label><input id="a-val" name="valor" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(a.valor)}"></div>
+  <div><label for="a-val">Valor total (R$)</label><input id="a-val" name="valor" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(a.valor)}"></div>
   <div><label for="a-pag">Pagamento</label><select id="a-pag" name="pagamento"><option value="">—</option>${pags.map(p=>`<option ${p===a.pagamento?'selected':''}>${p}</option>`).join('')}</select></div>
   <div id="a-parc-wrap" ${credito?'':'hidden'}><label for="a-parc">Parcelas</label><select id="a-parc" name="parcelas">${Array.from({length:12},(_,i)=>i+1).map(n=>`<option value="${n}" ${n===parcSel?'selected':''}>${n}x</option>`).join('')}</select><div id="a-parc-info" class="muted num"></div></div>
   <div id="a-taxa-wrap" ${cartao?'':'hidden'}><label for="a-taxa">Taxa da máquina (R$)</label><input id="a-taxa" name="taxaMaquina" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(a.taxaMaquina||'')}"></div>
@@ -1283,6 +1285,7 @@ async function salvarAtend(id,d){
   const o={cliente_id:d.clienteId,data:d.data,procedimento:d.procedimento.trim(),profissional:(d.profissional||profPadrao()||PROF).trim(),
     valor:Math.max(0,Number(d.valor)||0),pagamento:d.pagamento||'',parcelas:cred?PARC(d.parcelas):1,gasto_produtos:din(d.gastoProdutos),taxa_maquina:cartao?din(d.taxaMaquina):0,retorno:d.retorno||null,obs:(d.obs||'').trim()};
   if(!S.semEst)o.hora=d.hora||null;
+  if(!S.semProc2)o.procedimento2=String(d.procedimento2||'').trim().slice(0,60);
   if(!S.semDur)o.duracao=Math.min(720,Math.max(5,Math.round(Number(d.duracao)||60)));
   if(!id&&!S.semStatus)o.status='agendado';
   const aid=id||novoId();
@@ -1293,6 +1296,7 @@ async function salvarAtend(id,d){
     delete o.hora;r=await grava(o);S.semHora=true;
   }
   if(r.error&&/duracao/i.test(String(r.error.message||''))){delete o.duracao;S.semDur=true;r=await grava(o)}
+  if(r.error&&/procedimento2/i.test(String(r.error.message||''))){const quis=o.procedimento2;delete o.procedimento2;S.semProc2=true;if(quis)throw erroUi('Para usar dois procedimentos, rode o arquivo 14-dois-procedimentos.sql (ou o agendio-TUDO.sql) no Supabase.');r=await grava(o)}
   if(r.error)throw r.error;
   /* Estoque: refaz a baixa deste atendimento (devolve a anterior e dá a nova). */
   let msg=id?'Atendimento atualizado.':'Atendimento registrado.';
@@ -1301,7 +1305,7 @@ async function salvarAtend(id,d){
     try{
       if(tinha||(id&&baixa)){const x=await sb.from('movimentacoes_estoque').delete().eq('atendimento_id',aid);if(x.error)throw x.error}
       if(baixa){
-        const linhas=fichaDe(o.procedimento).map(({f,p})=>({id:novoId(),produto_id:p.id,data:o.data,tipo:'atendimento',quantidade:-r4(usoEf(p,f.quantidade)),motivo:'Atendimento: '+o.procedimento,atendimento_id:aid}));
+        const linhas=[...fichaDe(o.procedimento),...(o.procedimento2?fichaDe(o.procedimento2):[])].map(({f,p})=>({id:novoId(),produto_id:p.id,data:o.data,tipo:'atendimento',quantidade:-r4(usoEf(p,f.quantidade)),motivo:'Atendimento: '+o.procedimento+(o.procedimento2?' + '+o.procedimento2:''),atendimento_id:aid}));
         if(linhas.length){const x=await sb.from('movimentacoes_estoque').insert(linhas);if(x.error)throw x.error;msg+=' Estoque atualizado.'}
       }else if(tinha)msg+=' Baixa do estoque desfeita.';
     }catch(_){msg+=' Atenção: não foi possível atualizar o estoque, confira na aba Estoque.'}
@@ -1544,7 +1548,7 @@ function telaRet(){
   (l.length?'<div class="list">'+l.map(a=>{
     const c=cli(a.clienteId),late=a.retorno<h;
     return `<div class="item"><div class="grow"><div class="t">${esc(c.nome)} <span class="tag ${late?'late':'ok'}">${late?'Atrasada':'No prazo'}</span></div>
-    <div class="muted num">Retorno: ${fd(a.retorno)} · Último: ${esc(a.procedimento)} (${fd(a.data)})</div></div>
+    <div class="muted num">Retorno: ${fd(a.retorno)} · Último: ${esc(procTxt(a))} (${fd(a.data)})</div></div>
     <div class="item-acts">${c.telefone?`<a class="wa" href="${zap(c.telefone)}" target="_blank" rel="noopener">WhatsApp</a>`:''}<button class="btn ghost sm" data-act="abrir" data-id="${esc(c.id)}">Abrir</button></div></div>`;
   }).join('')+'</div>':'<div class="empty"><p>Nenhum retorno pendente.</p></div>');
 }
@@ -1552,8 +1556,8 @@ function telaRet(){
 /* ---------- A receber (fiado), agradecimento e cobrança ---------- */
 const FIADO='A receber (fiado)';
 const isFiado=a=>a.pagamento===FIADO;
-const msgAgradece=(c,a)=>montaMsg('agradecimento',Object.assign(vCli(c),{procedimento:(a&&a.procedimento)||'',data:a?fd(a.data):'',profissional:(a&&a.profissional)||''}));
-const msgCobranca=(c,a)=>montaMsg('cobranca',Object.assign(vCli(c),{valor:brl(a.valor),procedimento:a.procedimento||'',data:fd(a.data)}));
+const msgAgradece=(c,a)=>montaMsg('agradecimento',Object.assign(vCli(c),{procedimento:(a&&procTxt(a))||'',data:a?fd(a.data):'',profissional:(a&&a.profissional)||''}));
+const msgCobranca=(c,a)=>montaMsg('cobranca',Object.assign(vCli(c),{valor:brl(a.valor),procedimento:procTxt(a),data:fd(a.data)}));
 function btnAgradece(a){
   const c=cli(a.clienteId);if(!telOk(c)||String(a.data)>hoje())return '';
   return `<a class="btn sm wa-btn ghost" href="${esc(linkZap(c,msgAgradece(c,a)))}" target="_blank" rel="noopener" title="Abre o WhatsApp com a mensagem de agradecimento pronta">Agradecer</a>`;
@@ -1565,7 +1569,7 @@ function btnReceber(a){
 }
 function formReceber(id){
   const a=S.atend.find(x=>x.id===id);if(!a)return;const c=cli(a.clienteId)||{nome:''};
-  abrir(`<h2>Marcar como recebido</h2><form data-form="receber" data-id="${esc(id)}"><p>${esc(c.nome)} · ${esc(a.procedimento)} · <b>${brl(a.valor)}</b></p>
+  abrir(`<h2>Marcar como recebido</h2><form data-form="receber" data-id="${esc(id)}"><p>${esc(c.nome)} · ${esc(procTxt(a))} · <b>${brl(a.valor)}</b></p>
   <label for="r-pag">Forma de pagamento</label><select id="r-pag" name="pagamento">${['Pix','Dinheiro','Cartão de débito','Outro'].map(x=>`<option>${x}</option>`).join('')}</select>
   <div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Confirmar</button></div></form>`);
 }
@@ -1607,7 +1611,7 @@ async function mudarStatus(id,st){
 function linhaAg(a){
   const c=cli(a.clienteId)||{nome:'(cliente removida)'};
   const tag=a.status==='confirmado'?' <span class="tag ok">Confirmado</span>':inativo(a)?` <span class="tag late">${STATUS_ROT[a.status]}</span>`:'';
-  return `<div class="item"${inativo(a)?' style="opacity:.62"':''}><div class="side-val" style="min-width:56px">${esc(a.hora||'—')}</div>${avatar(c.nome)}<div class="grow"><div class="t">${esc(c.nome)}${tag}</div><div class="muted">${esc(a.procedimento)}${a.profissional?' · '+esc(a.profissional):''}</div></div>
+  return `<div class="item"${inativo(a)?' style="opacity:.62"':''}><div class="side-val" style="min-width:56px">${esc(a.hora||'—')}</div>${avatar(c.nome)}<div class="grow"><div class="t">${esc(c.nome)}${tag}</div><div class="muted">${esc(procTxt(a))}${a.profissional?' · '+esc(a.profissional):''}</div></div>
   <div class="item-acts">${inativo(a)?'':btnLembrete(a)+btnTaxa(a)}${btnStatus(a)}<button class="btn ghost sm" data-act="editAtend" data-id="${esc(a.id)}">Editar</button></div></div>`;
 }
 function telaInicio(){
@@ -1885,7 +1889,7 @@ function segRel(){
 }
 function relCustos(m,F){
   const mp=new Map();
-  F.forEach(a=>{const k=a.procedimento||'—',o=mp.get(k)||{n:0,r:0,p:0,t:0};o.n++;o.r+=Number(a.valor)||0;o.p+=din(a.gastoProdutos);o.t+=din(a.taxaMaquina);mp.set(k,o)});
+  F.forEach(a=>{const k=a.procTxt||'—',o=mp.get(k)||{n:0,r:0,p:0,t:0};o.n++;o.r+=Number(a.valor)||0;o.p+=din(a.gastoProdutos);o.t+=din(a.taxaMaquina);mp.set(k,o)});
   const rows=[...mp.entries()].map(([k,o])=>Object.assign({k},o,{m:o.r-o.p-o.t})).sort((a,b)=>b.m-a.m);
   const T=rows.reduce((x,o)=>({r:x.r+o.r,p:x.p+o.p,t:x.t+o.t}),{r:0,p:0,t:0}),marg=T.r-T.p-T.t;
   const stats=`<div class="stats"><div class="stat"><b>${brl(T.r)}</b><span>cobrado nos atendimentos</span></div><div class="stat"><b>${brl(T.p)}</b><span>produtos</span></div><div class="stat"><b>${brl(T.t)}</b><span>taxas da máquina</span></div><div class="stat"><b class="${marg<0?'neg':''}">${brl(marg)}</b><span>margem (cobrado − produtos − taxas)</span></div></div>`;
@@ -1907,9 +1911,9 @@ function relDesp(m,F,G){
   const GS=[...G].sort((a,b)=>String(b.data).localeCompare(String(a.data)));
   return stats+`<p class="muted" style="font-size:13px;margin:0 0 4px">Total = contas do salão + gastos dos atendimentos. Tudo conta no mês da data do lançamento ou do atendimento.</p>`+
     bloco('Despesas por tipo',T,'tipo')+
-    (L.length?bloco('Gastos dos atendimentos por procedimento',LL,'procedimento')+bloco('Gastos dos atendimentos por forma de pagamento',LL,'pagamento'):'')+
+    (L.length?bloco('Gastos dos atendimentos por procedimento',LL,'procTxt')+bloco('Gastos dos atendimentos por forma de pagamento',LL,'pagamento'):'')+
     (G.length?'<h3>Contas do salão</h3><div class="list">'+GS.slice(0,S.lim.gasto).map(itemDesp).join('')+'</div>'+maisBtn('gasto',GS.length):'')+
-    (L.length?'<h3>Detalhe por atendimento</h3><div class="list">'+L.slice(0,S.lim.desp).map(a=>{const c=cli(a.clienteId);return `<div class="item"><div class="grow"><div class="t">${esc(a.procedimento)}${c?` <span class="muted">·</span> ${esc(c.nome)}`:''}</div><div class="muted num">${fd(a.data)}</div>${despTxt(a)}</div><div class="side num"><b>${brl(desp(a))}</b></div></div>`}).join('')+'</div>'+maisBtn('desp',L.length):'');
+    (L.length?'<h3>Detalhe por atendimento</h3><div class="list">'+L.slice(0,S.lim.desp).map(a=>{const c=cli(a.clienteId);return `<div class="item"><div class="grow"><div class="t">${esc(procTxt(a))}${c?` <span class="muted">·</span> ${esc(c.nome)}`:''}</div><div class="muted num">${fd(a.data)}</div>${despTxt(a)}</div><div class="side num"><b>${brl(desp(a))}</b></div></div>`}).join('')+'</div>'+maisBtn('desp',L.length):'');
 }
 
 /* ---------- Relatórios ---------- */
@@ -1994,7 +1998,7 @@ function telaRel(){
   return head+resumo+`
   <div class="stats"><div class="stat"><b>${feitos.length}</b><span>atendimentos</span></div><div class="stat"><b>${nCli}</b><span>clientes atendidas</span></div><div class="stat"><b>${brl(feitos.length?soma(feitos)/feitos.length:0)}</b><span>ticket médio</span></div></div>`+
   (parc?`<p class="muted" style="font-size:13px;margin:0 0 4px">Cartão de crédito parcelado: o valor é dividido pelas parcelas e cada parcela entra no mês em que cai. A 1ª parcela conta no mês do atendimento.</p>`:'')+
-  graficos(m,L)+bloco('Clientes que mais gastaram',L.map(x=>({a:{cliente:(cli(x.a.clienteId)||{}).nome||'(cliente removida)'},v:x.v})),'cliente',10)+bloco('Por procedimento',L,'procedimento')+blocoComissao(m,L)+bloco('Por forma de pagamento',L,'pagamento')+
+  graficos(m,L)+bloco('Clientes que mais gastaram',L.map(x=>({a:{cliente:(cli(x.a.clienteId)||{}).nome||'(cliente removida)'},v:x.v})),'cliente',10)+bloco('Por procedimento',L,'procTxt')+blocoComissao(m,L)+bloco('Por forma de pagamento',L,'pagamento')+
   `<h3>Aniversariantes do mês</h3>`+(aniv.length?'<div class="list">'+aniv.map(c=>`<div class="item"><div class="grow"><span class="t">${esc(c.nome)}</span> <span class="tag">${esc(String(c.nascimento).slice(8))}/${mm}</span></div>${c.telefone?`<a class="wa" href="${zap(c.telefone)}" target="_blank" rel="noopener">WhatsApp</a>`:''}</div>`).join('')+'</div>':'<p class="muted">Nenhuma aniversariante neste mês.</p>');
 }
 
@@ -2021,7 +2025,7 @@ function exportJson(){
 function exportCsv(){
   const q=v=>{let t=String(v==null?'':v);if(/^[=+\-@\t\r]/.test(t)&&!/^[+-]?[\d\s().,-]+$/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"'};
   const cab=['Data','Horário','Cliente','Telefone','Procedimento','Profissional','Valor','Pagamento','Parcelas','Gasto com produtos','Taxa da máquina','Retorno','Observações'];
-  const linhas=[...S.atend].sort((a,b)=>String(a.data).localeCompare(String(b.data))).map(a=>{const c=cli(a.clienteId)||{};return [a.data,a.hora,c.nome,c.telefone,a.procedimento,a.profissional,a.valor,a.pagamento,a.pagamento==='Cartão de crédito'?PARC(a.parcelas):'',din(a.gastoProdutos),din(a.taxaMaquina),a.retorno,a.obs].map(q).join(';')});
+  const linhas=[...S.atend].sort((a,b)=>String(a.data).localeCompare(String(b.data))).map(a=>{const c=cli(a.clienteId)||{};return [a.data,a.hora,c.nome,c.telefone,procTxt(a),a.profissional,a.valor,a.pagamento,a.pagamento==='Cartão de crédito'?PARC(a.parcelas):'',din(a.gastoProdutos),din(a.taxaMaquina),a.retorno,a.obs].map(q).join(';')});
   salvarArquivo(`atendimentos-${hoje()}.csv`,'﻿'+[cab.map(q).join(';'),...linhas].join('\n'),'text/csv');
 }
 /* ---------- Planilha Excel (.xlsx), sem biblioteca externa ---------- */
@@ -2068,9 +2072,9 @@ function exportXlsx(){
   const ordN=(a,b)=>String(a.nome).localeCompare(String(b.nome),'pt-BR'),ordD=(a,b)=>String(a.data).localeCompare(String(b.data));
   const abas=[
     ['Clientes',['ID','Nome','Telefone','Nascimento','Observações'],[...S.clientes].sort(ordN).map(c=>[c.id,c.nome,c.telefone,c.nascimento,c.obs]),['t','t','t','d','t'],[38,30,16,14,40]],
-    ['Atendimentos',['ID','ID da cliente','Cliente','Data','Horário','Procedimento','Profissional','Valor','Pagamento','Parcelas','Gasto com produtos','Taxa da máquina','Retorno','Observações'],
-      [...S.atend].sort(ordD).map(a=>[a.id,a.clienteId,(cli(a.clienteId)||{}).nome||'',a.data,a.hora,a.procedimento,a.profissional,a.valor,a.pagamento,a.pagamento==='Cartão de crédito'?PARC(a.parcelas):'',a.gastoProdutos,a.taxaMaquina,a.retorno,a.obs]),
-      ['t','t','t','d','t','t','t','m','t','n','m','m','d','t'],[38,38,28,12,8,20,14,12,18,9,18,16,12,40]],
+    ['Atendimentos',['ID','ID da cliente','Cliente','Data','Horário','Procedimento','Profissional','Valor','Pagamento','Parcelas','Gasto com produtos','Taxa da máquina','Retorno','Observações','Segundo procedimento'],
+      [...S.atend].sort(ordD).map(a=>[a.id,a.clienteId,(cli(a.clienteId)||{}).nome||'',a.data,a.hora,a.procedimento,a.profissional,a.valor,a.pagamento,a.pagamento==='Cartão de crédito'?PARC(a.parcelas):'',a.gastoProdutos,a.taxaMaquina,a.retorno,a.obs,a.procedimento2]),
+      ['t','t','t','d','t','t','t','m','t','n','m','m','d','t','t'],[38,38,28,12,8,20,14,12,18,9,18,16,12,40,22]],
     ['Despesas',['ID','Data','Categoria','Descrição','Valor'],[...S.gastos].sort(ordD).map(g=>[g.id,g.data,g.categoria,g.descricao,g.valor]),['t','d','t','t','m'],[38,12,24,40,12]],
     ['Produtos',['ID','Nome','Categoria','Unidade','Conteúdo da embalagem','Preço da embalagem','Uso por aplicação','Perda (%)','Estoque atual (na unidade)','Estoque mínimo (embalagens)','Fornecedor','Validade','Observações'],
       [...S.produtos].sort(ordN).map(p=>[p.id,p.nome,p.categoria,p.unidade,p.conteudo,p.preco,p.uso,p.perda,r4(p.estoque),p.minimo,p.fornecedor,p.validade,p.obs]),
@@ -2177,8 +2181,8 @@ async function lerXlsx(buf){
   return {achou:!!(abas.clientes||abas.atendimentos||abas.despesas||abas.produtos||abas.fichas),
     clientes:tabela(abas.clientes,{id:['id','id da cliente'],nome:['nome','cliente'],telefone:['telefone','celular','whatsapp'],nascimento:['nascimento','data de nascimento'],obs:['observacoes','obs']})
       .map(o=>({id:tx(o.id),nome:tx(o.nome),telefone:tx(o.telefone),nascimento:nData(o.nascimento),obs:tx(o.obs)})),
-    atendimentos:tabela(abas.atendimentos,{id:['id','id do atendimento'],clienteId:['id da cliente','id cliente'],cliente:['cliente','nome da cliente','nome'],data:['data'],hora:['horario','hora'],procedimento:['procedimento'],profissional:['profissional'],valor:['valor'],pagamento:['pagamento','forma de pagamento'],parcelas:['parcelas'],gastoProdutos:['gasto com produtos','gastos com produtos'],taxaMaquina:['taxa da maquina'],retorno:['retorno','retorno previsto'],obs:['observacoes','obs']})
-      .map(o=>({id:tx(o.id),clienteId:tx(o.clienteId),cliente:tx(o.cliente),data:nData(o.data),hora:o.hora===undefined?undefined:nHora(o.hora),procedimento:tx(o.procedimento),profissional:tx(o.profissional),valor:nNum(o.valor),pagamento:tx(o.pagamento),parcelas:nNum(o.parcelas),gastoProdutos:nNum(o.gastoProdutos),taxaMaquina:nNum(o.taxaMaquina),retorno:nData(o.retorno),obs:tx(o.obs)})),
+    atendimentos:tabela(abas.atendimentos,{id:['id','id do atendimento'],clienteId:['id da cliente','id cliente'],cliente:['cliente','nome da cliente','nome'],data:['data'],hora:['horario','hora'],procedimento:['procedimento'],procedimento2:['segundo procedimento'],profissional:['profissional'],valor:['valor'],pagamento:['pagamento','forma de pagamento'],parcelas:['parcelas'],gastoProdutos:['gasto com produtos','gastos com produtos'],taxaMaquina:['taxa da maquina'],retorno:['retorno','retorno previsto'],obs:['observacoes','obs']})
+      .map(o=>({id:tx(o.id),clienteId:tx(o.clienteId),cliente:tx(o.cliente),data:nData(o.data),hora:o.hora===undefined?undefined:nHora(o.hora),procedimento:tx(o.procedimento),procedimento2:o.procedimento2===undefined?undefined:tx(o.procedimento2),profissional:tx(o.profissional),valor:nNum(o.valor),pagamento:tx(o.pagamento),parcelas:nNum(o.parcelas),gastoProdutos:nNum(o.gastoProdutos),taxaMaquina:nNum(o.taxaMaquina),retorno:nData(o.retorno),obs:tx(o.obs)})),
     despesas:tabela(abas.despesas,{id:['id'],data:['data'],categoria:['categoria'],descricao:['descricao','observacoes'],valor:['valor']})
       .map(o=>({id:tx(o.id),data:nData(o.data),categoria:tx(o.categoria),descricao:tx(o.descricao),valor:nNum(o.valor)})),
     produtos:tabela(abas.produtos,{id:['id'],nome:['nome','produto'],categoria:['categoria'],unidade:['unidade','unidade de medida'],conteudo:['conteudo da embalagem','conteudo'],preco:['preco da embalagem','preco'],uso:['uso por aplicacao'],perda:['perda'],estoque:['estoque atual na unidade','estoque atual'],minimo:['estoque minimo embalagens','estoque minimo'],fornecedor:['fornecedor'],validade:['validade'],obs:['observacoes','obs']})
@@ -2241,7 +2245,7 @@ async function importar(file){
   d.atendimentos.forEach(o=>{
     if(!o||!idOk(o.id)||!idOk(o.clienteId)||!ids.has(o.clienteId)||!dataOk(o.data)||!txt(o.procedimento).trim()){pulou++;return}
     const cred=o.pagamento==='Cartão de crédito';
-    am.set(o.id,{id:o.id,cliente_id:o.clienteId,data:o.data,procedimento:txt(o.procedimento).trim(),profissional:txt(o.profissional),
+    am.set(o.id,{id:o.id,cliente_id:o.clienteId,data:o.data,procedimento:txt(o.procedimento).trim(),...(S.semProc2||o.procedimento2===undefined?{}:{procedimento2:txt(o.procedimento2).trim().slice(0,60)}),profissional:txt(o.profissional),
       valor:Math.max(0,Number(o.valor)||0),pagamento:txt(o.pagamento),parcelas:cred?PARC(o.parcelas):1,hora:S.semEst?undefined:(o.hora===undefined?((exA.get(o.id)||{}).hora||null):(horaOk(o.hora)?o.hora:null)),gasto_produtos:dv(o.gastoProdutos,(exA.get(o.id)||{}).gastoProdutos),taxa_maquina:dv(o.taxaMaquina,(exA.get(o.id)||{}).taxaMaquina),retorno:dataOk(o.retorno)?o.retorno:null,obs:txt(o.obs),...(STATUS_OK.includes(o.status)&&!S.semStatus?{status:o.status}:{})});
   });
   const gm=new Map();
@@ -2271,7 +2275,14 @@ async function importar(file){
     const ini=[...estIni.entries()].map(([pid,q])=>({id:novoId(),produto_id:pid,data:hoje(),tipo:'entrada',quantidade:q,motivo:'Estoque inicial (importação)'}));
     for(const [t,l] of [['clientes',cs],['produtos',ps],['atendimentos',as],['ficha_procedimento',fs],['despesas',gs],['movimentacoes_estoque',ini]]){
       for(let i=0;i<l.length;i+=200){
-        const r=await sb.from(t).upsert(l.slice(i,i+200),{onConflict:'id'});
+        let r=await sb.from(t).upsert(l.slice(i,i+200),{onConflict:'id'});
+        for(let tent=0;r.error&&tent<3;tent++){
+          const q=/find the '([^']+)' column/i.exec(String(r.error.message||''));
+          if(!q||!['hora','status','duracao','procedimento2','origem'].includes(q[1]))break;
+          l.forEach(x=>{delete x[q[1]]});
+          if(q[1]==='procedimento2')S.semProc2=true;
+          r=await sb.from(t).upsert(l.slice(i,i+200),{onConflict:'id'});
+        }
         if(r.error)throw r.error;
         ok+=Math.min(200,l.length-i);S.prog=`Importando… ${ok} de ${total}`;render();
       }
@@ -2309,7 +2320,7 @@ function falha(e){
   if(['22023','23505','53400','P0002'].includes(c)||(c==='42501'&&/[ãõçé]/.test(m)&&!/row-level|permission/i.test(m))){toast(m,true);return}
   toast(/n[ãa]o pertence a um sal[ãa]o/i.test(m)?'Seu login ainda não tem um salão. Saia e entre de novo para cadastrar o salão.':
     /limite de (usu|profis)/i.test(m)?m:
-    c==='42703'||c==='PGRST204'||/column .* (does not exist|of relation)|could not find the .* column/i.test(m)?'O banco de dados está desatualizado. Rode o arquivo atualizar-banco-3.sql no Supabase.'+det:
+    c==='42703'||c==='PGRST204'||/column .* (does not exist|of relation)|could not find the .* column/i.test(m)?(()=>{const q=/find the '([^']+)' column of '([^']+)'/i.exec(m)||/column "?([a-z_0-9]+)"? of relation "?([a-z_0-9]+)/i.exec(m);return 'O banco de dados está desatualizado'+(q?' (falta a coluna "'+q[1]+'" em "'+q[2]+'")':'')+'. Rode o arquivo agendio-TUDO.sql no Supabase e tente de novo.'+det})():
     c==='42501'&&/row-level|permission/i.test(m)?'Seu perfil não tem permissão para esta ação.'+det:
     c==='42501'||c===401||c==='401'||/jwt/i.test(m)?'A sessão expirou. Saia e entre de novo.'+det:
     /fetch|network|failed to/i.test(m)?'Sem conexão com a internet. Tente de novo.':
@@ -2384,7 +2395,8 @@ document.addEventListener('change',e=>{
   else if(t.classList&&t.classList.contains('com-pct'))salvarComissao(t.dataset.prof,t.value).catch(x=>toast(falha(x)));
   else if(t.id==='mesDesp'){S.mesDesp=t.value;S.lim.gasto=100;render()}
   else if(t.id==='a-pag'||t.id==='a-parc')atualizaParc();
-  else if(t.id==='a-proc'){atualizaEstq(true);const sv=servicosCat().find(x=>x.nome===t.value);if(sv){$('a-dur').value=sv.duracao||60;const v=$('a-val');if(v&&!Number(v.value)&&Number(sv.preco)>0){v.value=sv.preco;atualizaParc()}}}
+  else if(t.id==='a-proc'||t.id==='a-proc2'){atualizaEstq(true);const c1=servicosCat(),f=n=>c1.find(x=>x.nome===n),A=f($('a-proc').value),B=$('a-proc2')?f($('a-proc2').value):null;
+    if(A||B){$('a-dur').value=((A&&A.duracao)||0)+((B&&B.duracao)||0)||60;const v=$('a-val'),pr=((A&&Number(A.preco))||0)+((B&&Number(B.preco))||0);if(v&&pr>0&&(!Number(v.value)||v.dataset.auto==='1')){v.value=pr;v.dataset.auto='1';atualizaParc()}}}
   else if(t.id==='bq-dia'){$('bq-h').hidden=t.checked}
   else if(t.id==='pb-sv'){S.pb.sv=t.value;buscaSlots()}
   else if(t.id==='pb-pf'){S.pb.pf=t.value;buscaSlots()}
