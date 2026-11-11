@@ -466,15 +466,19 @@ async function recarregar(){
     const [c,a,g,pr,fi,mv,bq,pd,ag]=await Promise.all([todos('clientes'),todos('atendimentos'),todos('despesas').catch(()=>{semD=true;return []}),
       todos('produtos').catch(ignE),todos('ficha_procedimento').catch(ignE),todos('movimentacoes_estoque',q=>q.gte('data',desde)).catch(ignE),
       S.legado?Promise.resolve([]):todos('bloqueios',q=>q.gte('data',desde)).catch(ignB),
-      S.legado?Promise.resolve([]):todos('pedidos_agenda',q=>q.eq('status','pendente')).catch(()=>[]),
+      S.legado?Promise.resolve([]):todos('pedidos_agenda',q=>q.gte('data',desde)).catch(()=>[]),
       S.legado?Promise.resolve(null):(async()=>{try{let r=await sb.from('tenants').select('agenda_config,slug,online_ativo').eq('id',S.ctx.tenant.id);S.semOnline=false;
         if(r.error){S.semOnline=true;r=await sb.from('tenants').select('agenda_config').eq('id',S.ctx.tenant.id)}
-        if(r.error){S.semAg=true;return null}S.semAg=false;const x=(r.data&&r.data[0])||{};return Object.assign({},x,{agenda_config:x.agenda_config||{}})}catch(_){S.semAg=true;return null}})()]);
+        if(r.error){S.semAg=true;return null}S.semAg=false;const x=(r.data&&r.data[0])||{};
+        let wa=null,mpc=null;
+        try{const r2=await sb.from('tenants').select('whatsapp_auto').eq('id',S.ctx.tenant.id);if(!r2.error&&r2.data&&r2.data[0])wa=!!r2.data[0].whatsapp_auto}catch(_){}
+        try{const r3=await sb.rpc('mp_conectado');if(!r3.error)mpc=!!r3.data}catch(_){}
+        return Object.assign({},x,{agenda_config:x.agenda_config||{},_wa:wa,_mp:mpc})}catch(_){S.semAg=true;return null}})()]);
     S.semDesp=semD;S.semEst=semE;S.semBloq=S.legado||semB;
     const sig=JSON.stringify([c,a,g,pr,fi,mv,bq,pd,ag]);
     const mudou=sig!==S.sig||tinhaErro||!S.got;
     S.sig=sig;S.erro='';
-    if(mudou){S.clientes=c.map(rowC);S.atendTodos=a.map(rowA);S.atend=S.atendTodos.filter(x=>!inativo(x));S.gastos=g.map(rowD);S.produtos=pr.map(rowP);S.fichas=fi.map(rowF);S.movs=mv.map(rowM);S.bloq=bq.map(b=>({id:b.id,profissional:b.profissional||'',data:b.data,inicio:b.inicio?String(b.inicio).slice(0,5):'',fim:b.fim?String(b.fim).slice(0,5):'',motivo:b.motivo||''}));S.pedidos=pd.map(x=>({id:x.id,nome:x.nome,telefone:x.telefone,servico:x.servico,profissional:x.profissional,data:x.data,hora:String(x.hora||'').slice(0,5),obs:x.obs||'',duracao:x.duracao})).sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora));S.agCfg=(ag&&ag.agenda_config)||{};S.onl=ag?{slug:ag.slug||'',on:!!ag.online_ativo}:{slug:'',on:false};S.got=true;render()}
+    if(mudou){S.clientes=c.map(rowC);S.atendTodos=a.map(rowA);S.atend=S.atendTodos.filter(x=>!inativo(x));S.gastos=g.map(rowD);S.produtos=pr.map(rowP);S.fichas=fi.map(rowF);S.movs=mv.map(rowM);S.bloq=bq.map(b=>({id:b.id,profissional:b.profissional||'',data:b.data,inicio:b.inicio?String(b.inicio).slice(0,5):'',fim:b.fim?String(b.fim).slice(0,5):'',motivo:b.motivo||''}));S.pedidos=pd.filter(x=>x.status==='pendente'||(x.status==='recusado'&&x.sinal_status==='pago')).map(x=>({id:x.id,nome:x.nome,telefone:x.telefone,servico:x.servico,profissional:x.profissional,data:x.data,hora:String(x.hora||'').slice(0,5),obs:x.obs||'',duracao:x.duracao,status:x.status,sinalValor:Number(x.sinal_valor)||0,sinalStatus:x.sinal_status||'nenhum'})).sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora));S.agCfg=(ag&&ag.agenda_config)||{};S.onl=ag?{slug:ag.slug||'',on:!!ag.online_ativo,wa:ag._wa,mp:ag._mp}:{slug:'',on:false,wa:null,mp:null};S.got=true;render()}
   }catch(e){S.erro=(e&&(e.code||e.message))||'erro';render()}
 }
 let tmr;
@@ -491,7 +495,7 @@ async function iniciar(){
   try{S.canal=sb.channel('salao-mudancas').on('postgres_changes',{event:'*',schema:'public'},agendar).subscribe()}catch(_){}
 }
 function parar(){
-  S.iniciado=false;S.got=false;S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
+  S.iniciado=false;S.got=false;S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
   if(S.canal&&sb){try{sb.removeChannel(S.canal)}catch(_){}}
   S.canal=null;
 }
@@ -1092,7 +1096,8 @@ function telaMensagens(){
   const cfg=`<div class="panel msg-card"><b>Taxa de agendamento e Pix</b><p class="muted" style="margin:2px 0 8px">Usados na mensagem de taxa de agendamento ({taxa} e {pix}).</p>
     <label for="mg-taxa-valor">Valor da taxa (R$)</label><input id="mg-taxa-valor" name="taxa_valor" inputmode="decimal" maxlength="12" placeholder="30,00" value="${esc(sv._taxa||'')}" ${pode?'':'disabled'}>
     <label for="mg-pix">Chave Pix</label><input id="mg-pix" name="pix_chave" maxlength="120" placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória" autocomplete="off" value="${esc(sv._pix||'')}" ${pode?'':'disabled'}></div>`;
-  return `${nota}<p class="muted" style="max-width:640px">Escreva do seu jeito. Os campos entre chaves, como <b>{nome}</b>, são trocados pelos dados da cliente na hora de enviar. Linhas com horário ou profissional em branco somem sozinhas.</p>
+  const auto=(S.onl&&S.onl.wa!==null&&S.onl.wa!==undefined&&!S.legado)?`<div class="panel msg-card" style="margin-bottom:12px"><b>Envio automático de WhatsApp</b><p class="muted" style="margin:2px 0 8px;max-width:620px">Lembrete na véspera do atendimento e aviso quando você aceita ou recusa um pedido online, sem você apertar nada. <b>Só funciona depois que o WhatsApp Business for conectado ao sistema</b>; até lá as mensagens ficam apenas na fila.</p><label class="chk"><input type="checkbox" id="wa-auto" ${S.onl.wa?'checked':''} ${pode?'':'disabled'}> Ligar o envio automático</label></div>`:'';
+  return `${nota}${auto}<p class="muted" style="max-width:640px">Escreva do seu jeito. Os campos entre chaves, como <b>{nome}</b>, são trocados pelos dados da cliente na hora de enviar. Linhas com horário ou profissional em branco somem sozinhas.</p>
   <form data-form="mensagens" class="msg-grid">${cfg}${Object.keys(MSG_DEF).map(card).join('')}<p class="erro" id="a-erro" role="alert"></p>${pode?'<div class="acts"><button class="btn">Salvar mensagens</button></div>':'<p class="muted">Só quem administra o salão altera os textos.</p>'}</form>`;
 }
 async function salvarMensagens(d){
@@ -1625,7 +1630,9 @@ function telaInicio(){
   const aniv=S.clientes.filter(c=>c.nascimento&&String(c.nascimento).slice(5,7)===mm).sort((a,b)=>String(a.nascimento).slice(8).localeCompare(String(b.nascimento).slice(8)));
   const al=[],ub=LS.get('salao_ultimo_backup','');
   const dono=!!S.ctx&&S.ctx.role==='proprietario',tn0=(S.ctx&&S.ctx.tenant)||{};
-  if((S.pedidos||[]).length)al.unshift([`${S.pedidos.length} ${S.pedidos.length===1?'pedido de agendamento online aguardando':'pedidos de agendamento online aguardando'} resposta.`,'agenda','Ver pedidos']);
+  {const np=(S.pedidos||[]).filter(x=>x.status==='pendente').length,dev=(S.pedidos||[]).filter(x=>x.status==='recusado').length;
+    if(dev)al.unshift([`${dev} sinal(is) recebido(s) de horário que não está mais livre. Devolva pelo Mercado Pago.`,'agenda','Ver']);
+    if(np)al.unshift([`${np} ${np===1?'pedido de agendamento online aguardando':'pedidos de agendamento online aguardando'} resposta.`,'agenda','Ver pedidos'])}
   if(dono){
     const pg=((S.assin&&S.assin.pags)||[]),atr=pg.filter(g=>g.status==='atrasado'),prox=pg.filter(g=>g.status==='pendente'&&diasPara(g.vencimento)>=0&&diasPara(g.vencimento)<=3);
     if(atr.length)al.unshift([`Cobrança do Agendio atrasada (${brl(atr.reduce((t,g)=>t+Number(g.valor||0),0))}). Pague para não perder o acesso.`,'salao','Pagar agora']);
@@ -1765,10 +1772,10 @@ async function salvarBloq(d){
 }
 
 /* ===== Agendamento online (página pública da cliente) ===== */
-const linkPub=slug=>location.origin+location.pathname+'?salao='+slug;
+const linkPub=slug=>location.origin+'/a/'+slug;
 function blocoOnline(pode){
   if(S.semOnline)return `<div class="panel" style="margin-bottom:16px"><b>Agendamento online</b><p class="muted" style="margin:6px 0 0">Rode o arquivo 13-agendamento-online.sql (ou o agendio-TUDO.sql) no Supabase para ativar.</p></div>`;
-  const o=S.onl||{slug:'',on:false},oc=(S.agCfg&&S.agCfg.online)||{};
+  const o=S.onl||{slug:'',on:false},oc=(S.agCfg&&S.agCfg.online)||{},sg=oc.sinal||{};
   return `<h3 style="margin-top:0">Agendamento online</h3><form data-form="online" class="panel" style="margin-bottom:16px">
   <p class="muted" style="margin:0 0 8px;max-width:620px">A cliente abre o seu link, escolhe o serviço e vê só os horários livres, sem senha. O pedido chega na Agenda e você aceita ou recusa. Precisa de serviços e horários cadastrados abaixo.</p>
   <label class="chk"><input type="checkbox" name="on" ${o.on?'checked':''} ${pode?'':'disabled'}> Receber pedidos de agendamento online</label>
@@ -1777,8 +1784,26 @@ function blocoOnline(pode){
   <div class="grid2"><div><label for="on-dias">Quantos dias à frente</label><input id="on-dias" name="dias" type="number" min="1" max="120" value="${esc(oc.dias_max||30)}" ${pode?'':'disabled'}></div>
   <div><label for="on-ant">Antecedência mínima (horas)</label><input id="on-ant" name="ant" type="number" min="0" max="72" value="${esc(oc.antecedencia_h==null?2:oc.antecedencia_h)}" ${pode?'':'disabled'}></div>
   <div><label for="on-passo">Intervalo entre horários (min)</label><select id="on-passo" name="passo" ${pode?'':'disabled'}>${[15,30,45,60,90,120].map(n=>`<option value="${n}" ${n===(Number(oc.passo)||60)?'selected':''}>${n} min</option>`).join('')}</select></div></div>
+  <h4 style="margin:16px 0 4px">Sinal para garantir o horário</h4>
+  <label for="on-sm">Como cobrar</label><select id="on-sm" name="sinal_modo" ${pode?'':'disabled'}>${[['nenhum','Sem sinal'],['pix','Pix manual (a cliente vê o recado abaixo)'],['mp','Mercado Pago automático (a cliente paga na hora)']].map(([v,t])=>`<option value="${v}" ${v===(sg.modo||'nenhum')?'selected':''}>${t}</option>`).join('')}</select>
+  <div class="grid2"><div><label for="on-st">Tipo</label><select id="on-st" name="sinal_tipo" ${pode?'':'disabled'}><option value="fixo" ${sg.tipo!=='percentual'?'selected':''}>Valor fixo (R$)</option><option value="percentual" ${sg.tipo==='percentual'?'selected':''}>% do valor do serviço</option></select></div>
+  <div><label for="on-sv">Valor</label><input id="on-sv" name="sinal_valor" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(sg.valor||'')}" ${pode?'':'disabled'}></div>
+  <div><label for="on-se">Prazo para pagar (min)</label><input id="on-se" name="sinal_exp" type="number" min="10" max="240" value="${esc(sg.expira_min||30)}" ${pode?'':'disabled'}></div></div>
+  <p class="muted" style="margin:6px 0 0">No Mercado Pago, o horário fica reservado só durante o prazo; se a cliente não pagar, ele é liberado sozinho. O dinheiro cai direto na conta do seu Mercado Pago.</p>
   <label for="on-av">Recado depois do pedido (taxa de agendamento, chave Pix…)</label><textarea id="on-av" name="aviso" rows="3" maxlength="400" ${pode?'':'disabled'} placeholder="Ex.: Para confirmar, envie a taxa de R$ 20 para a chave Pix 11 99999-0000.">${esc(oc.aviso||'')}</textarea>
-  <p class="erro" id="a-erro" role="alert"></p>${pode?'<div class="acts" style="justify-content:flex-start"><button class="btn">Salvar</button></div>':''}</form>`;
+  <p class="erro" id="a-erro" role="alert"></p>${pode?'<div class="acts" style="justify-content:flex-start"><button class="btn">Salvar</button></div>':''}</form>${blocoMp(pode)}`;
+}
+function blocoMp(pode){
+  const o=S.onl||{};if(o.mp===null||o.mp===undefined)return '';
+  return `<div class="panel" style="margin-bottom:16px"><b>Mercado Pago do salão (para receber o sinal)</b>${o.mp?`<p style="margin:6px 0">Conectado. O sinal cai direto na sua conta.</p>${pode?'<button type="button" class="btn ghost sm" data-act="mpDesconectar">Desconectar</button>':''}`:`<p class="muted" style="margin:6px 0">Cole o <b>Access Token de produção</b> da sua conta do Mercado Pago (Mercado Pago Developers, Suas integrações, Credenciais de produção). Ele fica guardado em cofre e ninguém consegue ler depois, nem você.</p>${pode?'<form data-form="mpconectar"><label for="mp-tk">Access Token</label><input id="mp-tk" name="token" type="password" autocomplete="off" spellcheck="false" placeholder="APP_USR-..."><p class="erro" id="a-erro" role="alert"></p><div class="acts" style="justify-content:flex-start"><button class="btn">Conectar</button></div></form>':'<p class="muted">Só a proprietária conecta.</p>'}`}</div>`;
+}
+async function chamaApi(rota,corpo){
+  const ses=await sb.auth.getSession(),tk=ses&&ses.data&&ses.data.session&&ses.data.session.access_token;
+  if(!tk)throw erroUi('Entre de novo.');
+  let r;try{r=await fetch((window.__API_BASE||'')+'/api/'+rota,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+tk},body:JSON.stringify(corpo)})}catch(_){throw erroUi('Sem conexão com o servidor.')}
+  let j=null;try{j=await r.json()}catch(_){}
+  if(!r.ok)throw erroUi((j&&j.erro)||'Não foi possível concluir.');
+  return j;
 }
 async function salvarOnline(d){
   const slug=String(d.slug||'').trim().toLowerCase(),on=d.on==='on';
@@ -1786,18 +1811,27 @@ async function salvarOnline(d){
   if(slug&&!/^[a-z0-9][a-z0-9-]{2,39}$/.test(slug))throw erroUi('O endereço deve ter 3 a 40 letras minúsculas, números ou hífen.');
   if(on&&!servicosCat().length)throw erroUi('Cadastre ao menos um serviço antes de ligar o agendamento online.');
   if(on&&!Object.keys((S.agCfg&&S.agCfg.profissionais)||{}).length)throw erroUi('Salve o horário de trabalho de ao menos uma profissional antes de ligar.');
-  const cfg=Object.assign({},S.agCfg,{online:{passo:Number(d.passo)||60,dias_max:Math.min(120,Math.max(1,Math.round(Number(d.dias)||30))),antecedencia_h:Math.min(72,Math.max(0,Math.round(Number(d.ant)||0))),aviso:String(d.aviso||'').trim().slice(0,400)}});
+  const sm=['nenhum','pix','mp'].includes(d.sinal_modo)?d.sinal_modo:'nenhum',sv=Math.max(0,Number(String(d.sinal_valor||'').replace(',','.'))||0),st=d.sinal_tipo==='percentual'?'percentual':'fixo';
+  if(sm!=='nenhum'&&!(sv>0))throw erroUi('Informe o valor do sinal.');
+  if(sm!=='nenhum'&&st==='percentual'&&sv>100)throw erroUi('A porcentagem do sinal não pode passar de 100.');
+  if(sm!=='nenhum'&&sv>0&&st==='fixo'&&sv<1)throw erroUi('O sinal mínimo é R$ 1,00.');
+  if(sm==='mp'&&!(S.onl&&S.onl.mp))throw erroUi('Para cobrar o sinal automático, conecte antes o Mercado Pago do salão (logo abaixo).');
+  const cfg=Object.assign({},S.agCfg,{online:{passo:Number(d.passo)||60,dias_max:Math.min(120,Math.max(1,Math.round(Number(d.dias)||30))),antecedencia_h:Math.min(72,Math.max(0,Math.round(Number(d.ant)||0))),aviso:String(d.aviso||'').trim().slice(0,400),sinal:{modo:sm,tipo:st,valor:sv,expira_min:Math.min(240,Math.max(10,Math.round(Number(d.sinal_exp)||30)))}}});
   const r=await sb.from('tenants').update({slug:slug||null,online_ativo:on,agenda_config:cfg}).eq('id',S.ctx.tenant.id);
   if(r.error){
     if(r.error.code==='23505')throw erroUi('Esse endereço já está em uso. Escolha outro.');
     if(r.error.code==='42703'||r.error.code==='PGRST204'){S.semOnline=true;render();throw erroUi('Rode o arquivo 13-agendamento-online.sql no Supabase.')}
     throw r.error}
-  S.agCfg=cfg;S.onl={slug,on};S.sig='';render();toast(on?'Agendamento online ligado.':'Agendamento online salvo.');
+  S.agCfg=cfg;S.onl=Object.assign({},S.onl,{slug,on});S.sig='';render();toast(on?'Agendamento online ligado.':'Agendamento online salvo.');
 }
 function blocoPedidos(){
-  const l=S.pedidos||[];if(!l.length)return '';
+  const todos=S.pedidos||[],l=todos.filter(x=>x.status==='pendente'),dev=todos.filter(x=>x.status==='recusado');
+  if(!l.length&&!dev.length)return '';
   const pode=NV('agenda')==='escrita';
-  return `<div class="panel" style="margin-bottom:12px"><b>Pedidos de agendamento online (${l.length})</b><p class="muted" style="margin:4px 0 12px">O horário já está reservado para a cliente. Aceite para colocar na agenda ou recuse para liberar.</p><div class="list">${l.map(x=>`<div class="item"><div class="grow"><div class="t">${esc(x.nome)} · ${esc(x.servico)}</div><div class="muted num">${esc(diaTxt(x.data))} às ${esc(x.hora)} · ${esc(x.profissional)} · ${esc(fmtTel(x.telefone))}${x.obs?' · '+esc(x.obs):''}</div></div><div class="item-acts"><a class="btn ghost sm wa-btn" target="_blank" rel="noopener" href="https://wa.me/55${esc(x.telefone)}">WhatsApp</a>${pode?`<button class="btn ghost sm" data-act="recusaPedido" data-id="${esc(x.id)}">Recusar</button><button class="btn sm" data-act="aceitaPedido" data-id="${esc(x.id)}">Aceitar</button>`:''}</div></div>`).join('')}</div></div>`;
+  const sinalTag=x=>x.sinalStatus==='pago'?`<span class="tag ok">Sinal pago ${brl(x.sinalValor)}</span>`:x.sinalStatus==='aguardando'?`<span class="tag late">Aguardando sinal ${brl(x.sinalValor)}</span>`:x.sinalValor>0?`<span class="tag">Sinal ${brl(x.sinalValor)} (Pix)</span>`:'';
+  const linha=x=>`<div class="item"><div class="grow"><div class="t">${esc(x.nome)} · ${esc(x.servico)} ${sinalTag(x)}</div><div class="muted num">${esc(diaTxt(x.data))} às ${esc(x.hora)} · ${esc(x.profissional)} · ${esc(fmtTel(x.telefone))}${x.obs?' · '+esc(x.obs):''}</div></div><div class="item-acts"><a class="btn ghost sm wa-btn" target="_blank" rel="noopener" href="https://wa.me/55${esc(x.telefone)}">WhatsApp</a>${pode&&x.status==='pendente'?`<button class="btn ghost sm" data-act="recusaPedido" data-id="${esc(x.id)}" data-sinal="${x.sinalStatus==='pago'?'1':''}">Recusar</button><button class="btn sm" data-act="aceitaPedido" data-id="${esc(x.id)}">Aceitar</button>`:''}</div></div>`;
+  return (l.length?`<div class="panel" style="margin-bottom:12px"><b>Pedidos de agendamento online (${l.length})</b><p class="muted" style="margin:4px 0 12px">O horário já está reservado para a cliente. Aceite para colocar na agenda ou recuse para liberar.</p><div class="list">${l.map(linha).join('')}</div></div>`:'')+
+    (dev.length?`<div class="panel" style="margin-bottom:12px;border-color:var(--late,#c0392b)"><b>Sinal recebido de horário que não está mais livre (${dev.length})</b><p class="muted" style="margin:4px 0 12px">A cliente pagou o sinal depois de o horário ser liberado e ele já foi ocupado. Devolva pelo app do Mercado Pago e avise a cliente.</p><div class="list">${dev.map(linha).join('')}</div></div>`:'');
 }
 const fmtTel=t=>{t=String(t||'');return t.length===11?`(${t.slice(0,2)}) ${t.slice(2,7)}-${t.slice(7)}`:t.length===10?`(${t.slice(0,2)}) ${t.slice(2,6)}-${t.slice(6)}`:t};
 async function responderPedido(id,aceita){
@@ -2340,7 +2374,8 @@ document.addEventListener('click',e=>{
   const f={
     novaCliente:()=>formCliente(),editCliente:()=>formCliente(id),delCliente:()=>pedirDelCliente(id),maisMenu:menuMais,pagarMP:()=>pagarCobranca(id,a),setStatus:()=>mudarStatus(id,a.dataset.st).catch(x=>toast(falha(x))),anonCliente:()=>pedirAnonCliente(id),exportaSalao:()=>exportarSalao().catch(x=>toast(falha(x))),excluiSalao:formExcluirSalao,
     pubHora:()=>{S.pb.hora=a.dataset.hora;S.pb.prof=a.dataset.prof;render()},pubNovo:()=>{S.pb={sv:'',pf:'',dt:'',slots:null,hora:'',prof:'',nome:'',tel:'',obs:'',ok:null};render()},pubRecarrega:()=>carregarPublico(),copiaLink:()=>{try{navigator.clipboard.writeText(a.dataset.link).then(()=>toast('Link copiado.'),()=>toast('Copie o link manualmente.',true))}catch(_){toast('Copie o link manualmente.',true)}},
-    aceitaPedido:()=>responderPedido(id,true).catch(x=>toast(falha(x),true)),recusaPedido:()=>responderPedido(id,false).catch(x=>toast(falha(x),true)),
+    aceitaPedido:()=>responderPedido(id,true).catch(x=>toast(falha(x),true)),recusaPedido:()=>{const go=()=>responderPedido(id,false).catch(x=>toast(falha(x),true));if(a.dataset.sinal)confirmar('Recusar pedido com sinal pago?','A cliente já pagou o sinal. Você precisa devolver pelo app do Mercado Pago.','Recusar',go);else go()},
+    mpDesconectar:()=>confirmar('Desconectar o Mercado Pago?','O sinal automático deixa de funcionar. Pedidos com sinal pendente continuam, mas a cliente não conseguirá pagar.','Desconectar',async()=>{await chamaApi('mp-conectar',{remover:true});S.onl.mp=false;if(S.agCfg&&S.agCfg.online&&S.agCfg.online.sinal&&S.agCfg.online.sinal.modo==='mp'){const c=Object.assign({},S.agCfg);c.online=Object.assign({},c.online,{sinal:Object.assign({},c.online.sinal,{modo:'nenhum'})});await salvarAgCfg(c)}render();toast('Mercado Pago desconectado.')}),
     ocultaPassos:()=>{LS.set('salao_passos_off','1');render()},
     novoServico:()=>formServico(''),editServico:()=>formServico(id),delServico:()=>removerServico(id).catch(x=>toast(falha(x),true)),novoBloq:()=>formBloq(a.dataset.data),delBloq:()=>confirmar('Remover este bloqueio?','O horário volta a ficar livre.','Remover',async()=>{const r=await sb.from('bloqueios').delete().eq('id',id);if(r.error)throw r.error;await recarregar();toast('Bloqueio removido.')}),
     novoAtend:()=>formAtend(null,a.dataset.cliente,a.dataset.data),receber:()=>formReceber(id),agSem:()=>{S.agSem=id==='0'?0:(S.agSem||0)+Number(id);render()},meta:()=>formMeta(),imprimir:()=>window.print(),editAtend:()=>formAtend(id),delAtend:()=>pedirDelAtend(id),
@@ -2398,6 +2433,7 @@ document.addEventListener('change',e=>{
   else if(t.id==='a-proc'||t.id==='a-proc2'){atualizaEstq(true);const c1=servicosCat(),f=n=>c1.find(x=>x.nome===n),A=f($('a-proc').value),B=$('a-proc2')?f($('a-proc2').value):null;
     if(A||B){$('a-dur').value=((A&&A.duracao)||0)+((B&&B.duracao)||0)||60;const v=$('a-val'),pr=((A&&Number(A.preco))||0)+((B&&Number(B.preco))||0);if(v&&pr>0&&(!Number(v.value)||v.dataset.auto==='1')){v.value=pr;v.dataset.auto='1';atualizaParc()}}}
   else if(t.id==='bq-dia'){$('bq-h').hidden=t.checked}
+  else if(t.id==='wa-auto'){const v=t.checked;sb.from('tenants').update({whatsapp_auto:v}).eq('id',S.ctx.tenant.id).then(r=>{if(r.error){t.checked=!v;toast(falha(r.error),true)}else{S.onl.wa=v;toast(v?'Envio automático ligado.':'Envio automático desligado.')}})}
   else if(t.id==='pb-sv'){S.pb.sv=t.value;buscaSlots()}
   else if(t.id==='pb-pf'){S.pb.pf=t.value;buscaSlots()}
   else if(t.id==='pb-dt'){S.pb.dt=t.value;buscaSlots()}
@@ -2450,7 +2486,7 @@ function tempoTxt(sg){return sg>=60?Math.ceil(sg/60)+' min':sg+' s'}
 
 document.addEventListener('submit',async e=>{
   const f=e.target,k=f.dataset&&f.dataset.form;
-  if(!['criar','recuperar','novasenha','salao','config','mensagens','horarios','online','pub'].includes(k))return;
+  if(!['criar','recuperar','novasenha','salao','config','mensagens','horarios','online','pub','mpconectar'].includes(k))return;
   e.preventDefault();if(S.busy||!sb)return;
   const d=Object.fromEntries(new FormData(f)),bt=f.querySelector('button'),er=$('a-erro');
   const ver=(c,m)=>{if(c){er.textContent=m;return true}return false};
@@ -2479,6 +2515,8 @@ document.addEventListener('submit',async e=>{
       render();toast('Senha alterada.');
     }else if(k==='pub'){
       await salvarPub(d,er);
+    }else if(k==='mpconectar'){
+      try{const j=await chamaApi('mp-conectar',{token:d.token});S.onl.mp=true;S.sig='';render();toast('Mercado Pago conectado.')}catch(x){er.textContent=String((x&&(x.aviso||x.message))||'Não foi possível conectar.')}
     }else if(k==='online'){
       try{await salvarOnline(d)}catch(x){er.textContent=String((x&&(x.aviso||x.message))||'Não foi possível salvar.')}
     }else if(k==='horarios'){
@@ -2543,6 +2581,7 @@ async function boot(){
   if(!okCfg){S.pronto=true;S.semConfig=true;render();return}
   if(!window.supabase||!window.supabase.createClient){S.pronto=true;S.semLib=true;render();return}
   sb=window.supabase.createClient(CFG.url,CFG.anonKey);
+  if(PUB_SLUG&&location.protocol!=='file:'&&!window.__SEM_REDIRECT){location.replace('/a/'+encodeURIComponent(PUB_SLUG));return}
   if(PUB_SLUG){S.pubSlug=PUB_SLUG;S.pronto=true;await carregarPublico();return}
   try{const r=await sb.auth.getSession();S.sessao=(r&&r.data&&r.data.session)||null}catch(_){S.sessao=null}
   sb.auth.onAuthStateChange((ev,ses)=>{
