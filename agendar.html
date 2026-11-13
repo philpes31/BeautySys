@@ -236,8 +236,57 @@ async function retorno(id,sit){
     var b=$('repagar');b.onclick=async function(){b.disabled=true;try{location.href=await pagarSinal(id)}catch(e){b.disabled=false;b.textContent=e.message}};
   }
 }
+// ---- A cliente vê, remarca ou cancela o próprio horário (link do WhatsApp: ?m=CÓDIGO) ----
+function waG(a,texto){
+  var w=String(a.whatsapp||'').replace(/\D/g,'').replace(/^55/,'');
+  return w.length>=10?'<a class="btn2" target="_blank" rel="noopener" href="https://wa.me/55'+w+'?text='+encodeURIComponent(texto||'Olá!')+'">Falar no WhatsApp</a>':'';
+}
+function cartao(a){
+  return '<div class="resumo"><b>'+esc(a.servico)+'</b><br>'+esc(dataExtensa(a.data))+' às '+esc(a.hora)+(a.prof?' · com '+esc(a.prof):'')+'</div>';
+}
+async function gerenciar(tk){
+  var a=null,o=null;
+  try{o=await rpc('publico_salao',{p_slug:SLUG});if(o)cor(o.cor)}catch(_){}
+  try{a=await rpc('publico_atendimento',{p_slug:SLUG,p_token:tk})}catch(_){}
+  if(!a){A.innerHTML='<header><h1>Link inválido</h1><p class="sub">Este link não existe mais ou está incorreto. Fale diretamente com o salão.</p></header>';return}
+  document.title='Seu horário · '+a.salao;
+  var cab='<header><h1>'+esc(a.salao)+'</h1><p class="sub">Olá, '+esc(a.nome)+'! Este é o seu horário.</p></header><section>'+cartao(a);
+  if(a.status==='cancelado'){A.innerHTML=cab+'<p class="sub">Este horário foi cancelado.</p><p>'+waG(a,'Olá! Gostaria de marcar um novo horário.')+'</p></section>';return}
+  if(!a.pode){A.innerHTML=cab+'<div class="dica">'+esc(a.motivo||'Fale com o salão para alterar este horário.')+'</div><p>'+waG(a,'Olá! Preciso alterar o meu horário de '+a.servico+' em '+dataExtensa(a.data)+' às '+a.hora+'.')+'</p></section>';return}
+  A.innerHTML=cab+'<p class="leg">Você pode remarcar ou cancelar até '+esc(a.limite_h)+' h antes do horário.</p>'+
+    '<p><button type="button" class="btn1" id="g-rem">Remarcar</button> <button type="button" class="btn2" id="g-can">Cancelar horário</button></p>'+
+    '<div id="g-area"></div></section>';
+  $('g-can').onclick=function(){
+    $('g-area').innerHTML='<div class="dica"><b>Cancelar este horário?</b><br>O horário fica livre para outras pessoas.</div><button type="button" class="btn1" id="g-can-ok">Sim, cancelar</button> <button type="button" class="btn2" id="g-can-nao">Voltar</button><p class="erro" id="g-erro" role="alert"></p>';
+    $('g-can-nao').onclick=function(){$('g-area').innerHTML=''};
+    $('g-can-ok').onclick=async function(){var b=this;b.disabled=true;
+      try{await rpc('publico_cancelar',{p_slug:SLUG,p_token:tk});A.innerHTML='<div class="fim"><h2>Horário cancelado</h2><p class="sub">Quando quiser, é só marcar outro.</p><p>'+waG(a,'Olá! Cancelei o meu horário e gostaria de marcar outro.')+'</p></div>'}
+      catch(e){b.disabled=false;$('g-erro').textContent=e.message}};
+  };
+  $('g-rem').onclick=function(){
+    var ds=dias(a.dias_max||30);
+    $('g-area').innerHTML='<h2 id="g-h-dia" style="margin-top:18px">Escolha o novo dia</h2><div class="dias" id="g-dias" role="group" aria-labelledby="g-h-dia">'+ds.map(function(d){return '<button type="button" class="dia" data-d="'+d.iso+'" aria-pressed="false" aria-label="'+esc(dataExtensa(d.iso))+'"><span>'+esc(d.w)+'</span><b>'+d.n+'</b><span>'+esc(d.m)+'</span></button>'}).join('')+'</div>'+
+      '<div id="g-horas-box" hidden><h2>Horário</h2><div class="chips" id="g-horas"></div><p class="vazio" id="g-vazio" hidden>Sem horários livres neste dia. Escolha outro dia.</p></div><p class="erro" id="g-erro" role="alert"></p><button class="enviar" id="g-ok" hidden>Confirmar novo horário</button>';
+    var dia='',hora='',n=0;
+    $('g-dias').onclick=async function(ev){var b=ev.target.closest('.dia');if(!b)return;dia=b.getAttribute('data-d');hora='';$('g-ok').hidden=true;$('g-erro').textContent='';
+      Array.prototype.forEach.call(document.querySelectorAll('#g-dias .dia'),function(x){x.setAttribute('aria-pressed',String(x===b))});
+      var my=++n;$('g-horas-box').hidden=false;$('g-horas').innerHTML='<span class="vazio">Buscando horários…</span>';$('g-vazio').hidden=true;
+      try{var r=await rpc('publico_horarios_remarcar',{p_slug:SLUG,p_token:tk,p_data:dia});if(my!==n)return;
+        var v={},l=[];(r||[]).forEach(function(x){if(!v[x.h]){v[x.h]=1;l.push(x)}});
+        $('g-horas').innerHTML=l.map(function(x){return '<button type="button" class="chip" data-h="'+esc(x.h)+'" aria-pressed="false">'+esc(x.h)+'</button>'}).join('');$('g-vazio').hidden=l.length>0}
+      catch(e){$('g-horas').innerHTML='';$('g-erro').textContent=e.message}};
+    $('g-horas').onclick=function(ev){var b=ev.target.closest('.chip');if(!b)return;hora=b.getAttribute('data-h');
+      Array.prototype.forEach.call(document.querySelectorAll('#g-horas .chip'),function(x){x.setAttribute('aria-pressed',String(x===b))});$('g-ok').hidden=false;$('g-erro').textContent=''};
+    $('g-ok').onclick=async function(){var b=this;if(!dia||!hora)return;b.disabled=true;
+      try{var r=await rpc('publico_remarcar',{p_slug:SLUG,p_token:tk,p_data:dia,p_hora:hora});
+        A.innerHTML='<div class="fim"><h2>Horário remarcado!</h2><p>'+esc(a.servico)+' em '+esc(dataExtensa(r.data))+' às '+esc(r.hora)+'.</p><p class="sub">O salão já foi avisado.</p><p>'+waG(a,'Olá! Remarquei o meu horário.')+'</p></div>';window.scrollTo(0,0)}
+      catch(e){b.disabled=false;$('g-erro').textContent=e.message}};
+  };
+}
 async function iniciar(){
   if(!C.url||!C.anonKey||!SLUG){A.innerHTML='<p class="vazio" style="padding-top:40px">Endereço de agendamento inválido.</p>';return}
+  var mm=new URLSearchParams(location.search).get('m');
+  if(mm&&/^[0-9a-f]{32}$/i.test(mm)){gerenciar(mm.toLowerCase());return}
   try{
     var s=await rpc('publico_salao',{p_slug:SLUG});
     if(!s){A.innerHTML='<header><h1>Agendamento indisponível</h1><p class="sub">Este salão não está recebendo pedidos online agora. Fale diretamente com o salão.</p></header>';return}

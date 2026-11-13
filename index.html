@@ -490,7 +490,7 @@ const rowC=r=>({id:r.id,nome:r.nome||'',telefone:r.telefone||'',nascimento:r.nas
 const STATUS_OK=['agendado','confirmado','cancelado','faltou'],STATUS_ROT={agendado:'Agendado',confirmado:'Confirmado',cancelado:'Cancelou',faltou:'Faltou'};
 const inativo=a=>a.status==='cancelado'||a.status==='faltou';
 const procTxt=a=>(a.procedimento||'')+(a.procedimento2?' + '+a.procedimento2:'');
-const rowA=r=>({id:r.id,clienteId:r.cliente_id,data:r.data,procedimento:r.procedimento||'',procedimento2:r.procedimento2||'',procTxt:(r.procedimento||'')+(r.procedimento2?' + '+r.procedimento2:''),profissional:r.profissional||'',
+const rowA=r=>({token:r.token_cliente||'',cancCli:!!r.cancelado_pela_cliente,remarcadoEm:r.remarcado_em||'',id:r.id,clienteId:r.cliente_id,data:r.data,procedimento:r.procedimento||'',procedimento2:r.procedimento2||'',procTxt:(r.procedimento||'')+(r.procedimento2?' + '+r.procedimento2:''),profissional:r.profissional||'',
   hora:String(r.hora||'').slice(0,5),valor:Number(r.valor)||0,pagamento:r.pagamento||'',parcelas:PARC(r.parcelas),gastoProdutos:Number(r.gasto_produtos)||0,taxaMaquina:Number(r.taxa_maquina)||0,retorno:r.retorno||'',obs:r.obs||'',duracao:Math.min(720,Math.max(5,Number(r.duracao)||60)),status:STATUS_OK.includes(r.status)?r.status:'agendado',valor2:Math.max(0,Number(r.valor2)||0),pago:r.pago!==false,pagoEm:r.pago_em||''});
 const CATS=['Anúncio Instagram','Água','Internet','Produtos de limpeza','Luz','Manutenção','Aluguel','Condomínio','Outros'];
 const rowD=r=>({id:r.id,data:r.data,categoria:r.categoria||'Outros',descricao:r.descricao||'',valor:Number(r.valor)||0});
@@ -515,7 +515,7 @@ async function recarregar(){
     let semD=false,semE=false;
     const desde=new Date(Date.now()-120*864e5).toISOString().slice(0,10),ignE=()=>{semE=true;return []};
     let semB=false;const ignB=()=>{semB=true;return []};
-    const [c,a,g,pr,fi,mv,bq,pd,es,pk,rs,ag]=await Promise.all([todos('clientes'),todos('atendimentos'),todos('despesas').catch(()=>{semD=true;return []}),
+    const [c,a,g,pr,fi,mv,bq,pd,es,pk,rs,ag,vl]=await Promise.all([todos('clientes'),todos('atendimentos'),todos('despesas').catch(()=>{semD=true;return []}),
       todos('produtos').catch(ignE),todos('ficha_procedimento').catch(ignE),todos('movimentacoes_estoque',q=>q.gte('data',desde)).catch(ignE),
       S.legado?Promise.resolve([]):todos('bloqueios',q=>q.gte('data',desde)).catch(ignB),
       S.legado?Promise.resolve([]):todos('pedidos_agenda',q=>q.gte('data',desde)).catch(()=>[]),
@@ -528,12 +528,13 @@ async function recarregar(){
         let wa=null,mpc=null;
         try{const r2=await sb.from('tenants').select('whatsapp_auto').eq('id',S.ctx.tenant.id);if(!r2.error&&r2.data&&r2.data[0])wa=!!r2.data[0].whatsapp_auto}catch(_){}
         try{const r3=await sb.rpc('mp_conectado');if(!r3.error)mpc=!!r3.data}catch(_){}
-        return Object.assign({},x,{agenda_config:x.agenda_config||{},_wa:wa,_mp:mpc})}catch(_){S.semAg=true;return null}})()]);
+        return Object.assign({},x,{agenda_config:x.agenda_config||{},_wa:wa,_mp:mpc})}catch(_){S.semAg=true;return null}})(),
+      S.legado?Promise.resolve([]):todos('vales').catch(()=>[])]);
     S.semDesp=semD;S.semEst=semE;S.semBloq=S.legado||semB;
-    const sig=JSON.stringify([c,a,g,pr,fi,mv,bq,pd,es,pk,rs,ag]);
+    const sig=JSON.stringify([c,a,g,pr,fi,mv,bq,pd,es,pk,rs,ag,vl]);
     const mudou=sig!==S.sig||tinhaErro||!S.got;
     S.sig=sig;S.erro='';
-    if(mudou){S.clientes=c.map(rowC);S.atendTodos=a.map(rowA);S.atend=S.atendTodos.filter(x=>!inativo(x));S.gastos=g.map(rowD);S.produtos=pr.map(rowP);S.fichas=fi.map(rowF);S.movs=mv.map(rowM);S.bloq=bq.map(b=>({id:b.id,profissional:b.profissional||'',data:b.data,inicio:b.inicio?String(b.inicio).slice(0,5):'',fim:b.fim?String(b.fim).slice(0,5):'',motivo:b.motivo||''}));S.pedidos=pd.filter(x=>x.status==='pendente'||(x.status==='recusado'&&x.sinal_status==='pago')).map(x=>({id:x.id,nome:x.nome,telefone:x.telefone,servico:x.servico,profissional:x.profissional,data:x.data,hora:String(x.hora||'').slice(0,5),obs:x.obs||'',duracao:x.duracao,status:x.status,sinalValor:Number(x.sinal_valor)||0,sinalStatus:x.sinal_status||'nenhum'})).sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora));S.pacotes=pk.map(x=>({id:x.id,clienteId:x.cliente_id,nome:x.nome,servico:x.servico||'',total:Number(x.total_sessoes)||0,usadas:Number(x.usadas)||0,preco:Number(x.preco)||0,validade:x.validade||'',status:x.status||'ativo',criado:x.criado_em||''}));S.resgates=rs.map(x=>({id:x.id,clienteId:x.cliente_id,premio:x.premio||'',criado:x.criado_em||''}));S.espera=es.filter(x=>x.status==='aguardando'||x.status==='avisada').map(x=>({id:x.id,nome:x.nome,telefone:x.telefone,servico:x.servico,profissional:x.profissional||'',data:x.data,periodo:x.periodo||'qualquer',obs:x.obs||'',status:x.status,origem:x.origem||'salao',avisadaEm:x.avisada_em||''})).sort((a,b)=>(a.data+a.status).localeCompare(b.data+b.status));S.agCfg=(ag&&ag.agenda_config)||{};S.onl=ag?{slug:ag.slug||'',on:!!ag.online_ativo,wa:ag._wa,mp:ag._mp}:{slug:'',on:false,wa:null,mp:null};S.got=true;render()}
+    if(mudou){S.vales=(vl||[]).map(r=>({id:r.id,prof:r.profissional||'',data:r.data,valor:Number(r.valor)||0,obs:r.obs||''}));S.clientes=c.map(rowC);S.atendTodos=a.map(rowA);S.atend=S.atendTodos.filter(x=>!inativo(x));S.gastos=g.map(rowD);S.produtos=pr.map(rowP);S.fichas=fi.map(rowF);S.movs=mv.map(rowM);S.bloq=bq.map(b=>({id:b.id,profissional:b.profissional||'',data:b.data,inicio:b.inicio?String(b.inicio).slice(0,5):'',fim:b.fim?String(b.fim).slice(0,5):'',motivo:b.motivo||''}));S.pedidos=pd.filter(x=>x.status==='pendente'||(x.status==='recusado'&&x.sinal_status==='pago')).map(x=>({id:x.id,nome:x.nome,telefone:x.telefone,servico:x.servico,profissional:x.profissional,data:x.data,hora:String(x.hora||'').slice(0,5),obs:x.obs||'',duracao:x.duracao,status:x.status,sinalValor:Number(x.sinal_valor)||0,sinalStatus:x.sinal_status||'nenhum'})).sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora));S.pacotes=pk.map(x=>({id:x.id,clienteId:x.cliente_id,nome:x.nome,servico:x.servico||'',total:Number(x.total_sessoes)||0,usadas:Number(x.usadas)||0,preco:Number(x.preco)||0,validade:x.validade||'',status:x.status||'ativo',criado:x.criado_em||''}));S.resgates=rs.map(x=>({id:x.id,clienteId:x.cliente_id,premio:x.premio||'',criado:x.criado_em||''}));S.espera=es.filter(x=>x.status==='aguardando'||x.status==='avisada').map(x=>({id:x.id,nome:x.nome,telefone:x.telefone,servico:x.servico,profissional:x.profissional||'',data:x.data,periodo:x.periodo||'qualquer',obs:x.obs||'',status:x.status,origem:x.origem||'salao',avisadaEm:x.avisada_em||''})).sort((a,b)=>(a.data+a.status).localeCompare(b.data+b.status));S.agCfg=(ag&&ag.agenda_config)||{};S.onl=ag?{slug:ag.slug||'',on:!!ag.online_ativo,wa:ag._wa,mp:ag._mp}:{slug:'',on:false,wa:null,mp:null};S.got=true;render()}
   }catch(e){S.erro=(e&&(e.code||e.message))||'erro';render()}
 }
 let tmr;
@@ -725,16 +726,61 @@ async function salvarComissao(prof,pct){
   LS.set('salao_comissoes',JSON.stringify(m));S.com=null;render();
   toast(S.semCom?'Salvo só neste aparelho. Rode o 09-comissoes.sql no Supabase para valer em todos.':'Comissão salva.');
 }
+const chaveCom=(prof,serv)=>String(prof).replace(/\|/g,'')+'|'+String(serv).replace(/\|/g,'');
+function pctCom(C,prof,serv){const e=C[chaveCom(prof,serv)];return e!=null&&e!==''?(Number(e)||0):(Number(C[prof])||0)}
+/* Divide o valor de um atendimento entre o 1º e o 2º procedimento (valor2) para aplicar a porcentagem de cada serviço. */
+function partesCom(a,v){
+  const tot=Number(a.valor)||0,v2=Math.min(tot,Number(a.valor2)||0);
+  if(!a.procedimento2||!(v2>0)||!(tot>0))return [[a.procedimento||'',v]];
+  const p2=Math.round(v*(v2/tot)*100)/100;return [[a.procedimento||'',Math.round((v-p2)*100)/100],[a.procedimento2,p2]];
+}
+async function salvarComissaoSrv(prof,serv,pct){
+  S.comAb=prof;const m=Object.assign({},comissoes()),k=chaveCom(prof,serv),txt=String(pct).trim();
+  if(txt==='')delete m[k];else m[k]=Math.min(100,Math.max(0,Math.round((Number(txt.replace(',','.'))||0)*100)/100));
+  if(JSON.stringify(m).length>3800)throw erroUi('Há porcentagens demais cadastradas. Limpe algumas que não usa.');
+  if(!S.legado&&!S.semCom){
+    const r=await sb.from('tenants').update({comissoes:m}).eq('id',S.ctx.tenant.id);
+    if(r.error){if(/comissoes/i.test(String(r.error.message||''))){S.semCom=true}else throw r.error}
+    else{S.com=m;render();toast('Comissão do serviço salva.');return}
+  }
+  LS.set('salao_comissoes',JSON.stringify(m));S.com=null;render();toast('Comissão do serviço salva.');
+}
 function blocoComissao(m,L){
-  const by={};L.forEach(x=>{const n=x.a.profissional||'(sem profissional)';(by[n]=by[n]||{n:0,v:0});by[n].n++;by[n].v+=x.v});
-  const nomes=Object.keys(by).sort((a,b)=>by[b].v-by[a].v);if(!nomes.length)return '';
+  const rec=L.filter(x=>!aberto(x.a)),pend=L.filter(x=>aberto(x.a));
+  const by={};rec.forEach(x=>{const n=x.a.profissional||'(sem profissional)';(by[n]=by[n]||{n:0,v:0,p:[]});by[n].n++;by[n].v+=x.v;by[n].p.push(...partesCom(x.a,x.v))});
+  const VL=(S.vales||[]).filter(v=>!m||String(v.data).startsWith(m)),vpor={};VL.forEach(v=>{vpor[v.prof]=(vpor[v.prof]||0)+v.valor;if(!by[v.prof])by[v.prof]={n:0,v:0,p:[]}});
+  const nomes=Object.keys(by).sort((a,b)=>by[b].v-by[a].v);if(!nomes.length&&!pend.length&&!VL.length)return '';
   if(!recOk('comissoes'))return `<h3>Comissão por profissional</h3><p class="muted" style="max-width:640px">Este recurso faz parte de um plano superior. Peça a troca em Salão, Plano e assinatura.</p>`;
   const C=comissoes(),pode=NV('config')==='escrita'&&!(S.ctx&&S.ctx.role==='profissional');
-  let tot=0;
-  const linhas=nomes.map(n=>{const pct=Number(C[n])||0,com=Math.round(by[n].v*pct)/100;tot+=com;
-    return `<div class="item"><div class="grow"><div class="t">${esc(n)}</div><div class="muted num">${by[n].n} ${by[n].n===1?'atendimento':'atendimentos'} · ${brl(by[n].v)} ${m?'recebidos':'faturados'}</div></div>
-    <div class="side" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end"><label class="sr-only" for="com-${esc(n)}">Comissão de ${esc(n)} em %</label><input id="com-${esc(n)}" class="com-pct" data-prof="${esc(n)}" type="number" min="0" max="100" step="0.5" inputmode="decimal" style="width:84px" value="${pct||''}" placeholder="0" ${pode&&n!=='(sem profissional)'?'':'disabled'}><span class="muted">%</span><b class="num">${brl(com)}</b></div></div>`}).join('');
-  return `<h3>Comissão por profissional</h3><p class="muted" style="margin:0 0 8px;max-width:640px">Calculada sobre o valor ${m?'recebido no mês':'faturado'}. ${pode?'Digite o percentual de cada pessoa; ele fica salvo.':'Só quem administra o salão altera os percentuais.'}</p><div class="list">${linhas}</div><p class="num" style="margin:8px 0 0"><b>Total de comissões: ${brl(tot)}</b></p>`;
+  const servs=[...new Set([...servicosCat().filter(x=>x.ativo!==false).map(x=>x.nome),...PROCS])].filter(Boolean);
+  let tot=0,totV=0;
+  const linhas=nomes.map(n=>{const pct=Number(C[n])||0,vl=Math.round((vpor[n]||0)*100)/100;totV+=vl;
+    const com=Math.round(by[n].p.reduce((t,[sv,v])=>t+v*pctCom(C,n,sv),0))/100;tot+=com;
+    const usados=[...new Set(by[n].p.map(x=>x[0]).filter(Boolean))].sort(),espec=servs.filter(sv=>C[chaveCom(n,sv)]!=null);
+    const lista=[...new Set([...usados,...espec])];
+    const det=n!=='(sem profissional)'&&lista.length?`<details style="margin-top:6px"${S.comAb===n?' open':''}><summary class="muted" style="cursor:pointer">Porcentagem por serviço${espec.length?` (${espec.length} diferente${espec.length>1?'s':''})`:''}</summary><div style="display:grid;gap:6px;margin-top:6px">${lista.map(sv=>`<div style="display:flex;gap:8px;align-items:center;justify-content:space-between"><label for="cs-${esc(n)}-${esc(sv)}">${esc(sv)}</label><span><input id="cs-${esc(n)}-${esc(sv)}" class="com-srv" data-prof="${esc(n)}" data-srv="${esc(sv)}" type="number" min="0" max="100" step="0.5" inputmode="decimal" style="width:84px" value="${C[chaveCom(n,sv)]!=null?esc(C[chaveCom(n,sv)]):''}" placeholder="${pct||0}" ${pode?'':'disabled'}> %</span></div>`).join('')}<span class="muted">Deixe em branco para usar ${pct||0}%, a porcentagem geral de ${esc(n)}.</span></div></details>`:'';
+    return `<div class="item"><div class="grow"><div class="t">${esc(n)}</div><div class="muted num">${by[n].n} ${by[n].n===1?'atendimento':'atendimentos'} · ${brl(by[n].v)} recebidos</div>${det}</div>
+    <div class="side" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end"><label class="sr-only" for="com-${esc(n)}">Comissão de ${esc(n)} em %</label><input id="com-${esc(n)}" class="com-pct" data-prof="${esc(n)}" type="number" min="0" max="100" step="0.5" inputmode="decimal" style="width:84px" value="${pct||''}" placeholder="0" ${pode&&n!=='(sem profissional)'?'':'disabled'}><span class="muted">%</span><b class="num">${brl(com)}</b>${vl?`<span class="muted num" style="flex-basis:100%;text-align:right">Vale −${brl(vl)} · a pagar <b>${brl(Math.max(0,Math.round((com-vl)*100)/100))}</b></span>`:''}</div></div>`}).join('');
+  const pv=pend.reduce((t,x)=>t+x.v,0);
+  return `<h3>Comissão por profissional</h3><p class="muted" style="margin:0 0 8px;max-width:640px">Calculada só sobre o que já foi pago pela cliente${m?' (valor recebido no mês)':''}. ${pode?'Digite a porcentagem geral de cada pessoa e, se quiser, uma diferente para cada serviço.':'Só quem administra o salão altera os percentuais.'}</p>${pend.length?`<p class="muted" style="margin:0 0 8px;max-width:640px"><b>${pend.length}</b> ${pend.length===1?'atendimento ainda não pago':'atendimentos ainda não pagos'} (${brl(pv)}) não ${pend.length===1?'entra':'entram'} na conta até receber.</p>`:''}<div class="list">${linhas}</div><p class="num" style="margin:8px 0 0"><b>Total de comissões: ${brl(tot)}</b>${totV?` · Vales: ${brl(totV)} · <b>A pagar: ${brl(Math.max(0,Math.round((tot-totV)*100)/100))}</b>`:''}</p>${pode?`<p style="margin:8px 0 0"><button class="btn ghost sm" data-act="novoVale">Registrar vale ou adiantamento</button></p>`:''}${VL.length?`<h4 style="margin:14px 0 4px">Vales${m?' do mês':''}</h4><div class="list">${VL.slice().sort((x,y)=>String(y.data).localeCompare(String(x.data))).map(v=>`<div class="item"><div class="grow"><div class="t">${esc(v.prof)}</div><div class="muted num">${fd(v.data)}${v.obs?' · '+esc(v.obs):''}</div></div><div class="side-val">${brl(v.valor)}</div>${pode?`<div class="item-acts"><button class="btn danger sm" data-act="delVale" data-id="${esc(v.id)}">Excluir</button></div>`:''}</div>`).join('')}</div>`:''}`;
+}
+function formVale(){
+  const nomes=[...new Set([...Object.keys((S.agCfg&&S.agCfg.profissionais)||{}),...S.atendTodos.map(a=>a.profissional).filter(Boolean)])].sort();
+  abrir(`<h2>Registrar vale</h2><form data-form="vale"><div class="grid2">
+  <div><label for="v-prof">Profissional *</label><select id="v-prof" name="prof" required><option value="">Selecione…</option>${nomes.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('')}</select></div>
+  <div><label for="v-data">Data *</label><input id="v-data" name="data" type="date" required value="${esc(hoje())}"></div>
+  <div><label for="v-val">Valor (R$) *</label><input id="v-val" name="valor" type="number" step="0.01" min="0.01" required inputmode="decimal"></div></div>
+  <label for="v-obs">Observação</label><input id="v-obs" name="obs" maxlength="200" placeholder="Ex.: adiantamento do dia 15">
+  <p class="muted" style="margin:6px 0 0">O valor é descontado da comissão a pagar no mês da data escolhida.</p>
+  <p class="erro" id="a-erro" role="alert"></p><div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Salvar</button></div></form>`);
+}
+async function salvarVale(d){
+  const o={profissional:String(d.prof||'').trim(),data:d.data,valor:din(d.valor),obs:String(d.obs||'').trim().slice(0,200)};
+  if(!o.profissional)throw erroUi('Escolha a profissional.');
+  if(!o.data||!(o.valor>0))throw erroUi('Informe a data e um valor maior que zero.');
+  const r=await sb.from('vales').insert(o);
+  if(r.error){if(r.error.code==='42P01'||/vales/.test(String(r.error.message||'')))throw erroUi('Rode o arquivo 24-vales.sql (ou o agendio-TUDO.sql) no Supabase.');throw r.error}
+  await recarregar();toast('Vale registrado.');
 }
 async function carregarMsgs(){
   if(S.legado||!S.ctx||!S.ctx.tenant){S.msgs=null;return}
@@ -1320,7 +1366,7 @@ async function plRpc(nome,args,msg,reabre){
 
 
 /* ---------- Mensagens (textos do WhatsApp) ---------- */
-const AMOSTRA={nome:'Maria',nome_completo:'Maria Souza',data:'12/12/2026',hora:'14:30',procedimento:'Mechas',profissional:'Fabiana',valor:'R$ 350,00'};
+const AMOSTRA={nome:'Maria',nome_completo:'Maria Souza',data:'12/12/2026',hora:'14:30',procedimento:'Mechas',profissional:'Fabiana',valor:'R$ 350,00',link:'https://g.page/r/seu-salao/review'};
 const cfgTaxa=()=>{const g=i=>{const e=$(i);return e?e.value.trim():null},m=msgsSalvas(),n=g('mg-taxa-valor'),x=g('mg-pix');return {taxa:fmtTaxa(n===null?m._taxa:n),pix:String(x===null?(m._pix||''):x).trim()}};
 const fmtTaxa=v=>{const n=Number(String(v==null?'':v).replace(/[^\d,.]/g,'').replace(',','.'));return n>0?brl(n):''};
 function previaMsg(chave,texto){
@@ -1338,15 +1384,18 @@ function telaMensagens(){
   const cfg=`<div class="panel msg-card"><b>Taxa de agendamento e Pix</b><p class="muted" style="margin:2px 0 8px">Usados na mensagem de taxa de agendamento ({taxa} e {pix}).</p>
     <label for="mg-taxa-valor">Valor da taxa (R$)</label><input id="mg-taxa-valor" name="taxa_valor" inputmode="decimal" maxlength="12" placeholder="30,00" value="${esc(sv._taxa||'')}" ${pode?'':'disabled'}>
     <label for="mg-pix">Chave Pix</label><input id="mg-pix" name="pix_chave" maxlength="120" placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória" autocomplete="off" value="${esc(sv._pix||'')}" ${pode?'':'disabled'}></div>`;
+  const cfgAv=`<div class="panel msg-card"><b>Link de avaliação</b><p class="muted" style="margin:2px 0 8px">Cole o link de avaliação do seu Google. Com ele, aparece o botão <b>Pedir avaliação</b> nos atendimentos e uma lista dos últimos 7 dias.</p><details style="margin:0 0 8px"><summary class="muted" style="cursor:pointer">Como pegar o link no Google</summary><ol class="muted" style="margin:6px 0 0;padding-left:20px;max-width:560px"><li>No celular ou computador, procure o nome do seu salão no Google (precisa estar logada na conta do Perfil da Empresa).</li><li>Toque em <b>Pedir avaliações</b> (ou <b>Compartilhar formulário de avaliação</b>).</li><li>Toque em <b>Copiar link</b> e cole aqui embaixo. Ele começa com https://g.page/r/ ou https://search.google.com/.</li></ol></details>
+    <label for="mg-avalia">Link (começa com https://)</label><input id="mg-avalia" name="avalia_link" type="url" maxlength="300" placeholder="https://g.page/r/..." autocomplete="off" value="${esc(sv._avalia||'')}" ${pode?'':'disabled'}></div>`;
   const auto=(S.onl&&S.onl.wa!==null&&S.onl.wa!==undefined&&!S.legado)?`<div class="panel msg-card" style="margin-bottom:12px"><b>Envio automático de WhatsApp</b><p class="muted" style="margin:2px 0 8px;max-width:620px">Lembrete na véspera do atendimento e aviso quando você aceita ou recusa um pedido online, sem você apertar nada. <b>Só funciona depois que o WhatsApp Business for conectado ao sistema</b>; até lá as mensagens ficam apenas na fila.</p><label class="chk"><input type="checkbox" id="wa-auto" ${S.onl.wa?'checked':''} ${pode?'':'disabled'}> Ligar o envio automático</label></div>`:'';
   return `${nota}${auto}<p class="muted" style="max-width:640px">Escreva do seu jeito. Os campos entre chaves, como <b>{nome}</b>, são trocados pelos dados da cliente na hora de enviar. Linhas com horário ou profissional em branco somem sozinhas.</p>
-  <form data-form="mensagens" class="msg-grid">${cfg}${Object.keys(MSG_DEF).map(card).join('')}<p class="erro" id="a-erro" role="alert"></p>${pode?'<div class="acts"><button class="btn">Salvar mensagens</button></div>':'<p class="muted">Só quem administra o salão altera os textos.</p>'}</form>`;
+  <form data-form="mensagens" class="msg-grid">${cfg}${cfgAv}${Object.keys(MSG_DEF).map(card).join('')}<p class="erro" id="a-erro" role="alert"></p>${pode?'<div class="acts"><button class="btn">Salvar mensagens</button></div>':'<p class="muted">Só quem administra o salão altera os textos.</p>'}</form>`;
 }
 async function salvarMensagens(d){
   const m={};
   Object.keys(MSG_DEF).forEach(k=>{const t=String(d[k]||'').replace(/\r/g,'').trim();if(t&&t!==MSG_DEF[k].d)m[k]=t.slice(0,1000)});
   const tx=String(d.taxa_valor||'').replace(/[^\d,.]/g,'').slice(0,12),px=String(d.pix_chave||'').trim().slice(0,120);
-  if(tx)m._taxa=tx;if(px)m._pix=px;
+  const av=String(d.avalia_link||'').trim();if(av&&!/^https:\/\/[^\s]{4,290}$/.test(av))throw erroUi('O link de avaliação precisa começar com https:// e não ter espaços.');
+  if(tx)m._taxa=tx;if(px)m._pix=px;if(av)m._avalia=av;
   if(S.legado){LS.set('salao_mensagens',JSON.stringify(m));S.msgs=null;return 'local'}
   const r=await sb.from('tenants').update({mensagens:m}).eq('id',S.ctx.tenant.id);
   if(r.error){LS.set('salao_mensagens',JSON.stringify(m));S.msgs=null;S.msgsLocal=true;return 'local'}
@@ -1547,8 +1596,8 @@ function pedirDelCliente(id){
 /* ---------- Atendimentos ---------- */
 /* ---------- Lembrete de WhatsApp (envio manual: a pessoa aperta Enviar no WhatsApp) ---------- */
 const MSG_DEF={
-  lembrete:{t:'Lembrete do atendimento',q:'Enviado pela Agenda e pelos lembretes de amanhã.',v:['nome','salao','data','hora','procedimento','profissional'],
-    d:'✨ Olá! Tudo bem? \u{1F495}\n\nPassando para lembrar que você tem um horário agendado conosco!\n\n\u{1F4C5} Data: {data}\n⏰ Horário: {hora}\n\u{1F487}‍♀️ Procedimento: {procedimento}\n\nEstamos esperando você com muito carinho para proporcionar um momento especial de cuidado e beleza! ❤️\n\nAté breve!\n{salao} \u{1F337}'},
+  lembrete:{t:'Lembrete do atendimento',q:'Enviado pela Agenda e pelos lembretes de amanhã.',v:['nome','salao','data','hora','procedimento','profissional','remarcar'],
+    d:'✨ Olá! Tudo bem? \u{1F495}\n\nPassando para lembrar que você tem um horário agendado conosco!\n\n\u{1F4C5} Data: {data}\n⏰ Horário: {hora}\n\u{1F487}‍♀️ Procedimento: {procedimento}\n\nPrecisa remarcar ou cancelar? {remarcar}\n\nEstamos esperando você com muito carinho para proporcionar um momento especial de cuidado e beleza! ❤️\n\nAté breve!\n{salao} \u{1F337}'},
   retorno:{t:'Retorno (saudade)',q:'Enviado na aba Retornos, para quem está sem voltar.',v:['nome','nome_completo','salao'],
     d:'Olá, {nome}! \u{1F495}\n\nEstamos com saudade de você aqui no {salao}. Que tal agendar um horário para cuidar de você? ✨'},
   aniversario:{t:'Aniversário',q:'Enviado para as aniversariantes do mês.',v:['nome','nome_completo','salao'],
@@ -1557,12 +1606,16 @@ const MSG_DEF={
     d:'Olá, {nome}! \u{1F495}\n\nFoi um prazer cuidar de você ({procedimento}) no {salao}! Qualquer dúvida sobre os cuidados em casa, é só me chamar. Até a próxima! \u{1F337}'},
   taxa:{t:'Taxa de agendamento (Pix)',q:'Enviado pela Agenda, no botão Taxa Pix, para garantir o horário.',v:['nome','nome_completo','salao','data','hora','procedimento','profissional','taxa','pix'],
     d:'Olá, {nome}! \u{1F495}\n\nPara confirmar o seu horário no {salao}, pedimos uma taxa de agendamento de {taxa}, que é descontada do valor do atendimento.\n\n\u{1F4C5} Data: {data}\n⏰ Horário: {hora}\n\u{1F487}‍♀️ Procedimento: {procedimento}\n\n\u{1F4B8} Chave Pix: {pix}\n\nDepois de pagar, é só enviar o comprovante por aqui. Obrigada! \u{1F337}'},
+  avaliacao:{t:'Pedido de avaliação',q:'Enviado depois do atendimento, pelo botão Pedir avaliação (aparece quando você cadastra o link de avaliação).',v:['nome','nome_completo','salao','procedimento','link'],
+    d:'Olá, {nome}! \u{1F495}\n\nFoi um prazer cuidar de você ({procedimento}) no {salao}! Se você gostou, sua avaliação ajuda muito o nosso trabalho e leva só 1 minuto:\n{link}\n\nMuito obrigada! \u{1F337}'},
   vaga:{t:'Vaga aberta (lista de espera)',q:'Enviado pela Agenda, para quem está na lista de espera quando um horário libera.',v:['nome','nome_completo','salao','data','procedimento'],
     d:'Olá, {nome}! \u{1F495}\n\nAbriu uma vaga no {salao} para {procedimento} em {data}. Ainda tem interesse? Se quiser, responda por aqui que eu reservo para você! ✨'},
   cobranca:{t:'Cobrança (a receber)',q:'Enviado pelo botão Cobrar, nos valores a receber.',v:['nome','nome_completo','salao','valor','procedimento','data'],
     d:'Olá, {nome}! Tudo bem? \u{1F495}\n\nPassando para lembrar do valor de {valor} referente a {procedimento} do dia {data}. Quando puder, é só me avisar por aqui. Obrigada! \u{1F337}\n{salao}'}
 };
-const VAR_ROT={nome:'Primeiro nome',nome_completo:'Nome completo',salao:'Nome do salão',data:'Data',hora:'Horário',procedimento:'Procedimento',profissional:'Profissional',valor:'Valor',taxa:'Valor da taxa',pix:'Chave Pix'};
+const VAR_ROT={nome:'Primeiro nome',nome_completo:'Nome completo',salao:'Nome do salão',data:'Data',hora:'Horário',procedimento:'Procedimento',profissional:'Profissional',valor:'Valor',taxa:'Valor da taxa',pix:'Chave Pix',link:'Link de avaliação',remarcar:'Link para remarcar ou cancelar'};
+function linkGerir(a){const o=S.onl||{},oc=(S.agCfg&&S.agCfg.online)||{};
+  return o.slug&&o.on&&a&&a.token&&oc.cliente_pode!==false&&a.status!=='cancelado'?linkPub(o.slug)+'?m='+a.token:''}
 const salaoNome=()=>(S.ctx&&S.ctx.tenant&&S.ctx.tenant.nome)||SALAO;
 function msgsSalvas(){
   if(S.msgs)return S.msgs;
@@ -1570,15 +1623,15 @@ function msgsSalvas(){
 }
 function montaMsg(chave,v){
   const t=(msgsSalvas()[chave]||'').trim()||MSG_DEF[chave].d;
-  const _m=msgsSalvas(),val=Object.assign({salao:salaoNome(),taxa:fmtTaxa(_m._taxa),pix:String(_m._pix||'').trim()},v);
+  const _m=msgsSalvas(),val=Object.assign({salao:salaoNome(),taxa:fmtTaxa(_m._taxa),pix:String(_m._pix||'').trim(),link:String(_m._avalia||'').trim()},v);
   const L=String(t).replace(/\r/g,'').split('\n').filter(l=>{
     const m=l.match(/\{(\w+)\}/g);
-    return !m||m.every(x=>{const k=x.slice(1,-1);return !(k in val)||String(val[k]||'')!==''||!(k in {hora:1,profissional:1,procedimento:1,data:1,valor:1,taxa:1,pix:1})});
+    return !m||m.every(x=>{const k=x.slice(1,-1);return !(k in val)||String(val[k]||'')!==''||!(k in {hora:1,profissional:1,procedimento:1,data:1,valor:1,taxa:1,pix:1,link:1,remarcar:1})});
   });
   return L.join('\n').replace(/\{(\w+)\}/g,(x,k)=>k in val?String(val[k]||''):x).replace(/\n{3,}/g,'\n\n').trim();
 }
 const vCli=c=>({nome:primeiro(c&&c.nome),nome_completo:String((c&&c.nome)||'').trim()});
-function msgLembrete(a){const c=cli(a.clienteId);return montaMsg('lembrete',Object.assign(vCli(c),{data:fd(a.data),hora:a.hora||'',procedimento:procTxt(a),profissional:a.profissional||''}))}
+function msgLembrete(a){const c=cli(a.clienteId);return montaMsg('lembrete',Object.assign(vCli(c),{data:fd(a.data),hora:a.hora||'',procedimento:procTxt(a),profissional:a.profissional||'',remarcar:linkGerir(a)}))}
 function btnLembrete(a){
   const c=cli(a.clienteId),tel=c?String(c.telefone||'').replace(/\D/g,'').replace(/^0+/,''):'';
   if(tel.length<10){const m=tel?'telefone sem DDD':'cliente sem telefone';return `<button class="btn ghost sm" disabled title="${m==='telefone sem DDD'?'O telefone da cliente está sem DDD. Edite o cadastro dela.':'Esta cliente não tem telefone cadastrado'}">Lembrete WhatsApp</button><div class="muted" style="font-size:12px">${m}</div>`}
@@ -1594,10 +1647,17 @@ function btnTaxa(a){
 function itemAtend(a,mostra,mes){
   const c=mostra?cli(a.clienteId):null;
   return `<div class="item"><div class="grow"><div class="t">${esc(procTxt(a))}${c?` <span class="muted">·</span> <button class="linkbtn" data-act="abrir" data-id="${esc(c.id)}">${esc(c.nome)}</button>`:''}</div>
-  <div class="muted num">${fd(a.data)}${a.hora?' às '+esc(a.hora):''}${a.profissional?' · '+esc(a.profissional):''}${a.pagamento?' · '+esc(pagTxt(a)):''}${aberto(a)?' <span class="tag late">Pagamento pendente</span>':''}</div>
+  <div class="muted num">${fd(a.data)}${a.hora?' às '+esc(a.hora):''}${a.profissional?' · '+esc(a.profissional):''}${a.pagamento?' · '+esc(pagTxt(a)):''}${aberto(a)?' <span class="tag late">Pagamento pendente</span>':''}${a.cancCli?' <span class="tag late">Cancelado pela cliente</span>':''}${a.remarcadoEm&&!a.cancCli?' <span class="tag ok">Remarcado pela cliente</span>':''}</div>
   ${despTxt(a)}${parcMes(a,mes)}${a.retorno?`<div class="muted">Retorno previsto: ${fd(a.retorno)}</div>`:''}${a.obs?`<div class="obs">${esc(a.obs)}</div>`:''}</div>
   <div class="side-val">${brl(a.valor)}</div>
-  <div class="item-acts">${btnReceber(a)}${btnLembrete(a)}${btnAgradece(a)}<button class="btn ghost sm" data-act="editAtend" data-id="${esc(a.id)}">Editar</button><button class="btn danger sm" data-act="delAtend" data-id="${esc(a.id)}">Excluir</button></div></div>`;
+  <div class="item-acts">${btnReceber(a)}${btnLembrete(a)}${btnAgradece(a)}${btnAvalia(a)}<button class="btn ghost sm" data-act="editAtend" data-id="${esc(a.id)}">Editar</button><button class="btn danger sm" data-act="delAtend" data-id="${esc(a.id)}">Excluir</button></div></div>`;
+}
+function blocoAvaliar(){
+  if(!avaliaLink())return '';
+  const ini=addDia(hoje(),-7),ja=pediram();
+  const L=S.atend.filter(a=>a.status!=='faltou'&&String(a.data)<=hoje()&&String(a.data)>=ini&&!ja[a.id]&&telOk(cli(a.clienteId))).sort((x,y)=>String(y.data).localeCompare(String(x.data)));
+  if(!L.length)return '';
+  return `<div class="panel" style="margin-bottom:12px"><b>Pedir avaliação no Google (${L.length})</b><p class="muted" style="margin:4px 0 8px">Atendimentos dos últimos 7 dias em que você ainda não pediu avaliação. Toque no botão para abrir o WhatsApp com a mensagem pronta.</p><div class="list">${L.slice(0,5).map(a=>{const c=cli(a.clienteId);return `<div class="item"><div class="grow"><div class="t">${esc(c.nome)}</div><div class="muted num">${fd(a.data)} · ${esc(procTxt(a))}</div></div><div class="item-acts">${btnAvalia(a)}</div></div>`}).join('')}</div></div>`;
 }
 function blocoPendPag(){
   const L=pendPag();if(!L.length)return '';
@@ -1609,7 +1669,7 @@ function telaAtend(){
   const l=S.atend.filter(a=>!m||plano(a).some(p=>p.mes===m)).sort((a,b)=>String(b.data).localeCompare(String(a.data)));
   const feitos=l.filter(a=>!m||String(a.data).startsWith(m));
   const rec=m?l.reduce((s,a)=>s+noMes(a,m),0):soma(l);
-  return blocoPendPag()+`<div class="bar"><select id="mesFiltro" aria-label="Filtrar por mês"><option value="">Todos os meses</option>${meses.map(x=>`<option value="${x}" ${x===m?'selected':''}>${esc(mesNome(x))}</option>`).join('')}</select><button class="btn" data-act="novoAtend">Novo atendimento</button></div>
+  return blocoPendPag()+blocoAvaliar()+`<div class="bar"><select id="mesFiltro" aria-label="Filtrar por mês"><option value="">Todos os meses</option>${meses.map(x=>`<option value="${x}" ${x===m?'selected':''}>${esc(mesNome(x))}</option>`).join('')}</select><button class="btn" data-act="novoAtend">Novo atendimento</button></div>
   <div class="stats"><div class="stat"><b>${feitos.length}</b><span>atendimentos</span></div><div class="stat"><b>${brl(rec)}</b><span>${m?'recebido no mês':'faturado'}</span></div></div>`+
   (l.length?'<div class="list">'+l.slice(0,S.lim.at).map(a=>itemAtend(a,true,m)).join('')+'</div>'+maisBtn('at',l.length):'<div class="empty"><p>Nenhum atendimento registrado neste período.</p></div>');
 }
@@ -1962,6 +2022,14 @@ function btnAgradece(a){
   const c=cli(a.clienteId);if(!telOk(c)||String(a.data)>hoje())return '';
   return `<a class="btn sm wa-btn ghost" href="${esc(linkZap(c,msgAgradece(c,a)))}" target="_blank" rel="noopener" title="Abre o WhatsApp com a mensagem de agradecimento pronta">Agradecer</a>`;
 }
+const avaliaLink=()=>/^https:\/\//.test(String(msgsSalvas()._avalia||'').trim());
+const msgAvalia=(c,a)=>montaMsg('avaliacao',Object.assign(vCli(c),{procedimento:(a&&procTxt(a))||''}));
+const pediram=()=>{try{return JSON.parse(LS.get('salao_avaliacoes','{}'))||{}}catch(_){return {}}};
+function btnAvalia(a){
+  const c=cli(a.clienteId);if(!avaliaLink()||!telOk(c)||String(a.data)>hoje())return '';
+  const jaf=pediram()[a.id]?'<span class="tag ok" title="Você já abriu o WhatsApp com o pedido de avaliação">Avaliação pedida</span> ':'';
+  return jaf+`<a class="btn sm wa-btn ghost" data-ava="${esc(a.id)}" href="${esc(linkZap(c,msgAvalia(c,a)))}" target="_blank" rel="noopener" title="Abre o WhatsApp com o pedido de avaliação pronto">Pedir avaliação</a>`;
+}
 function btnReceber(a){
   if(!aberto(a)||String(a.data)>hoje())return '';
   const c=cli(a.clienteId);
@@ -1992,7 +2060,7 @@ const telOk=c=>!!c&&String(c.telefone||'').replace(/\D/g,'').replace(/^0+/,'').l
 const primeiro=n=>String(n||'').trim().split(/\s+/)[0]||'';
 const msgAniv=c=>montaMsg('aniversario',vCli(c));
 const msgSaudade=c=>montaMsg('retorno',vCli(c));
-if(window.__TESTE__)window.__t={montaMsg,msgAniv,msgSaudade,msgLembrete,msgAgradece,msgCobranca};
+if(window.__TESTE__)window.__t={S,montaMsg,msgAniv,msgSaudade,msgLembrete,msgAgradece,msgCobranca};
 const linkZap=(c,m)=>zap(c.telefone)+'?text='+encodeURIComponent(m);
 function sumidas(dias){
   const lim=addDia(hoje(),-(dias||60));
@@ -2012,7 +2080,7 @@ async function mudarStatus(id,st){
 }
 function linhaAg(a){
   const c=cli(a.clienteId)||{nome:'(cliente removida)'};
-  const tag=a.status==='confirmado'?' <span class="tag ok">Confirmado</span>':inativo(a)?` <span class="tag late">${STATUS_ROT[a.status]}</span>`:'';
+  const tag=a.status==='confirmado'?' <span class="tag ok">Confirmado</span>':inativo(a)?` <span class="tag late">${a.cancCli&&a.status==='cancelado'?'Cancelado pela cliente':STATUS_ROT[a.status]}</span>`:(a.remarcadoEm?' <span class="tag ok">Remarcado pela cliente</span>':'');
   return `<div class="item"${inativo(a)?' style="opacity:.62"':''}><div class="side-val" style="min-width:56px">${esc(a.hora||'—')}</div>${avatar(c.nome)}<div class="grow"><div class="t">${esc(c.nome)}${tag}</div><div class="muted">${esc(procTxt(a))}${a.profissional?' · '+esc(a.profissional):''}</div></div>
   <div class="item-acts">${inativo(a)?'':btnLembrete(a)+btnTaxa(a)}${btnStatus(a)}<button class="btn ghost sm" data-act="editAtend" data-id="${esc(a.id)}">Editar</button></div></div>`;
 }
@@ -2179,6 +2247,7 @@ function blocoOnline(pode){
   ${o.slug?`<p class="num" style="margin:6px 0 0;word-break:break-all"><a href="${esc(linkPub(o.slug))}" target="_blank" rel="noopener">${esc(linkPub(o.slug))}</a> <button type="button" class="btn ghost sm" data-act="copiaLink" data-link="${esc(linkPub(o.slug))}">Copiar link</button></p>`:''}
   <div class="grid2"><div><label for="on-dias">Quantos dias à frente</label><input id="on-dias" name="dias" type="number" min="1" max="120" value="${esc(oc.dias_max||30)}" ${pode?'':'disabled'}></div>
   <div><label for="on-ant">Antecedência mínima (horas)</label><input id="on-ant" name="ant" type="number" min="0" max="72" value="${esc(oc.antecedencia_h==null?2:oc.antecedencia_h)}" ${pode?'':'disabled'}></div>
+  <div><label for="on-rh">Cliente pode remarcar até (horas antes)</label><input id="on-rh" name="remarcar_h" type="number" min="1" max="72" value="${esc(oc.remarcar_h||24)}" ${pode?'':'disabled'}></div>
   <div><label for="on-passo">Intervalo entre horários (min)</label><select id="on-passo" name="passo" ${pode?'':'disabled'}>${[15,30,45,60,90,120].map(n=>`<option value="${n}" ${n===(Number(oc.passo)||60)?'selected':''}>${n} min</option>`).join('')}</select></div></div>
   <h4 style="margin:16px 0 4px">Sinal para garantir o horário</h4>
   <label for="on-sm">Como cobrar</label><select id="on-sm" name="sinal_modo" ${pode?'':'disabled'}>${[['nenhum','Sem sinal'],['pix','Pix manual (a cliente vê o recado abaixo)'],['mp','Mercado Pago automático (a cliente paga na hora)']].map(([v,t])=>`<option value="${v}" ${v===(sg.modo||'nenhum')?'selected':''}>${t}</option>`).join('')}</select>
@@ -2186,6 +2255,7 @@ function blocoOnline(pode){
   <div><label for="on-sv">Valor</label><input id="on-sv" name="sinal_valor" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(sg.valor||'')}" ${pode?'':'disabled'}></div>
   <div><label for="on-se">Prazo para pagar (min)</label><input id="on-se" name="sinal_exp" type="number" min="10" max="240" value="${esc(sg.expira_min||30)}" ${pode?'':'disabled'}></div></div>
   <p class="muted" style="margin:6px 0 0">No Mercado Pago, o horário fica reservado só durante o prazo; se a cliente não pagar, ele é liberado sozinho. O dinheiro cai direto na conta do seu Mercado Pago.</p>
+  <label class="chk"><input type="checkbox" name="cliente_pode" ${oc.cliente_pode===false?'':'checked'} ${pode?'':'disabled'}> A cliente pode remarcar ou cancelar pelo link do lembrete</label>
   <label for="on-av">Recado depois do pedido (taxa de agendamento, chave Pix…)</label><textarea id="on-av" name="aviso" rows="3" maxlength="400" ${pode?'':'disabled'} placeholder="Ex.: Para confirmar, envie a taxa de R$ 20 para a chave Pix 11 99999-0000.">${esc(oc.aviso||'')}</textarea>
   <p class="erro" id="a-erro" role="alert"></p>${pode?'<div class="acts" style="justify-content:flex-start"><button class="btn">Salvar</button></div>':''}</form>${blocoMp(pode)}`;
 }
@@ -2212,7 +2282,7 @@ async function salvarOnline(d){
   if(sm!=='nenhum'&&st==='percentual'&&sv>100)throw erroUi('A porcentagem do sinal não pode passar de 100.');
   if(sm!=='nenhum'&&sv>0&&st==='fixo'&&sv<1)throw erroUi('O sinal mínimo é R$ 1,00.');
   if(sm==='mp'&&!(S.onl&&S.onl.mp))throw erroUi('Para cobrar o sinal automático, conecte antes o Mercado Pago do salão (logo abaixo).');
-  const cfg=Object.assign({},S.agCfg,{online:{passo:Number(d.passo)||60,dias_max:Math.min(120,Math.max(1,Math.round(Number(d.dias)||30))),antecedencia_h:Math.min(72,Math.max(0,Math.round(Number(d.ant)||0))),aviso:String(d.aviso||'').trim().slice(0,400),sinal:{modo:sm,tipo:st,valor:sv,expira_min:Math.min(240,Math.max(10,Math.round(Number(d.sinal_exp)||30)))}}});
+  const cfg=Object.assign({},S.agCfg,{online:{passo:Number(d.passo)||60,dias_max:Math.min(120,Math.max(1,Math.round(Number(d.dias)||30))),antecedencia_h:Math.min(72,Math.max(0,Math.round(Number(d.ant)||0))),aviso:String(d.aviso||'').trim().slice(0,400),cliente_pode:d.cliente_pode==='on',remarcar_h:Math.min(72,Math.max(1,Math.round(Number(d.remarcar_h)||24))),sinal:{modo:sm,tipo:st,valor:sv,expira_min:Math.min(240,Math.max(10,Math.round(Number(d.sinal_exp)||30)))}}});
   const r=await sb.from('tenants').update({slug:slug||null,online_ativo:on,agenda_config:cfg}).eq('id',S.ctx.tenant.id);
   if(r.error){
     if(r.error.code==='23505')throw erroUi('Esse endereço já está em uso. Escolha outro.');
@@ -2885,6 +2955,7 @@ function falha(e){
 
 /* ---------- Eventos ---------- */
 document.addEventListener('click',e=>{
+  const ava=e.target.closest('[data-ava]');if(ava){const o=pediram();o[ava.dataset.ava]=hoje();LS.set('salao_avaliacoes',JSON.stringify(o));setTimeout(render,400)}
   const lem=e.target.closest('[data-lem]');if(lem){const o=enviados();o[lem.dataset.lem]=hoje();LS.set('salao_lembretes',JSON.stringify(o));setTimeout(render,400)}
   const au=e.target.closest('[data-auth]');if(au){S.auth=au.dataset.auth;S.aviso='';render();return}
   const g=e.target.closest('[data-go]');
@@ -2900,6 +2971,7 @@ document.addEventListener('click',e=>{
     novoServico:()=>formServico(''),editServico:()=>formServico(id),delServico:()=>removerServico(id).catch(x=>toast(falha(x),true)),novoBloq:()=>formBloq(a.dataset.data),delBloq:()=>confirmar('Remover este bloqueio?','O horário volta a ficar livre.','Remover',async()=>{const r=await sb.from('bloqueios').delete().eq('id',id);if(r.error)throw r.error;await recarregar();toast('Bloqueio removido.')}),
     novoAtend:()=>formAtend(null,a.dataset.cliente,a.dataset.data),receber:()=>formReceber(id),agVis:()=>{S.agVis=['mes','lista'].includes(id)?id:'sem';LS.set('salao_ag_vis',S.agVis);render()},agMes:()=>{S.agMes=id==='0'?0:(S.agMes||0)+Number(id);S.agDia=null;render()},agDia:()=>{S.agDia=id;render()},agSem:()=>{S.agSem=id==='0'?0:(S.agSem||0)+Number(id);render()},meta:()=>formMeta(),imprimir:()=>window.print(),editAtend:()=>formAtend(id),delAtend:()=>pedirDelAtend(id),
     abrir:()=>{S.view='clientes';S.sel=id;render();window.scrollTo(0,0)},
+    novoVale:()=>formVale(),delVale:()=>confirmar('Excluir este vale?','O valor volta a entrar na comissão a pagar.','Excluir',async()=>{const r=await sb.from('vales').delete().eq('id',id);if(r.error)throw r.error;await recarregar();toast('Vale excluído.')}),
     relAba:()=>{S.relAba=id;render()},diaRel:()=>{S.diaRel=id==='0'?hoje():addDia(S.diaRel||hoje(),Number(id));render()},juntarVer:()=>dlgRepetidas(),juntarManter:()=>confirmar('Juntar estes cadastros?','Os atendimentos das outras passam para a cliente escolhida e o cadastro repetido é removido. Não dá para desfazer.','Juntar',()=>juntarClientes(id,String(a.dataset.outras||'').split(',').filter(Boolean))),novoPacote:()=>formPacote(a.dataset.cliente),usarSessao:()=>{usarSessao(id).catch(x=>toast(falha(x),true))},encerrarPacote:()=>confirmar('Encerrar este pacote?','As sessões que sobraram deixam de poder ser usadas.','Encerrar',()=>encerrarPacote(id)),fidConfig:()=>formFid(),fidResgatar:()=>confirmar('Resgatar o prêmio?','Isso registra que a cliente já recebeu o prêmio.','Resgatar',()=>resgatarPremio(id)),novaEspera:()=>formEspera(),esAvisada:()=>{esMarcar(id,'avisada').catch(x=>toast(falha(x),true))},esRemover:()=>confirmar('Remover da lista de espera?','A cliente deixa de aparecer na lista.','Remover',()=>esMarcar(id,'remover')),retDias:()=>{S.retDias=Number(id)||60;LS.set('salao_ret_dias',String(S.retDias));render()},retChamei:()=>{const c=retContatos();c[id]=hoje();LS.set('salao_ret_contato',JSON.stringify(c));setTimeout(render,50)},mais:()=>{S.lim[id]=(S.lim[id]||100)+200;render()},voltar:()=>{S.sel=null;render()},estAba:()=>{S.estAba=id;render()},novoProd:()=>formProd(),editProd:()=>formProd(id),delProd:()=>pedirDelProd(id),movProd:()=>formMov(id),histProd:()=>histProd(id),novaFicha:()=>formFicha(id),editFicha:()=>formFicha(null,id),delFicha:()=>pedirDelFicha(id),exportJson,exportCsv,exportXlsx,novaDesp:()=>formDesp(),editDesp:()=>formDesp(id),delDesp:()=>pedirDelDesp(id),fechar:()=>$('dlg').close(),
     recarregar:()=>{S.erro='';render();recarregar()},
     tentarCtx:()=>{parar();iniciar()},
@@ -2950,6 +3022,7 @@ document.addEventListener('change',e=>{
   else if(t.id==='mesRel'){S.mesRel=t.value;render()}
   else if(t.id==='agLivres'){S.agLivres=t.checked;render()}
   else if(t.id==='diaRelData'){if(/^\d{4}-\d{2}-\d{2}$/.test(t.value)){S.diaRel=t.value;render()}}
+  else if(t.classList&&t.classList.contains('com-srv'))salvarComissaoSrv(t.dataset.prof,t.dataset.srv,t.value).catch(x=>toast(falha(x)));
   else if(t.classList&&t.classList.contains('com-pct'))salvarComissao(t.dataset.prof,t.value).catch(x=>toast(falha(x)));
   else if(t.id==='mesDesp'){S.mesDesp=t.value;S.lim.gasto=100;render()}
   else if(t.id==='a-pag'||t.id==='a-parc'||t.id==='a-pago')atualizaParc();
@@ -2987,6 +3060,7 @@ $('dlg').addEventListener('submit',async e=>{
     else if(k==='espera')await salvarEspera(dados);
     else if(k==='pacote')await salvarPacote(id,dados);
     else if(k==='fidelidade')await salvarFid(dados);
+    else if(k==='vale')await salvarVale(dados);
     else if(k==='desp')await salvarDesp(id,dados);
     else if(k==='prod')await salvarProd(id,dados);
     else if(k==='mov')await salvarMov(id,dados);
@@ -3070,7 +3144,7 @@ document.addEventListener('submit',async e=>{
       if(r.error){er.textContent=String(r.error.message||'Não foi possível cadastrar o salão.');return}
       S.view='inicio';parar();iniciar();
     }
-  }catch(err){er.textContent='Sem conexão. Verifique a internet e tente de novo.'}
+  }catch(err){er.textContent=(err&&err.aviso)||'Sem conexão. Verifique a internet e tente de novo.'}
   finally{S.busy=false;if(bt)bt.disabled=false}
 });
 document.addEventListener('submit',async e=>{
@@ -3095,8 +3169,9 @@ document.addEventListener('submit',async e=>{
       det.textContent='Detalhe técnico: '+m+(r.error.status?' (código '+r.error.status+')':'');
     }
   }catch(err){
-    er.textContent='Sem conexão com o Supabase. Verifique a internet e tente de novo.';
-    det.textContent='Detalhe técnico: '+String((err&&err.message)||err);
+    if(err&&err.aviso){er.textContent=err.aviso;det.textContent=''}
+    else{er.textContent='Sem conexão com o Supabase. Verifique a internet e tente de novo.';
+    det.textContent='Detalhe técnico: '+String((err&&err.message)||err)}
   }
   finally{S.busy=false;bt.disabled=false}
 });
