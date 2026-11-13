@@ -97,7 +97,14 @@ function montar(){
   '</div></section>'+
   '<section id="s-prof" hidden aria-labelledby="h-prof"><h2 id="h-prof">Com quem</h2><div class="chips" id="prof"></div></section>'+
   '<section id="s-dia" hidden aria-labelledby="h-dia"><h2 id="h-dia">Dia</h2><div class="dias" id="dias" role="group" aria-labelledby="h-dia">'+dias(s.dias_max).map(function(d){return '<button type="button" class="dia" data-d="'+d.iso+'" aria-pressed="false" aria-label="'+esc(dataExtensa(d.iso))+'"><span>'+esc(d.w)+'</span><b>'+d.n+'</b><span>'+esc(d.m)+'</span></button>'}).join('')+'</div></section>'+
-  '<section id="s-hora" hidden aria-labelledby="h-hora"><h2 id="h-hora">Horário</h2><p class="aviso" id="h-aviso" role="alert" hidden></p><div class="chips" id="horas"></div><p class="vazio" id="h-vazio" hidden>Sem horários livres neste dia. Escolha outro dia.</p></section>'+
+  '<section id="s-hora" hidden aria-labelledby="h-hora"><h2 id="h-hora">Horário</h2><p class="aviso" id="h-aviso" role="alert" hidden></p><div class="chips" id="horas"></div><p class="vazio" id="h-vazio" hidden>Sem horários livres neste dia. Escolha outro dia ou entre na lista de espera.</p>'+
+  '<div id="espera" hidden><button type="button" class="btn2" id="esp-abrir" aria-expanded="false">Não achou horário? Entrar na lista de espera</button>'+
+  '<form id="fe" hidden novalidate><p class="leg">Se abrir uma vaga neste dia, o salão avisa você pelo WhatsApp.</p>'+
+  '<label for="e-nome">Nome</label><input id="e-nome" autocomplete="name" maxlength="80">'+
+  '<label for="e-tel">WhatsApp com DDD</label><input id="e-tel" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="(11) 90000-0000">'+
+  '<label for="e-per">Melhor período</label><select id="e-per"><option value="qualquer">Qualquer horário</option><option value="manha">Manhã</option><option value="tarde">Tarde</option><option value="noite">Noite</option></select>'+
+  '<p class="erro" id="esp-erro" role="alert"></p><button class="enviar" id="esp-env">Entrar na lista de espera</button></form>'+
+  '<div class="dica" id="esp-ok" role="status" hidden></div></div></section>'+
   '<form id="f" hidden novalidate><section aria-labelledby="h-eu"><h2 id="h-eu">Seus dados</h2>'+
   '<div class="resumo" id="resumo"></div>'+
   '<label for="nome">Nome</label><input id="nome" autocomplete="name" maxlength="80" required>'+
@@ -123,6 +130,7 @@ async function carregarHoras(){
     gr.forEach(function(g){var l=lista.filter(function(x){var n=parseInt(x.h,10);return n>=g[1]&&n<g[2]});if(l.length)h+='<p class="periodo">'+g[0]+'</p>'+l.map(function(x){return '<button type="button" class="chip" data-h="'+esc(x.h)+'" aria-pressed="false">'+esc(x.h)+'</button>'}).join('')});
     box.innerHTML=h;
     $('h-vazio').hidden=lista.length>0;
+    var es=$('espera');es.hidden=false;$('fe').hidden=true;$('esp-ok').hidden=true;$('esp-abrir').hidden=false;$('esp-abrir').setAttribute('aria-expanded','false');
   }catch(e){if(tk===S.carregandoH){box.innerHTML='';$('h-vazio').hidden=false;$('h-vazio').textContent=e.message}}
 }
 function marcar(sel,attr,val){Array.prototype.forEach.call(document.querySelectorAll(sel),function(b){b.setAttribute('aria-pressed',String(b.getAttribute(attr)===String(val)))})}
@@ -145,6 +153,26 @@ document.addEventListener('click',function(e){
     S.hora=b.dataset.h;marcar('#horas .chip','data-h',S.hora);resumo();$('f').hidden=false;
     $('f').scrollIntoView({behavior:'smooth',block:'nearest'});
   }
+});
+document.addEventListener('click',function(e){
+  var b=e.target.closest('#esp-abrir');if(!b)return;
+  var f=$('fe');f.hidden=!f.hidden;b.setAttribute('aria-expanded',String(!f.hidden));
+  if(!f.hidden){if(!$('e-nome').value)$('e-nome').value=$('nome')?$('nome').value:'';$('e-nome').focus()}
+});
+document.addEventListener('submit',async function(e){
+  if(e.target.id!=='fe')return;e.preventDefault();
+  if(S.esperando)return;
+  var er=$('esp-erro');er.textContent='';
+  var nome=$('e-nome').value.trim(),tel=$('e-tel').value.replace(/\D/g,'');
+  if(nome.length<2){er.textContent='Informe seu nome.';$('e-nome').focus();return}
+  if(tel.length<10||tel.length>13){er.textContent='Informe o WhatsApp com DDD.';$('e-tel').focus();return}
+  S.esperando=true;$('esp-env').disabled=true;
+  try{
+    var r=await rpc('publico_espera',{p_slug:SLUG,p:{nome:nome,telefone:tel,servico:S.salao.servicos[S.serv].nome,profissional:S.prof,data:S.dia,periodo:$('e-per').value}});
+    $('fe').hidden=true;$('esp-abrir').hidden=true;
+    var ok=$('esp-ok');ok.innerHTML='<b>Você está na lista de espera.</b><br>Se abrir uma vaga em '+esc(dataExtensa(S.dia))+', o salão chama você pelo WhatsApp. Isso não é um agendamento confirmado.';ok.hidden=false;
+  }catch(x){er.textContent=/fetch|network|failed/i.test(x.message)?'Sem conexão. Verifique a internet e tente de novo.':x.message}
+  S.esperando=false;$('esp-env').disabled=false;
 });
 document.addEventListener('submit',async function(e){
   if(e.target.id!=='f')return;e.preventDefault();
