@@ -486,7 +486,7 @@ const pagTxt=a=>{
 };
 
 /* ---------- Dados (Supabase) ---------- */
-const rowC=r=>({id:r.id,nome:r.nome||'',telefone:r.telefone||'',nascimento:r.nascimento||'',obs:r.obs||''});
+const rowC=r=>({id:r.id,nome:r.nome||'',telefone:r.telefone||'',nascimento:r.nascimento||'',obs:r.obs||'',indicadaPor:r.indicada_por||''});
 const STATUS_OK=['agendado','confirmado','cancelado','faltou'],STATUS_ROT={agendado:'Agendado',confirmado:'Confirmado',cancelado:'Cancelou',faltou:'Faltou'};
 const inativo=a=>a.status==='cancelado'||a.status==='faltou';
 const procTxt=a=>(a.procedimento||'')+(a.procedimento2?' + '+a.procedimento2:'');
@@ -1403,7 +1403,13 @@ async function salvarMensagens(d){
 }
 /* ---------- Clientes ---------- */
 function lista(){
-  return `<div class="bar"><input id="busca" type="search" placeholder="Buscar por nome ou telefone" value="${esc(S.busca)}" autocomplete="off" aria-label="Buscar cliente">${!S.legado&&NV('config')==='escrita'?'<button class="btn ghost" data-act="fidConfig">Fidelidade</button>':''}<button class="btn" data-act="novaCliente">Nova cliente</button></div>${avisoRepetidas()}<div id="lista">${itensClientes()}</div>`;
+  return `<div class="bar"><input id="busca" type="search" placeholder="Buscar por nome ou telefone" value="${esc(S.busca)}" autocomplete="off" aria-label="Buscar cliente">${!S.legado&&NV('config')==='escrita'?'<button class="btn ghost" data-act="fidConfig">Fidelidade</button>':''}<button class="btn" data-act="novaCliente">Nova cliente</button></div>${avisoRepetidas()}${blocoIndicacoes()}<div id="lista">${itensClientes()}</div>`;
+}
+const indicouLista=id=>S.clientes.filter(x=>x.indicadaPor===id);
+function blocoIndicacoes(){
+  const m=new Map();S.clientes.forEach(x=>{if(x.indicadaPor&&cli(x.indicadaPor))m.set(x.indicadaPor,(m.get(x.indicadaPor)||0)+1)});
+  const top=[...m.entries()].sort((a,b)=>b[1]-a[1]).slice(0,3);if(!top.length)return '';
+  return `<div class="panel" style="margin-bottom:12px"><b>Quem mais indica</b><div class="list" style="margin-top:8px">${top.map(([id,n])=>`<div class="item click" tabindex="0" role="button" data-act="abrir" data-id="${esc(id)}"><div class="grow"><div class="t">${esc(cli(id).nome)}</div></div><div class="side"><b>${n}</b> ${n===1?'indicação':'indicações'}</div></div>`).join('')}</div></div>`;
 }
 function avisoRepetidas(){
   const g=gruposRepetidos();if(!g.length||S.legado||NV('clientes')!=='escrita')return '';
@@ -1438,6 +1444,7 @@ function detalhe(){
   <div class="head-card">${avatar(c.nome)}<div class="grow"><h2>${esc(c.nome)}</h2>
     <div class="muted">${c.telefone?`${esc(c.telefone)} · <a class="wa" href="${zap(c.telefone)}" target="_blank" rel="noopener">WhatsApp</a>`:'sem telefone'}</div>
     ${c.nascimento?`<div class="muted">Nascimento: ${fd(c.nascimento)}</div>`:''}
+    ${(()=>{const q=cli(c.indicadaPor),L=indicouLista(c.id);return (q?`<div class="muted">Indicada por ${esc(q.nome)}</div>`:'')+(L.length?`<div class="muted">Indicou ${L.length} ${L.length===1?'cliente':'clientes'}: ${esc(L.map(x=>x.nome).join(', '))}</div>`:'')})()}
     ${(()=>{const f=S.atendTodos.filter(x=>x.clienteId===c.id&&x.status==='faltou').length,k=S.atendTodos.filter(x=>x.clienteId===c.id&&x.status==='cancelado').length;return f||k?`<div class="muted">${f?`<span class="tag late">${f} ${f===1?'falta':'faltas'}</span> `:''}${k?`${k} ${k===1?'cancelamento':'cancelamentos'}`:''}</div>`:''})()}
     ${/alergi|al[eé]rgic|sensibilidade|n[aã]o pode usar/i.test(c.obs||'')?'<div><span class="tag late" role="note">Atenção: alergia ou sensibilidade anotada</span></div>':''}
     ${c.obs?`<p class="obs">${esc(c.obs)}</p>`:''}</div>
@@ -1551,6 +1558,7 @@ function formCliente(id){
   <label for="f-nome">Nome *</label><input id="f-nome" name="nome" required autocomplete="off" value="${esc(c.nome)}">
   <div class="grid2"><div><label for="f-tel">Telefone / WhatsApp</label><input id="f-tel" name="telefone" type="tel" value="${esc(c.telefone)}"></div>
   <div><label for="f-nasc">Nascimento</label><input id="f-nasc" name="nascimento" type="date" value="${esc(c.nascimento)}"></div></div>
+  ${S.clientes.some(x=>x.id!==id)?`<label for="f-ind">Indicada por</label><select id="f-ind" name="indicada_por"><option value="">Ninguém / não sei</option>${[...S.clientes].filter(x=>x.id!==id).sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','pt-BR')).map(x=>`<option value="${esc(x.id)}" ${x.id===c.indicadaPor?'selected':''}>${esc(x.nome)}</option>`).join('')}</select>`:''}
   <label for="f-obs">Observações</label><textarea id="f-obs" name="obs" rows="3" placeholder="Alergias, preferências, cuidados">${esc(c.obs)}</textarea>
   <div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Salvar</button></div></form>`);
 }
@@ -1563,6 +1571,8 @@ function gruposRepetidos(){
 }
 async function salvarCliente(id,d){
   const o={nome:d.nome.trim(),telefone:(d.telefone||'').trim(),nascimento:d.nascimento||null,obs:(d.obs||'').trim()};
+  const ind=d.indicada_por||'',antes=id?((cli(id)||{}).indicadaPor||''):'';
+  if(ind!==antes)o.indicada_por=ind||null;
   const fn=foneNorm(o.telefone);
   if(fn&&(!id||foneNorm((cli(id)||{}).telefone)!==fn)){
     const outra=S.clientes.find(c=>c.id!==id&&foneNorm(c.telefone)===fn);
