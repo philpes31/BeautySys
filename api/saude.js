@@ -19,7 +19,9 @@ async function testes() {
         return { ok: true };
       } catch (e) {
         if (e.status === 404) return { ok: false, dica: 'Falta rodar o agendio-TUDO.sql no Supabase (a função de pagamentos não existe).' };
-        if (e.status === 401 || e.status === 403) return { ok: false, dica: 'A chave SUPABASE_SERVICE_KEY foi recusada. Use a chave "service_role" (ou "secret"), não a anon.' };
+        const motivo = String(e.message || '').slice(0, 140);
+        if (/permission denied|must be owner|not allowed/i.test(motivo)) return { ok: false, dica: 'A chave entrou, mas o banco negou a permissão (' + motivo + '). Rode de novo o agendio-TUDO.sql inteiro no Supabase (SQL Editor > Run) e teste outra vez.' };
+        if (e.status === 401 || e.status === 403) return { ok: false, dica: 'O Supabase recusou a SUPABASE_SERVICE_KEY (' + e.status + ': ' + motivo + '). Use a chave "secret" (sb_secret_…) ou "service_role", inteira e sem espaços, não a publishable/anon.' };
         return { ok: false, dica: 'Erro ' + (e.status || '') + ' ao falar com o Supabase.' };
       }
     });
