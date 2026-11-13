@@ -14,6 +14,8 @@ async function testes() {
       return r.status < 400 ? { ok: true } : { ok: false, dica: 'O Supabase recusou a chave SUPABASE_ANON_KEY (erro ' + r.status + '). Copie de novo em Project Settings > API.' };
     });
     await tenta('Supabase aceita a chave de serviço e o SQL de pagamentos está instalado', async () => {
+      const sk = L.env('SUPABASE_SERVICE_KEY');
+      if (sk.startsWith('sb_publishable_') || sk === L.env('SUPABASE_ANON_KEY')) return { ok: false, dica: 'Em SUPABASE_SERVICE_KEY você colou a chave PÚBLICA (publishable/anon). Ela precisa ser a chave SECRET (sb_secret_…): Supabase > Project Settings > API Keys > Secret keys > botão de copiar.' };
       try {
         const r = await L.rpcServico('mp_dados_cobranca', { p_id: '00000000-0000-0000-0000-000000000000' });
         return { ok: true };
