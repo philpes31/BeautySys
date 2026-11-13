@@ -9,7 +9,8 @@ async function testes() {
   const base = L.env('SUPABASE_URL').replace(/\/+$/, '');
   if (L.faltandoBase().length === 0) {
     await tenta('Supabase aceita a chave pública (anon)', async () => {
-      const r = await fetch(base + '/rest/v1/', { headers: { apikey: L.env('SUPABASE_ANON_KEY') } });
+      // /auth/v1/settings é público e só responde 200 se a chave for válida (o /rest/v1/ raiz recusa chaves novas e daria alarme falso)
+      const r = await fetch(base + '/auth/v1/settings', { headers: { apikey: L.env('SUPABASE_ANON_KEY') } });
       return r.status < 400 ? { ok: true } : { ok: false, dica: 'O Supabase recusou a chave SUPABASE_ANON_KEY (erro ' + r.status + '). Copie de novo em Project Settings > API.' };
     });
     await tenta('Supabase aceita a chave de serviço e o SQL de pagamentos está instalado', async () => {
