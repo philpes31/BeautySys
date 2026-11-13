@@ -48,12 +48,19 @@ module.exports = async (req, res) => {
   // Se o salão ainda tem dias pagos, o primeiro débito só acontece no vencimento (sem cobrar duas vezes).
   if (d.vencimento && /^\d{4}-\d{2}-\d{2}$/.test(d.vencimento)) {
     const dt = new Date(d.vencimento + 'T12:00:00-03:00');
-    if (dt.getTime() > Date.now() + 36e5 * 24) corpo.auto_recurring.start_date = dt.toISOString();
+    // O Mercado Pago não aceita início muito distante: limita a ~1 ano (salões com plano pago por muitos anos).
+    const teto = Date.now() + 36e5 * 24 * 360;
+    if (dt.getTime() > Date.now() + 36e5 * 24) corpo.auto_recurring.start_date = new Date(Math.min(dt.getTime(), teto)).toISOString();
   }
   const r = await L.mp('/preapproval', { method: 'POST', body: JSON.stringify(corpo) });
   const url = r.dados && r.dados.init_point, id = r.dados && r.dados.id;
-  if (!r.ok || !url || !id) return L.json(res, 502, { erro: 'O Mercado Pago não respondeu. Tente de novo em instantes.' });
+  if (!r.ok || !url || !id) {
+    const dd = r.dados || {}, causa = Array.isArray(dd.cause) && dd.cause[0] ? (dd.cause[0].description || dd.cause[0].code) : '';
+    const motivo = String(causa || dd.message || dd.error || '').slice(0, 160);
+    console.error('mp-assinar: MP respondeu', r.status, JSON.stringify(dd).slice(0, 400));
+    return L.json(res, 502, { erro: 'O Mercado Pago recusou criar o débito automático' + (r.status ? ' (erro ' + r.status + (motivo ? ': ' + motivo : '') + ')' : '') + '. Se continuar, avise o suporte.' });
+  }
   try { await L.rpcServico('mp_assinatura_gravar', { p_tenant: d.tenant_id, p_preapproval: String(id), p_plano: d.plano_id, p_valor: valor }); }
-  catch (_) { return L.json(res, 502, { erro: 'Não foi possível guardar a assinatura.' }); }
+  catch (e) { console.error('mp-assinar: gravar falhou', e.status, e.message); return L.json(res, 502, { erro: 'Não foi possível guardar a assinatura (erro ' + (e.status || '?') + ': ' + String(e.message || '').slice(0, 140) + '). Avise o suporte.' }); }
   return L.json(res, 200, { url });
 };
