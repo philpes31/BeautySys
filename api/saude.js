@@ -1,4 +1,3 @@
-
 // GET /api/saude — diz se as funções do servidor estão no ar e quais configurações já existem.
 // Mostra só "configurado / faltando" (nunca o valor). Serve para você conferir a Vercel sem abrir o painel.
 const L = require('./_lib');
