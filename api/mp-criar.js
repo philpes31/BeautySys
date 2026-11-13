@@ -51,6 +51,9 @@ module.exports = async (req, res) => {
     return L.json(res, 502, { erro: 'O Mercado Pago recusou criar o pagamento' + (r.status ? ' (erro ' + r.status + (motivo ? ': ' + motivo : '') + ')' : '') + '. Se continuar, avise o suporte.' });
   }
   try { await L.rpcServico('mp_gravar_link', { p_id: id, p_link: url }); }
-  catch (e) { return L.json(res, 502, { erro: 'Não foi possível guardar o link do pagamento.' }); }
+  catch (e) {
+    console.error('mp-criar: mp_gravar_link falhou', e.status, e.message);
+    return L.json(res, 502, { erro: 'Não foi possível guardar o link do pagamento (erro ' + (e.status || '?') + ': ' + String(e.message || '').slice(0, 140) + '). Avise o suporte.' });
+  }
   return L.json(res, 200, { url });
 };
