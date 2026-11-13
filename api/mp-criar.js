@@ -43,7 +43,13 @@ module.exports = async (req, res) => {
   };
   const r = await L.mp('/checkout/preferences', { method: 'POST', body: JSON.stringify(pref) });
   const url = r.dados && r.dados.init_point;
-  if (!r.ok || !url) return L.json(res, 502, { erro: 'O Mercado Pago não respondeu. Tente de novo em instantes.' });
+  if (!r.ok || !url) {
+    // Mostra o motivo que o Mercado Pago deu (nunca contém chaves) para dar para corrigir sem adivinhar.
+    const d = r.dados || {}, causa = Array.isArray(d.cause) && d.cause[0] ? (d.cause[0].description || d.cause[0].code) : '';
+    const motivo = String(causa || d.message || d.error || '').slice(0, 160);
+    console.error('mp-criar: MP respondeu', r.status, JSON.stringify(d).slice(0, 400));
+    return L.json(res, 502, { erro: 'O Mercado Pago recusou criar o pagamento' + (r.status ? ' (erro ' + r.status + (motivo ? ': ' + motivo : '') + ')' : '') + '. Se continuar, avise o suporte.' });
+  }
   try { await L.rpcServico('mp_gravar_link', { p_id: id, p_link: url }); }
   catch (e) { return L.json(res, 502, { erro: 'Não foi possível guardar o link do pagamento.' }); }
   return L.json(res, 200, { url });
