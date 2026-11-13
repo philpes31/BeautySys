@@ -16,7 +16,7 @@ module.exports = async (req, res) => {
   // 1) Quem é e o que pode ver: a leitura passa pela segurança do banco (RLS) com o login da própria pessoa.
   let g;
   try {
-    const r = await fetch(base + '/rest/v1/pagamentos?select=id,valor,status,vencimento,link_pagamento,provedor&id=eq.' + id, {
+    const r = await fetch(base + '/rest/v1/pagamentos?select=id,valor,status,vencimento,link_pagamento,provedor,tipo,descricao&id=eq.' + id, {
       headers: { apikey: L.env('SUPABASE_ANON_KEY'), Authorization: auth }
     });
     if (r.status === 401 || r.status === 403) return L.json(res, 401, { erro: 'Sessão expirada. Entre de novo.' });
@@ -34,7 +34,7 @@ module.exports = async (req, res) => {
   const site = L.siteUrl(req);
   const venc = String(g.vencimento || '').split('-').reverse().join('/');
   const pref = {
-    items: [{ id, title: 'Agendio - mensalidade' + (venc ? ' (vence ' + venc + ')' : ''), quantity: 1, currency_id: 'BRL', unit_price: Math.round(valor * 100) / 100 }],
+    items: [{ id, title: g.tipo === 'mensagens' ? 'Agendio - ' + String(g.descricao || 'mensagens de WhatsApp').slice(0, 100) : 'Agendio - mensalidade' + (venc ? ' (vence ' + venc + ')' : ''), quantity: 1, currency_id: 'BRL', unit_price: Math.round(valor * 100) / 100 }],
     external_reference: id,
     notification_url: site + '/api/mp-webhook',
     back_urls: { success: site + '/?pg=ok', pending: site + '/?pg=pendente', failure: site + '/?pg=falha' },

@@ -1,6 +1,6 @@
 // GET /api/cron  (a Vercel chama uma vez por dia; veja vercel.json)
 // Gera as cobranças que vencem em até 7 dias, marca vencidos/atrasados, vence sinais não pagos,
-// limpa a lista de espera antiga, coloca os lembretes de amanhã na fila e envia a fila de WhatsApp (se as chaves existirem).
+// cobra as mensagens de WhatsApp enviadas no mês anterior, limpa a lista de espera antiga, coloca os lembretes de amanhã na fila e envia a fila de WhatsApp (se as chaves existirem).
 const L = require('./_lib');
 const W = require('./_wa');
 
@@ -12,12 +12,14 @@ module.exports = async (req, res) => {
   try {
     const situacoes = await L.rpcServico('cron_atualizar_situacoes', {});
     const geradas = await L.rpcServico('cron_gerar_cobrancas', {});
+    let msgsCobradas = null;
+    try { msgsCobradas = await L.rpcServico('cron_cobrar_mensagens', {}); } catch (e) { console.error('cron cobrar mensagens:', e.message); }
     let sinais = null, lembretes = null, whatsapp = null, espera = null;
     try { sinais = await L.rpcServico('sinal_expirar', {}); } catch (e) { console.error('cron sinal:', e.message); }
     try { lembretes = await L.rpcServico('cron_enfileirar_whatsapp', {}); } catch (e) { console.error('cron lembretes:', e.message); }
     try { espera = await L.rpcServico('cron_limpar_espera', {}); } catch (e) { console.error('cron espera:', e.message); }
     try { whatsapp = await W.enviarFila(); } catch (e) { console.error('cron whatsapp:', e.message); }
-    return L.json(res, 200, { ok: true, situacoes, cobrancas_geradas: geradas, sinais_expirados: sinais, lembretes_na_fila: lembretes, espera_removida: espera, whatsapp });
+    return L.json(res, 200, { ok: true, situacoes, cobrancas_geradas: geradas, cobrancas_mensagens: msgsCobradas, sinais_expirados: sinais, lembretes_na_fila: lembretes, espera_removida: espera, whatsapp });
   } catch (e) {
     console.error('cron:', e.message);
     return L.json(res, 500, { erro: 'Falha na rotina diária.' });
