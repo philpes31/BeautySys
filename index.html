@@ -20,6 +20,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Figtree:wght@400..800&display=swap">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
+<script src="pix.js"></script>
 <style>
 /* Visual "ateliê de cor": menu lateral ameixa, fundo pérola, títulos em serifa e a carta de tons de cabelo como assinatura. */
 :root{
@@ -2275,7 +2276,7 @@ async function salvarBloq(d){
 const linkPub=slug=>location.origin+'/a/'+slug;
 function blocoOnline(pode){
   if(S.semOnline)return `<div class="panel" style="margin-bottom:16px"><b>Agendamento online</b><p class="muted" style="margin:6px 0 0">Rode o arquivo 13-agendamento-online.sql (ou o agendio-TUDO.sql) no Supabase para ativar.</p></div>`;
-  const o=S.onl||{slug:'',on:false},oc=(S.agCfg&&S.agCfg.online)||{},sg=oc.sinal||{};
+  const o=S.onl||{slug:'',on:false},oc=(S.agCfg&&S.agCfg.online)||{},sg=oc.sinal||{},px=oc.pix||{},sgAtivo=!!sg.modo&&sg.modo!=='nenhum',sgModo=sgAtivo?sg.modo:(sg.modo_antes==='mp'?'mp':'pix');
   return `<h3 style="margin-top:0">Agendamento online</h3><form data-form="online" class="panel" style="margin-bottom:16px">
   <p class="muted" style="margin:0 0 8px;max-width:620px">A cliente abre o seu link, escolhe o serviço e vê só os horários livres, sem senha. O pedido chega na Agenda e você aceita ou recusa. Precisa de serviços e horários cadastrados abaixo.</p>
   <label class="chk"><input type="checkbox" name="on" ${o.on?'checked':''} ${pode?'':'disabled'}> Receber pedidos de agendamento online</label>
@@ -2286,11 +2287,20 @@ function blocoOnline(pode){
   <div><label for="on-rh">Cliente pode remarcar até (horas antes)</label><input id="on-rh" name="remarcar_h" type="number" min="1" max="72" value="${esc(oc.remarcar_h||24)}" ${pode?'':'disabled'}></div>
   <div><label for="on-passo">Intervalo entre horários (min)</label><select id="on-passo" name="passo" ${pode?'':'disabled'}>${[15,30,45,60,90,120].map(n=>`<option value="${n}" ${n===(Number(oc.passo)||60)?'selected':''}>${n} min</option>`).join('')}</select></div></div>
   <h4 style="margin:16px 0 4px">Sinal para garantir o horário</h4>
-  <label for="on-sm">Como cobrar</label><select id="on-sm" name="sinal_modo" ${pode?'':'disabled'}>${[['nenhum','Sem sinal'],['pix','Pix manual (a cliente vê o recado abaixo)'],['mp','Mercado Pago automático (a cliente paga na hora)']].map(([v,t])=>`<option value="${v}" ${v===(sg.modo||'nenhum')?'selected':''}>${t}</option>`).join('')}</select>
+  <label class="chk"><input type="checkbox" id="on-sa" name="sinal_ativo" ${sgAtivo?'checked':''} ${pode?'':'disabled'}> Cobrar sinal das clientes que agendam online</label>
+  <p class="muted" style="margin:2px 0 8px">Desligado, a cliente agenda sem pagar nada. Os valores abaixo ficam guardados para quando você ligar de novo.</p>
+  <div id="sinal-campos" ${sgAtivo?'':'hidden'}>
+  <label for="on-sm">Como cobrar</label><select id="on-sm" name="sinal_modo" ${pode?'':'disabled'}>${[['pix','Pix: a cliente vê o QR code e o código copia e cola'],['mp','Mercado Pago automático (a cliente paga na hora)']].map(([v,t])=>`<option value="${v}" ${v===sgModo?'selected':''}>${t}</option>`).join('')}</select>
   <div class="grid2"><div><label for="on-st">Tipo</label><select id="on-st" name="sinal_tipo" ${pode?'':'disabled'}><option value="fixo" ${sg.tipo!=='percentual'?'selected':''}>Valor fixo (R$)</option><option value="percentual" ${sg.tipo==='percentual'?'selected':''}>% do valor do serviço</option></select></div>
   <div><label for="on-sv">Valor</label><input id="on-sv" name="sinal_valor" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(sg.valor||'')}" ${pode?'':'disabled'}></div>
   <div><label for="on-se">Prazo para pagar (min)</label><input id="on-se" name="sinal_exp" type="number" min="10" max="240" value="${esc(sg.expira_min||30)}" ${pode?'':'disabled'}></div></div>
-  <p class="muted" style="margin:6px 0 0">No Mercado Pago, o horário fica reservado só durante o prazo; se a cliente não pagar, ele é liberado sozinho. O dinheiro cai direto na conta do seu Mercado Pago.</p>
+  <div id="pix-campos" ${sgModo==='pix'?'':'hidden'}>
+  <div class="grid2"><div><label for="on-pt">Tipo da chave Pix</label><select id="on-pt" name="pix_tipo" ${pode?'':'disabled'}>${[['cpf_cnpj','CPF ou CNPJ'],['celular','Celular'],['email','E-mail'],['aleatoria','Chave aleatória']].map(([v,t])=>`<option value="${v}" ${v===(px.tipo||'celular')?'selected':''}>${t}</option>`).join('')}</select></div>
+  <div><label for="on-pc">Chave Pix</label><input id="on-pc" name="pix_chave" maxlength="80" autocomplete="off" value="${esc(px.chave||'')}" ${pode?'':'disabled'}></div>
+  <div><label for="on-pn">Nome que aparece no Pix</label><input id="on-pn" name="pix_nome" maxlength="25" placeholder="Seu nome ou do salão" value="${esc(px.nome||'')}" ${pode?'':'disabled'}></div>
+  <div><label for="on-pd">Cidade</label><input id="on-pd" name="pix_cidade" maxlength="15" placeholder="Ex.: Recife" value="${esc(px.cidade||'')}" ${pode?'':'disabled'}></div></div>
+  <p class="muted" style="margin:6px 0 0">A cliente recebe o QR code e o código copia e cola já com o valor do sinal. O dinheiro cai direto na sua conta, sem taxa do Agendio. Depois de pagar, ela avisa você pelo WhatsApp.</p></div>
+  <p class="muted" style="margin:6px 0 0" id="sinal-mp-nota" ${sgModo==='mp'?'':'hidden'}>No Mercado Pago, o horário fica reservado só durante o prazo; se a cliente não pagar, ele é liberado sozinho. O dinheiro cai direto na conta do seu Mercado Pago.</p></div>
   <label class="chk"><input type="checkbox" name="cliente_pode" ${oc.cliente_pode===false?'':'checked'} ${pode?'':'disabled'}> A cliente pode remarcar ou cancelar pelo link do lembrete</label>
   <label for="on-av">Recado depois do pedido (taxa de agendamento, chave Pix…)</label><textarea id="on-av" name="aviso" rows="3" maxlength="400" ${pode?'':'disabled'} placeholder="Ex.: Para confirmar, envie a taxa de R$ 20 para a chave Pix 11 99999-0000.">${esc(oc.aviso||'')}</textarea>
   <p class="erro" id="a-erro" role="alert"></p>${pode?'<div class="acts" style="justify-content:flex-start"><button class="btn">Salvar</button></div>':''}</form>${blocoMp(pode)}`;
@@ -2313,12 +2323,17 @@ async function salvarOnline(d){
   if(slug&&!/^[a-z0-9][a-z0-9-]{2,39}$/.test(slug))throw erroUi('O endereço deve ter 3 a 40 letras minúsculas, números ou hífen.');
   if(on&&!servicosCat().length)throw erroUi('Cadastre ao menos um serviço antes de ligar o agendamento online.');
   if(on&&!Object.keys((S.agCfg&&S.agCfg.profissionais)||{}).length)throw erroUi('Salve o horário de trabalho de ao menos uma profissional antes de ligar.');
-  const sm=['nenhum','pix','mp'].includes(d.sinal_modo)?d.sinal_modo:'nenhum',sv=Math.max(0,Number(String(d.sinal_valor||'').replace(',','.'))||0),st=d.sinal_tipo==='percentual'?'percentual':'fixo';
+  const sAtivo=d.sinal_ativo==='on',sm0=['pix','mp'].includes(d.sinal_modo)?d.sinal_modo:'pix',sm=sAtivo?sm0:'nenhum',sv=Math.max(0,Number(String(d.sinal_valor||'').replace(',','.'))||0),st=d.sinal_tipo==='percentual'?'percentual':'fixo';
   if(sm!=='nenhum'&&!(sv>0))throw erroUi('Informe o valor do sinal.');
   if(sm!=='nenhum'&&st==='percentual'&&sv>100)throw erroUi('A porcentagem do sinal não pode passar de 100.');
   if(sm!=='nenhum'&&sv>0&&st==='fixo'&&sv<1)throw erroUi('O sinal mínimo é R$ 1,00.');
   if(sm==='mp'&&!(S.onl&&S.onl.mp))throw erroUi('Para cobrar o sinal automático, conecte antes o Mercado Pago do salão (logo abaixo).');
-  const cfg=Object.assign({},S.agCfg,{online:{passo:Number(d.passo)||60,dias_max:Math.min(120,Math.max(1,Math.round(Number(d.dias)||30))),antecedencia_h:Math.min(72,Math.max(0,Math.round(Number(d.ant)||0))),aviso:String(d.aviso||'').trim().slice(0,400),cliente_pode:d.cliente_pode==='on',remarcar_h:Math.min(72,Math.max(1,Math.round(Number(d.remarcar_h)||24))),sinal:{modo:sm,tipo:st,valor:sv,expira_min:Math.min(240,Math.max(10,Math.round(Number(d.sinal_exp)||30)))}}});
+  let pixCfg={};const chaveBruta=String(d.pix_chave||'').trim();
+  if(chaveBruta){const nk=window.AgendioPix?AgendioPix.normalizaChave(d.pix_tipo,chaveBruta):{ok:true,chave:chaveBruta};if(!nk.ok)throw erroUi(nk.erro);
+    pixCfg={tipo:d.pix_tipo||'celular',chave:nk.chave,nome:String(d.pix_nome||'').trim().slice(0,25),cidade:String(d.pix_cidade||'').trim().slice(0,15)}}
+  if(sm==='pix'&&!pixCfg.chave)throw erroUi('Informe a sua chave Pix para gerar o QR code do sinal.');
+  if(sm==='pix'&&(!pixCfg.nome||!pixCfg.cidade))throw erroUi('Informe o nome e a cidade que aparecem no Pix.');
+  const cfg=Object.assign({},S.agCfg,{online:{passo:Number(d.passo)||60,dias_max:Math.min(120,Math.max(1,Math.round(Number(d.dias)||30))),antecedencia_h:Math.min(72,Math.max(0,Math.round(Number(d.ant)||0))),aviso:String(d.aviso||'').trim().slice(0,400),cliente_pode:d.cliente_pode==='on',remarcar_h:Math.min(72,Math.max(1,Math.round(Number(d.remarcar_h)||24))),sinal:{modo:sm,modo_antes:sm0,tipo:st,valor:sv,expira_min:Math.min(240,Math.max(10,Math.round(Number(d.sinal_exp)||30)))},pix:pixCfg}});
   const r=await sb.from('tenants').update({slug:slug||null,online_ativo:on,agenda_config:cfg}).eq('id',S.ctx.tenant.id);
   if(r.error){
     if(r.error.code==='23505')throw erroUi('Esse endereço já está em uso. Escolha outro.');
@@ -3067,6 +3082,8 @@ document.addEventListener('change',e=>{
     if(A||B){$('a-dur').value=((A&&A.duracao)||0)+((B&&B.duracao)||0)||60;const v=$('a-val'),v2=$('a-val2'),pa=(A&&Number(A.preco))||0,pb=(B&&Number(B.preco))||0;if(v&&pa>0&&(!Number(v.value)||v.dataset.auto==='1')){v.value=pa;v.dataset.auto='1'}if(v2&&pb>0&&(!Number(v2.value)||v2.dataset.auto==='1')){v2.value=pb;v2.dataset.auto='1'}}
     atualizaParc()}
   else if(t.id==='bq-dia'){$('bq-h').hidden=t.checked}
+  else if(t.id==='on-sa'){const c=$('sinal-campos');if(c)c.hidden=!t.checked}
+  else if(t.id==='on-sm'){const a=$('pix-campos'),b=$('sinal-mp-nota');if(a)a.hidden=t.value!=='pix';if(b)b.hidden=t.value!=='mp'}
   else if(t.id==='wa-auto'){const v=t.checked;sb.from('tenants').update({whatsapp_auto:v}).eq('id',S.ctx.tenant.id).then(r=>{if(r.error){t.checked=!v;toast(falha(r.error),true)}else{S.onl.wa=v;toast(v?'Envio automático ligado.':'Envio automático desligado.')}})}
   else if(t.id==='pb-sv'){S.pb.sv=t.value;buscaSlots()}
   else if(t.id==='pb-pf'){S.pb.pf=t.value;buscaSlots()}

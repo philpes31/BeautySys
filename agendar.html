@@ -45,6 +45,8 @@ input:focus,textarea:focus,button:focus-visible{outline:3px solid color-mix(in s
 .fim{text-align:center;padding:40px 0}
 .logo{width:56px;height:56px;border-radius:14px;object-fit:cover;margin-bottom:10px;display:block}
 .periodo{flex-basis:100%;margin:8px 0 0;font-size:.85rem;color:var(--mu);font-weight:600}
+.pixqr{max-width:250px;margin:12px auto 6px;background:#fff;border-radius:12px;padding:8px}.pixqr svg{display:block;width:100%;height:auto}
+.pixcod{width:100%;box-sizing:border-box;font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;padding:8px;border-radius:10px;border:1px solid var(--bd,#ccc);background:transparent;color:inherit;resize:none;margin:4px 0 8px}
 .sinal-tag{display:inline-block;font-size:.78rem;color:var(--ac);font-weight:600;margin-top:2px}
 .dica{background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:12px 14px;margin:14px 0;text-align:left}
 .btn2{display:inline-block;font:inherit;font-weight:700;text-decoration:none;color:var(--ac);border:1.5px solid var(--ac);border-radius:12px;padding:12px 18px;min-height:48px;background:transparent;cursor:pointer;margin:6px 4px 0}
@@ -58,6 +60,7 @@ input:focus,textarea:focus,button:focus-visible{outline:3px solid color-mix(in s
 <div id="app" aria-live="polite"><p class="vazio" style="padding-top:40px">Carregando…</p></div>
 </main>
 <script src="/config.js"></script>
+<script src="/pix.js"></script>
 <script>
 (function(){
 'use strict';
@@ -207,12 +210,30 @@ function zap(texto){
   var w=String((S.salao&&S.salao.whatsapp)||(S.res&&S.res.whatsapp)||'').replace(/\D/g,'').replace(/^55/,'');
   return w.length>=10?'<a class="btn2" target="_blank" rel="noopener" href="https://wa.me/55'+w+'?text='+encodeURIComponent(texto||'Olá! Acabei de fazer um pedido de agendamento.')+'">Falar no WhatsApp</a>':'';
 }
+function blocoPix(r){
+  var p=r.pix;if(r.sinal_modo!=='pix'||!r.sinal_valor||!p||!p.chave||!window.AgendioPix)return '';
+  var code=AgendioPix.payload(p,r.sinal_valor),svg='';
+  try{svg=AgendioPix.qrSvg(code)}catch(e){}
+  return '<div class="dica pix"><b>Sinal de '+brl(r.sinal_valor)+' por Pix</b><br>Para garantir o horário, pague o sinal e depois avise o salão.'+
+    (svg?'<div class="pixqr">'+svg+'</div><p class="sub" style="margin:0 0 8px">Abra o app do seu banco, escolha Pix e leia o QR code.</p>':'')+
+    '<label for="pixcod" class="sub">Ou use o Pix copia e cola</label><textarea id="pixcod" class="pixcod" readonly rows="5">'+esc(code)+'</textarea>'+
+    '<button class="btn1" id="pixcopia" type="button">Copiar código Pix</button><p class="sub" style="margin:8px 0 0">Favorecido: '+esc(p.nome||'')+'</p></div>';
+}
+function ligaPix(){
+  var b=$('pixcopia');if(!b)return;
+  b.onclick=function(){
+    var t=$('pixcod'),ok=function(){b.textContent='Código copiado!';setTimeout(function(){b.textContent='Copiar código Pix'},2500)};
+    var velho=function(){try{t.focus();t.select();t.setSelectionRange(0,99999);document.execCommand('copy');ok()}catch(e){b.textContent='Toque no código e copie'}};
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t.value).then(ok,velho);else velho();
+  };
+}
 function fim(nome,erroPag){
   var x=S.salao.servicos[S.serv],r=S.res||{};
-  var sinal=r.sinal_modo==='pix'&&r.sinal_valor?'<div class="dica"><b>Sinal de '+brl(r.sinal_valor)+'</b><br>Para garantir o horário, pague o sinal conforme o recado abaixo e avise o salão.</div>':'';
+  var sinal=blocoPix(r)||(r.sinal_modo==='pix'&&r.sinal_valor?'<div class="dica"><b>Sinal de '+brl(r.sinal_valor)+'</b><br>Para garantir o horário, pague o sinal conforme o recado abaixo e avise o salão.</div>':'');
   var falha=erroPag?'<div class="dica"><b>O pagamento do sinal não abriu.</b><br>'+esc(erroPag)+'</div><button class="btn1" id="repagar" type="button">Tentar pagar o sinal de novo</button>':'';
   A.innerHTML='<div class="fim"><h2>Pedido enviado, '+esc(nome.split(' ')[0])+'.</h2><p>'+esc(x.nome)+' em '+esc(dataExtensa(S.dia))+' às '+esc(S.hora)+'.</p><p class="sub">O horário fica reservado para você. O salão vai confirmar pelo WhatsApp.</p>'+sinal+falha+(S.salao.aviso?'<p class="aviso" style="text-align:left">'+esc(S.salao.aviso)+'</p>':'')+'<p>'+zap('Olá! Fiz um pedido de '+x.nome+' para '+dataExtensa(S.dia)+' às '+S.hora+'.')+'</p></div>';
   var b=$('repagar');if(b)b.onclick=async function(){b.disabled=true;try{location.href=await pagarSinal(r.pedido_id)}catch(e){b.disabled=false;b.textContent=e.message}};
+  ligaPix();
   window.scrollTo(0,0);
 }
 // Volta do Mercado Pago: confirma o pagamento do sinal
