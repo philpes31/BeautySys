@@ -1825,11 +1825,28 @@ function telaEstoque(){
   if(ab==='fichas')return seg+av+telaFichas();
   const cats=[...new Set(P.map(p=>p.categoria))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
   const valor=P.reduce((t,p)=>t+(p.estoque>0?nEmb(p)*p.preco:0),0);
-  return seg+av+`<div class="bar"><input id="estBusca" type="search" placeholder="Buscar produto…" aria-label="Buscar produto" value="${esc(S.estBusca)}"><select id="estCat" aria-label="Categoria"><option value="">Todas as categorias</option>${cats.map(c=>`<option ${c===S.estCat?'selected':''}>${esc(c)}</option>`).join('')}</select><button class="btn" data-act="novoProd">Novo produto</button></div>
+  return seg+av+`<div class="bar"><input id="estBusca" type="search" placeholder="Buscar produto…" aria-label="Buscar produto" value="${esc(S.estBusca)}"><select id="estCat" aria-label="Categoria"><option value="">Todas as categorias</option>${cats.map(c=>`<option ${c===S.estCat?'selected':''}>${esc(c)}</option>`).join('')}</select><button class="btn ghost" data-act="listaCompras">Lista de compras</button><button class="btn" data-act="novoProd">Novo produto</button></div>
   <div class="stats"><div class="stat"><b>${P.length}</b><span>produtos</span></div><div class="stat"><b>${P.filter(emFalta).length}</b><span>em falta ou estoque baixo</span></div><div class="stat"><b>${P.filter(vencendo).length}</b><span>vencidos ou vencendo em 30 dias</span></div><div class="stat"><b>${brl(valor)}</b><span>valor em estoque</span></div></div>
   <div id="lista-est">${itensProdutos()}</div>`;
 }
 /* Produto: cadastro com cálculo de rendimento ao vivo */
+/* Lista de compras: produtos em falta ou abaixo do mínimo, por fornecedor */
+function textoCompras(L){
+  const g={};L.forEach(x=>{(g[x.p.fornecedor||'Sem fornecedor']=g[x.p.fornecedor||'Sem fornecedor']||[]).push(x)});
+  let t='Lista de compras - '+((S.ctx&&S.ctx.tenant&&S.ctx.tenant.nome)||'Salão')+'\n';
+  Object.keys(g).sort((a,b)=>a.localeCompare(b,'pt-BR')).forEach(f=>{t+='\n'+f+'\n';g[f].forEach(x=>{t+='- '+x.p.nome+': '+x.q+(x.q===1?' embalagem':' embalagens')+'\n'})});
+  return t;
+}
+function listaCompras(){
+  const L=S.produtos.filter(emFalta).map(p=>{const alvo=Math.max(1,(p.minimo||0)*2),q=Math.max(1,Math.ceil(alvo-Math.max(0,nEmb(p))-1e-9));return{p,q,custo:q*p.preco}}).sort((a,b)=>(a.p.fornecedor||'zzz').localeCompare(b.p.fornecedor||'zzz','pt-BR')||a.p.nome.localeCompare(b.p.nome,'pt-BR'));
+  if(!L.length){abrir('<h2>Lista de compras</h2><p>Nada em falta agora. Os produtos com estoque abaixo do mínimo aparecem aqui.</p><div class="acts"><button type="button" class="btn" data-act="fechar">Fechar</button></div>');return}
+  const tot=L.reduce((t,x)=>t+x.custo,0),txt=textoCompras(L);
+  abrir(`<h2>Lista de compras</h2><p class="muted">Quantidade sugerida para chegar ao dobro do estoque mínimo (ou 1 embalagem, se não houver mínimo).</p>
+  <div class="list">${L.map(x=>`<div class="item"><div class="grow"><div class="t">${esc(x.p.nome)}</div><div class="muted">${esc(x.p.fornecedor||'Sem fornecedor')} · tem ${Math.max(0,Math.round(nEmb(x.p)*100)/100)} emb.</div></div><div class="side"><b>${x.q} emb.</b><div class="muted">${brl(x.custo)}</div></div></div>`).join('')}</div>
+  <p style="margin:10px 0"><b>Total estimado: ${brl(tot)}</b></p>
+  <textarea id="cv-txt" rows="6" readonly aria-label="Texto da lista">${esc(txt)}</textarea>
+  <div class="acts"><button type="button" class="btn ghost" data-act="copiaConvite">Copiar lista</button><a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(txt)}">Enviar por WhatsApp</a></div>`);
+}
 function formProd(id){
   const p=id?S.produtos.find(x=>x.id===id):{nome:'',categoria:'',unidade:'g',conteudo:'',preco:'',uso:'',perda:'',minimo:'',fornecedor:'',validade:'',obs:''};if(id&&!p)return;
   const cats=[...new Set([...CAT_EST,...S.produtos.map(x=>x.categoria)])];
@@ -2989,6 +3006,7 @@ document.addEventListener('click',e=>{
     plCobrancas:()=>plRpc('plataforma_gerar_cobrancas',{},n=>n?n+(n===1?' cobrança criada.':' cobranças criadas.'):'Nenhuma cobrança nova.'),
     plSituacoes:()=>plRpc('plataforma_atualizar_situacoes',{},r=>`${r.saloes_vencidos} salão(ões) vencido(s) e ${r.cobrancas_atrasadas} cobrança(s) atrasada(s).`),novoConvite:()=>formConvite(),editMembro:()=>formMembro(id),delMembro:()=>pedirDelMembro(id),
     cancelaConvite:async()=>{try{const r=await sb.rpc('cancelar_convite',{p_id:id});if(r.error)throw r.error;await carregarEquipe();toast('Convite cancelado.')}catch(e){falha(e)}},
+    listaCompras:()=>listaCompras(),
     copiaConvite:async()=>{const t=$('cv-txt');try{await navigator.clipboard.writeText(t.value);toast('Mensagem copiada.')}catch(_){t.select();toast('Selecione e copie a mensagem.')}},
     tiraLogo:()=>{S.logoNovo=null;const pv=$('cf-prev');if(pv)pv.innerHTML='<span class="muted">Sem logotipo</span>';a.remove()},liberaSuporte:()=>formSuporte(),
     sair:async()=>{const dl=$('dlg');if(dl&&dl.open)dl.close();S.auth='entrar';S.recuperando=false;try{await sb.auth.signOut()}catch(_){}}
