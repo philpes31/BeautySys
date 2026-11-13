@@ -1,5 +1,4 @@
 {
   "crons": [{ "path": "/api/cron", "schedule": "0 10 * * *" }],
-  "rewrites": [{ "source": "/a/:slug", "destination": "/agendar.html" }],
-  "functions": { "api/*.js": { "maxDuration": 30 } }
+  "rewrites": [{ "source": "/a/:slug", "destination": "/agendar.html" }]
 }
