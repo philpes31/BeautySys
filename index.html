@@ -2300,12 +2300,12 @@ function blocoOnline(pode){
   <div id="pix-campos" ${sgModo==='pix'?'':'hidden'}>
   <div class="grid2"><div><label for="on-pt">Tipo da chave Pix</label><select id="on-pt" name="pix_tipo" ${pode?'':'disabled'}>${[['cpf_cnpj','CPF ou CNPJ'],['celular','Celular'],['email','E-mail'],['aleatoria','Chave aleatória']].map(([v,t])=>`<option value="${v}" ${v===(px.tipo||'celular')?'selected':''}>${t}</option>`).join('')}</select></div>
   <div><label for="on-pc">Chave Pix</label><input id="on-pc" name="pix_chave" maxlength="80" autocomplete="off" value="${esc(px.chave||'')}" ${pode?'':'disabled'}></div>
-  <div><label for="on-pn">Nome que aparece no Pix</label><input id="on-pn" name="pix_nome" maxlength="25" placeholder="Seu nome ou do salão" value="${esc(px.nome||'')}" ${pode?'':'disabled'}></div>
-  <div><label for="on-pd">Cidade</label><input id="on-pd" name="pix_cidade" maxlength="15" placeholder="Ex.: Recife" value="${esc(px.cidade||'')}" ${pode?'':'disabled'}></div></div>
+  <div><label for="on-pn">Nome que aparece no Pix</label><input id="on-pn" name="pix_nome" maxlength="25" placeholder="Seu nome ou do salão" value="${esc(px.nome||String((S.ctx&&S.ctx.tenant&&S.ctx.tenant.nome)||'').slice(0,25))}" ${pode?'':'disabled'}></div>
+  <div><label for="on-pd">Cidade</label><input id="on-pd" name="pix_cidade" maxlength="15" placeholder="Ex.: Blumenau" value="${esc(px.cidade||(S.ctx&&S.ctx.tenant&&S.ctx.tenant.cidade)||'')}" ${pode?'':'disabled'}></div></div>
   <p class="muted" style="margin:6px 0 0">A cliente recebe o QR code e o código copia e cola já com o valor do sinal. O dinheiro cai direto na sua conta, sem taxa do Agendio. Depois de pagar, ela avisa você pelo WhatsApp.</p></div>
   <p class="muted" style="margin:6px 0 0" id="sinal-mp-nota" ${sgModo==='mp'?'':'hidden'}>No Mercado Pago, o horário fica reservado só durante o prazo; se a cliente não pagar, ele é liberado sozinho. O dinheiro cai direto na conta do seu Mercado Pago.</p></div>
   <label class="chk"><input type="checkbox" name="cliente_pode" ${oc.cliente_pode===false?'':'checked'} ${pode?'':'disabled'}> A cliente pode remarcar ou cancelar pelo link do lembrete</label>
-  <label for="on-av">Recado depois do pedido (taxa de agendamento, chave Pix…)</label><textarea id="on-av" name="aviso" rows="3" maxlength="400" ${pode?'':'disabled'} placeholder="Ex.: Para confirmar, envie a taxa de R$ 20 para a chave Pix 11 99999-0000.">${esc(oc.aviso||'')}</textarea>
+  <label for="on-av">Recado extra para a cliente, depois do pedido (opcional)</label><textarea id="on-av" name="aviso" rows="3" maxlength="400" ${pode?'':'disabled'} placeholder="Ex.: Chegue 10 minutos antes. Cancelamentos até 24 h antes.">${esc(oc.aviso||'')}</textarea>
   <p class="erro" id="a-erro" role="alert"></p>${pode?'<div class="acts" style="justify-content:flex-start"><button class="btn">Salvar</button></div>':''}</form>${blocoMp(pode)}`;
 }
 function blocoMp(pode){
@@ -2335,7 +2335,8 @@ async function salvarOnline(d){
   if(chaveBruta){const nk=window.AgendioPix?AgendioPix.normalizaChave(d.pix_tipo,chaveBruta):{ok:true,chave:chaveBruta};if(!nk.ok)throw erroUi(nk.erro);
     pixCfg={tipo:d.pix_tipo||'celular',chave:nk.chave,nome:String(d.pix_nome||'').trim().slice(0,25),cidade:String(d.pix_cidade||'').trim().slice(0,15)}}
   if(sm==='pix'&&!pixCfg.chave)throw erroUi('Informe a sua chave Pix para gerar o QR code do sinal.');
-  if(sm==='pix'&&(!pixCfg.nome||!pixCfg.cidade))throw erroUi('Informe o nome e a cidade que aparecem no Pix.');
+  if(sm==='pix'&&!pixCfg.nome){const e=$('on-pn');if(e){e.focus();e.scrollIntoView({block:'center'})}throw erroUi('Falta preencher o campo "Nome que aparece no Pix" (logo acima da caixa de recado). Pode ser o seu nome ou o do salão.')}
+  if(sm==='pix'&&!pixCfg.cidade){const e=$('on-pd');if(e){e.focus();e.scrollIntoView({block:'center'})}throw erroUi('Falta preencher o campo "Cidade" (logo acima da caixa de recado). Exemplo: Blumenau.')}
   const cfg=Object.assign({},S.agCfg,{online:{passo:Number(d.passo)||60,dias_max:Math.min(120,Math.max(1,Math.round(Number(d.dias)||30))),antecedencia_h:Math.min(72,Math.max(0,Math.round(Number(d.ant)||0))),aviso:String(d.aviso||'').trim().slice(0,400),cliente_pode:d.cliente_pode==='on',remarcar_h:Math.min(72,Math.max(1,Math.round(Number(d.remarcar_h)||24))),sinal:{modo:sm,modo_antes:sm0,tipo:st,valor:sv,expira_min:Math.min(240,Math.max(10,Math.round(Number(d.sinal_exp)||30)))},pix:pixCfg}});
   const r=await sb.from('tenants').update({slug:slug||null,online_ativo:on,agenda_config:cfg}).eq('id',S.ctx.tenant.id);
   if(r.error){
