@@ -321,11 +321,16 @@ async function gerenciar(tk){
   if(!a){A.innerHTML='<header><h1>Link inválido</h1><p class="sub">Este link não existe mais ou está incorreto. Fale diretamente com o salão.</p></header>';return}
   document.title='Seu horário · '+a.salao;
   var cab='<header><h1>'+esc(a.salao)+'</h1><p class="sub">Olá, '+esc(a.nome)+'! Este é o seu horário.</p></header><section>'+cartao(a);
+  var conf=a.status==='confirmado'?'<div class="dica ok-conf"><b>Presença confirmada.</b> Esperamos você!</div>':a.status==='agendado'?'<p><button type="button" class="btn1" id="g-conf">Confirmar presença</button></p><p class="erro" id="g-conf-erro" role="alert"></p>':'';
+  function ligaConf(){var b=$('g-conf');if(!b)return;b.onclick=async function(){b.disabled=true;$('g-conf-erro').textContent='';
+    try{await rpc('publico_confirmar',{p_slug:SLUG,p_token:tk});var p=b.parentNode;p.outerHTML='<div class="dica ok-conf"><b>Presença confirmada.</b> Esperamos você!</div>';var e=$('g-conf-erro');if(e)e.remove()}
+    catch(e){b.disabled=false;$('g-conf-erro').textContent=e.message}}}
   if(a.status==='cancelado'){A.innerHTML=cab+'<p class="sub">Este horário foi cancelado.</p><p>'+waG(a,'Olá! Gostaria de marcar um novo horário.')+'</p></section>';return}
-  if(!a.pode){A.innerHTML=cab+'<div class="dica">'+esc(a.motivo||'Fale com o salão para alterar este horário.')+'</div><p>'+waG(a,'Olá! Preciso alterar o meu horário de '+a.servico+' em '+dataExtensa(a.data)+' às '+a.hora+'.')+'</p></section>';return}
-  A.innerHTML=cab+'<p class="leg">Você pode remarcar ou cancelar até '+esc(a.limite_h)+' h antes do horário.</p>'+
+  if(!a.pode){A.innerHTML=cab+conf+'<div class="dica">'+esc(a.motivo||'Fale com o salão para alterar este horário.')+'</div><p>'+waG(a,'Olá! Preciso alterar o meu horário de '+a.servico+' em '+dataExtensa(a.data)+' às '+a.hora+'.')+'</p></section>';ligaConf();return}
+  A.innerHTML=cab+conf+'<p class="leg">Você pode remarcar ou cancelar até '+esc(a.limite_h)+' h antes do horário.</p>'+
     '<p><button type="button" class="btn1" id="g-rem">Remarcar</button> <button type="button" class="btn2" id="g-can">Cancelar horário</button></p>'+
     '<div id="g-area"></div></section>';
+  ligaConf();
   $('g-can').onclick=function(){
     $('g-area').innerHTML='<div class="dica"><b>Cancelar este horário?</b><br>O horário fica livre para outras pessoas.</div><button type="button" class="btn1" id="g-can-ok">Sim, cancelar</button> <button type="button" class="btn2" id="g-can-nao">Voltar</button><p class="erro" id="g-erro" role="alert"></p>';
     $('g-can-nao').onclick=function(){$('g-area').innerHTML=''};
