@@ -2208,7 +2208,7 @@ function linhaAg(a){
   const c=cli(a.clienteId)||{nome:'(cliente removida)'};
   const tag=a.status==='confirmado'?' <span class="tag ok">Confirmado</span>':inativo(a)?` <span class="tag late">${a.cancCli&&a.status==='cancelado'?'Cancelado pela cliente':STATUS_ROT[a.status]}</span>`:(a.remarcadoEm?' <span class="tag ok">Remarcado pela cliente</span>':'');
   return `<div class="item"${inativo(a)?' style="opacity:.62"':''}><div class="side-val" style="min-width:56px">${esc(a.hora||'—')}</div>${avatar(c.nome)}<div class="grow"><div class="t">${esc(c.nome)}${tag}</div><div class="muted">${esc(procTxt(a))}${a.profissional?' · '+esc(a.profissional):''}</div></div>
-  <div class="item-acts">${inativo(a)?'':btnLembrete(a)+btnTaxa(a)}${btnStatus(a)}<button class="btn ghost sm" data-act="editAtend" data-id="${esc(a.id)}">Editar</button></div></div>`;
+  <div class="item-acts">${inativo(a)?'':btnLembrete(a)+btnTaxa(a)+btnAvalia(a)}${btnStatus(a)}<button class="btn ghost sm" data-act="editAtend" data-id="${esc(a.id)}">Editar</button></div></div>`;
 }
 function telaInicio(){
   const h=hoje(),mes=h.slice(0,7),mm=h.slice(5,7);
