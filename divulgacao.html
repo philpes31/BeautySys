@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Agendio | Agenda e gestão para salões de beleza</title>
+<meta name="description" content="Sua cliente agenda sozinha pelo celular, paga o sinal por Pix e recebe lembrete. Você controla comissão, caixa e estoque. Teste grátis.">
+<meta name="theme-color" content="#2a1722">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Figtree:wght@400..800&display=swap">
+<style>
+/* Layout: cabeçalho simples, abertura em duas colunas (texto + a tela real de agendamento da cliente),
+   recursos agrupados por momento (antes, durante, depois), faixa escura de passos, planos, perguntas. */
+:root{
+  --bg:#f6f1f4;--surface:#ffffff;--ink:#27191f;--muted:#6e5d66;--line:#e6dbe1;
+  --accent:#9b2f58;--accent-hover:#832649;--accent-ink:#ffffff;--accent-soft:#f6e7ee;
+  --band:#2a1722;--band-ink:#f3e8ee;--band-muted:#c3adb9;--gold:#c9a46c;--ok:#23704b;--ok-soft:#e0f1e8;
+  --font-display:"Instrument Serif",Georgia,"Times New Roman",serif;
+  --font-body:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --shadow:0 24px 60px -28px rgba(42,23,34,.45);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161017;--surface:#211a20;--ink:#f3eaef;--muted:#ab9aa3;--line:#372c33;
+  --accent:#d9628f;--accent-hover:#e57ba3;--accent-ink:#1a0f16;--accent-soft:#3a2030;
+  --band:#0f090d;--band-ink:#f3e8ee;--band-muted:#b9a3af;--ok:#6fcf9b;--ok-soft:#1f3329;--shadow:0 24px 60px -28px rgba(0,0,0,.8);color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#161017;--surface:#211a20;--ink:#f3eaef;--muted:#ab9aa3;--line:#372c33;
+  --accent:#d9628f;--accent-hover:#e57ba3;--accent-ink:#1a0f16;--accent-soft:#3a2030;
+  --band:#0f090d;--band-ink:#f3e8ee;--band-muted:#b9a3af;--ok:#6fcf9b;--ok-soft:#1f3329;--shadow:0 24px 60px -28px rgba(0,0,0,.8);color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--font-display);font-weight:400;margin:0;text-wrap:balance;letter-spacing:-.01em;line-height:1.05}
+h1{font-size:clamp(40px,7vw,72px)}
+h2{font-size:clamp(30px,4.6vw,46px)}
+h3{font-size:24px}
+p{margin:0}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:6px}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+section{padding-block:clamp(56px,9vw,104px)}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 24px;border-radius:12px;background:var(--accent);color:var(--accent-ink);font-weight:700;text-decoration:none;border:2px solid var(--accent);transition:background .15s}
+.btn:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--accent);background:transparent}
+.btn.sm{min-height:40px;padding:0 16px;font-size:14px;border-radius:10px}
+
+/* cabeçalho */
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:18px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-size:26px;text-decoration:none}
+.mono{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--gold);color:#2a1722;font-size:18px}
+.nav{display:flex;align-items:center;gap:22px}
+.nav a:not(.btn){text-decoration:none;font-weight:600;font-size:15px;color:var(--muted)}
+.nav a:not(.btn):hover{color:var(--ink)}
+
+/* abertura */
+.hero{padding-top:clamp(20px,5vw,48px)}
+.hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(32px,6vw,72px);align-items:center}
+.hero-grid>*{min-width:0}
+.lead{font-size:clamp(18px,2.2vw,21px);color:var(--muted);margin-top:22px;max-width:34em}
+.cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
+.small{font-size:14px;color:var(--muted);margin-top:14px}
+
+/* tela de exemplo da cliente */
+.demo{display:flex;flex-direction:column;align-items:center;gap:12px}
+.phone{width:min(100%,340px);background:var(--surface);border:1px solid var(--line);border-radius:30px;padding:20px 18px 18px;box-shadow:var(--shadow)}
+.ph-h{font-family:var(--font-display);font-size:26px;line-height:1.1}
+.ph-s{font-size:13.5px;color:var(--muted);margin:2px 0 14px}
+.cal{border:1.5px solid var(--line);border-radius:16px;padding:10px 10px 12px}
+.cal-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;font-weight:700;font-size:15px}
+.cal-top span{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);color:var(--muted);font-weight:400}
+.cal-sem,.cal-mes{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-sem i{font-style:normal;text-align:center;font-size:11px;font-weight:700;color:var(--muted)}
+.cal-mes button,.cal-mes b{aspect-ratio:1;display:grid;place-items:center;border-radius:10px;font:inherit;font-size:14px;font-weight:500;border:1.5px solid transparent;background:transparent;color:var(--ink);padding:0;font-variant-numeric:tabular-nums}
+.cal-mes b{color:var(--muted);opacity:.38;font-weight:500}
+.cal-mes button{cursor:pointer}
+.cal-mes button:hover{border-color:var(--accent)}
+.cal-mes button.hoje{border-color:var(--accent);color:var(--accent);font-weight:800}
+.cal-mes button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.ph-d{font-size:13.5px;font-weight:700;margin:12px 0 8px}
+.chips{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.chips button{min-height:38px;border-radius:10px;border:1.5px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-size:14px;font-weight:600;cursor:pointer;font-variant-numeric:tabular-nums}
+.chips button:hover{border-color:var(--accent)}
+.chips button[aria-pressed=true]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.ph-ok{margin-top:12px;min-height:44px;border-radius:12px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;font-size:15px}
+.cap{font-size:13px;color:var(--muted);text-align:center}
+
+/* resultados */
+.res{background:var(--surface);border-block:1px solid var(--line)}
+.res-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(24px,4vw,48px)}
+.res-grid>*{min-width:0}
+.res h3{margin-bottom:8px}
+.res p{color:var(--muted)}
+
+/* recursos por momento */
+.sec-h{max-width:640px;margin-bottom:clamp(28px,5vw,48px)}
+.sec-h p{color:var(--muted);margin-top:14px;font-size:18px}
+.mom{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(20px,3vw,32px)}
+.mom>*{min-width:0}
+.mom-c{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:26px 24px}
+.mom-c h3{margin-bottom:4px}
+.mom-c>p{color:var(--muted);font-size:14.5px;margin-bottom:16px}
+.mom-c ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+.mom-c li b{display:block;font-size:15.5px}
+.mom-c li span{display:block;font-size:14.5px;color:var(--muted)}
+
+/* passos (sequência real) */
+.band{background:var(--band);color:var(--band-ink)}
+.band .sec-h p{color:var(--band-muted)}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(20px,3vw,40px);list-style:none;margin:0;padding:0;counter-reset:p}
+.steps li{counter-increment:p;min-width:0}
+.steps li::before{content:counter(p);display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--gold);color:#2a1722;font-family:var(--font-display);font-size:22px;margin-bottom:14px}
+.steps b{display:block;font-size:19px;margin-bottom:4px}
+.steps span{color:var(--band-muted)}
+.band .cta{margin-top:36px}
+.band .btn.ghost{color:var(--band-ink);border-color:rgba(255,255,255,.25)}
+.band .btn.ghost:hover{border-color:var(--gold)}
+
+/* planos */
+.planos{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.planos>*{min-width:0}
+.plano{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:24px 22px;display:flex;flex-direction:column}
+.plano.dest{border:2px solid var(--accent)}
+.plano .tag{align-self:flex-start;font-size:12.5px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:3px 10px;margin-bottom:10px}
+.plano .tag.vz{visibility:hidden}
+.plano h3{font-size:28px}
+.preco{margin:10px 0 2px;font-size:34px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.preco small{font-size:15px;font-weight:600;color:var(--muted);letter-spacing:0}
+.plano .for{font-size:14px;color:var(--muted);margin-bottom:16px}
+.plano ul{list-style:none;margin:0 0 20px;padding:0;display:flex;flex-direction:column;gap:9px;font-size:14.5px;flex:1}
+.plano li{display:flex;gap:9px;align-items:baseline}
+.plano li::before{content:"✓";color:var(--ok);font-weight:800;flex:none}
+.plano li.mais{font-weight:700}
+.plano .btn{width:100%}
+.nota{margin-top:22px;padding:16px 18px;border-radius:14px;background:var(--ok-soft);color:var(--ink);font-size:15px}
+
+/* perguntas */
+.faq{max-width:760px}
+details{border-bottom:1px solid var(--line);padding:18px 0}
+summary{cursor:pointer;font-weight:700;font-size:17px;list-style:none;display:flex;justify-content:space-between;gap:16px;align-items:center}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-size:24px;font-weight:400;color:var(--accent);flex:none;line-height:1}
+details[open] summary::after{content:"–"}
+details p{margin-top:10px;color:var(--muted);max-width:60ch}
+
+/* final */
+.fim{text-align:center}
+.fim h2{max-width:14em;margin:0 auto}
+.fim .cta{justify-content:center}
+footer{border-top:1px solid var(--line);padding-block:28px;color:var(--muted);font-size:14px}
+.foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
+
+@media (max-width:960px){
+  .planos{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:820px){
+  .hero-grid,.res-grid,.mom,.steps{grid-template-columns:1fr}
+  .nav a:not(.btn){display:none}
+}
+@media (max-width:520px){
+  .planos{grid-template-columns:1fr}
+  .top .btn{padding:0 16px}
+  .cta .btn{width:100%}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.btn{transition:none}}
+.faixa{background:var(--accent);color:var(--accent-ink);text-align:center;padding:10px max(16px,env(safe-area-inset-left,0px));font-weight:600;font-size:15px}
+.faixa a{color:inherit;font-weight:800}
+.faixa[hidden]{display:none}
+.contato{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:center;margin-top:22px;color:var(--muted);font-size:15px}
+.contato[hidden]{display:none}
+.contato b{color:var(--ink)}
+.vazio{background:var(--surface);border:1px dashed var(--line);border-radius:16px;padding:24px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+
+<div class="faixa" id="faixa" hidden></div>
+<header class="wrap top">
+  <a class="brand" href="#topo" id="topo"><span class="mono" aria-hidden="true">A</span>Agendio</a>
+  <nav class="nav" aria-label="Seções">
+    <a href="#recursos">Recursos</a><a href="#planos">Planos</a><a href="#perguntas">Perguntas</a>
+    <a class="btn sm" data-cta data-curto href="/">Testar grátis</a>
+  </nav>
+</header>
+
+<main>
+<section class="hero" aria-labelledby="t-hero">
+  <div class="wrap hero-grid">
+    <div>
+      <h1 id="t-hero" data-k="titulo">Sua cliente agenda sozinha. Você só atende.</h1>
+      <p class="lead" data-k="subtitulo">O Agendio é o sistema de agenda e gestão para salões de beleza. Ele recebe os pedidos de horário a qualquer hora, cobra o sinal, lembra a cliente no dia anterior e mostra quanto cada profissional ganhou.</p>
+      <div class="cta">
+        <a class="btn" data-cta href="/" >Testar grátis</a>
+        <a class="btn ghost" href="#planos">Ver os planos</a>
+      </div>
+      <p class="small">Você cria a conta sem pagar nada e usa pelo celular ou pelo computador.</p>
+    </div>
+    <div class="demo">
+      <div class="phone" id="demo" aria-label="Exemplo interativo da tela de agendamento da cliente">
+        <div class="ph-h">Studio Aurora</div>
+        <p class="ph-s">Escolha o dia e o horário</p>
+        <div class="cal">
+          <div class="cal-top"><span aria-hidden="true">‹</span>Novembro de 2026<span aria-hidden="true">›</span></div>
+          <div class="cal-sem" aria-hidden="true"><i>D</i><i>S</i><i>T</i><i>Q</i><i>Q</i><i>S</i><i>S</i></div>
+          <div class="cal-mes" id="demo-dias"></div>
+        </div>
+        <p class="ph-d" id="demo-data">Quarta-feira, 18 de novembro</p>
+        <div class="chips" id="demo-horas"></div>
+        <div class="ph-ok" id="demo-ok">Pedir este horário</div>
+      </div>
+      <p class="cap">Exemplo da página que sua cliente abre. Toque nos dias e nos horários.</p>
+    </div>
+  </div>
+</section>
+
+<section class="res" aria-label="O que muda no salão">
+  <div class="wrap res-grid">
+    <div><h3>Agenda cheia sem esforço</h3><p>Cada salão tem um link próprio. A cliente escolhe o serviço, o dia e o horário livre pelo celular, sem esperar você responder.</p></div>
+    <div><h3>Menos faltas</h3><p>O lembrete chega no dia anterior e a cliente confirma presença com um toque. Quem não puder vir remarca sozinha e libera o horário.</p></div>
+    <div><h3>Contas em dia</h3><p>Comissão, vales, caixa do dia e despesas ficam no mesmo lugar. No fim do mês você sabe quanto entrou e quanto pagar a cada profissional.</p></div>
+  </div>
+</section>
+
+<section id="recursos" aria-labelledby="t-rec">
+  <div class="wrap">
+    <div class="sec-h">
+      <h2 id="t-rec">Ajuda em todas as etapas do atendimento</h2>
+      <p>Do primeiro contato até o fechamento do mês, tudo o que o salão faz no dia a dia.</p>
+    </div>
+    <div class="mom">
+      <div class="mom-c">
+        <h3>Antes do horário</h3><p>Atrair e garantir a cliente.</p>
+        <ul>
+          <li><b>Agendamento online com link próprio</b><span>Calendário do mês inteiro, horários livres por profissional e respeito ao almoço e às folgas.</span></li>
+          <li><b>Sinal por Pix com QR code</b><span>A cliente vê o QR e o Pix copia e cola com o valor já preenchido. Você liga ou desliga quando quiser.</span></li>
+          <li><b>Lista de espera</b><span>Se o horário que ela queria está cheio, ela entra na fila e você chama quando abrir uma vaga.</span></li>
+          <li><b>Lembrete e confirmação</b><span>Aviso por WhatsApp no dia anterior, com confirmação de presença, remarcação e cancelamento pelo link.</span></li>
+        </ul>
+      </div>
+      <div class="mom-c">
+        <h3>No atendimento</h3><p>Organizar o dia da equipe.</p>
+        <ul>
+          <li><b>Agenda por semana, mês ou lista</b><span>Dois procedimentos no mesmo horário, duração de cada serviço e bloqueio de horários.</span></li>
+          <li><b>Ficha de cada cliente</b><span>Histórico, anotações, aniversário e telefone. Cadastros repetidos podem ser juntados.</span></li>
+          <li><b>Pacotes e fidelidade</b><span>Venda pacotes de sessões e acompanhe o saldo de cada cliente.</span></li>
+          <li><b>Estoque e fichas técnicas</b><span>Controle os produtos e quanto cada serviço consome.</span></li>
+          <li><b>Equipe com permissões</b><span>Cada pessoa vê só o que o seu perfil permite.</span></li>
+        </ul>
+      </div>
+      <div class="mom-c">
+        <h3>Depois do atendimento</h3><p>Receber, pagar e fazer a cliente voltar.</p>
+        <ul>
+          <li><b>Comissão e vales</b><span>O sistema calcula quanto cada profissional ganhou e desconta os adiantamentos.</span></li>
+          <li><b>Caixa do dia e despesas</b><span>Entradas por forma de pagamento, fechamento diário e relatórios do mês.</span></li>
+          <li><b>Retornos e aniversariantes</b><span>Veja quem não volta há semanas e quem faz aniversário para chamar de novo.</span></li>
+          <li><b>Pedido de avaliação e indicação</b><span>Agradeça e peça avaliação em um toque. Clientes indicadas por amigas ficam registradas.</span></li>
+          <li><b>Lista de compras</b><span>Os produtos que estão acabando viram uma lista pronta para enviar.</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band" aria-labelledby="t-passos">
+  <div class="wrap">
+    <div class="sec-h">
+      <h2 id="t-passos">Comece a receber pedidos hoje</h2>
+      <p>Não precisa instalar nada nem ter conhecimento de tecnologia.</p>
+    </div>
+    <ol class="steps">
+      <li><b>Crie a conta do salão</b><span>Informe o nome do salão e o seu e-mail. Os dias grátis começam na hora.</span></li>
+      <li><b>Cadastre serviços e horários</b><span>Coloque os serviços com preço e duração, e os dias e horários de cada profissional.</span></li>
+      <li><b>Compartilhe o seu link</b><span>Cole no perfil do Instagram e no WhatsApp. Os pedidos aparecem na sua agenda.</span></li>
+    </ol>
+    <div class="cta">
+      <a class="btn" data-cta href="/">Criar o meu salão</a>
+    </div>
+  </div>
+</section>
+
+<section id="planos" aria-labelledby="t-planos">
+  <div class="wrap">
+    <div class="sec-h">
+      <h2 id="t-planos">Um plano para o tamanho do seu salão</h2>
+      <p id="planos-sub">Cada plano inclui tudo o que o anterior tem.</p>
+    </div>
+    <div class="planos" id="planos-lista" aria-live="polite"><p class="vazio">Carregando os planos…</p></div>
+    <p class="nota">Enviar o lembrete ou o agradecimento pelo botão, na hora, não custa nada em nenhum plano. Só o envio automático, nos planos que o incluem, é cobrado por mensagem.</p>
+  </div>
+</section>
+
+<section id="perguntas" aria-labelledby="t-faq" style="padding-top:0">
+  <div class="wrap faq">
+    <div class="sec-h"><h2 id="t-faq">Perguntas frequentes</h2></div>
+    <div id="faq-lista"></div>
+  </div>
+</section>
+
+<section class="fim" aria-labelledby="t-fim" style="padding-top:0">
+  <div class="wrap">
+    <h2 id="t-fim">Seu salão com a agenda organizada ainda esta semana</h2>
+    <div class="cta">
+      <a class="btn" data-cta href="/">Testar grátis</a>
+      <a class="btn ghost" id="zap" href="#" hidden target="_blank" rel="noopener">Falar no WhatsApp</a>
+    </div>
+    <p class="contato" id="contato" hidden></p>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap foot"><span>Agendio · agenda e gestão para salões de beleza</span><a href="#topo">Voltar ao topo</a></div>
+</footer>
+
+
+<script src="config.js"></script>
+<script>
+(function(){
+  var C=window.SALAO_CONFIG||{},$=function(i){return document.getElementById(i)};
+  var esc=function(t){return String(t==null?'':t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+  var brl=function(v){return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})};
+  var ENTRAR=(C.siteUrl||'/')||'/';
+  var FAQ_PADRAO=[
+    {p:'Preciso pagar para começar?',r:'Não. Você cria a conta e usa o sistema durante o período de teste sem pagar. Se precisar de mais tempo para decidir, é possível pedir uma extensão do teste.'},
+    {p:'Minha cliente precisa baixar algum aplicativo?',r:'Não. Ela abre o seu link no navegador do celular, escolhe o dia e o horário e pronto. Para você, o Agendio também pode ser instalado na tela inicial do celular, como um aplicativo.'},
+    {p:'Como funciona a cobrança do sinal?',r:'Você escolhe entre um valor fixo ou uma porcentagem do serviço. A cliente vê o QR code e o Pix copia e cola, e o dinheiro cai direto na sua conta. Se o salão preferir, o sinal também pode ser cobrado pelo Mercado Pago, com confirmação automática. O sinal é opcional e você liga ou desliga quando quiser.'},
+    {p:'O WhatsApp tem custo?',r:'Enviar mensagens pelo botão, uma a uma, é grátis. O envio automático de lembretes faz parte do plano com WhatsApp automático e cada mensagem enviada é cobrada, conforme o valor do plano. O envio automático usa a API oficial do WhatsApp Business, que exige configuração própria.'},
+    {p:'Os dados do meu salão ficam seguros?',r:'Cada salão enxerga apenas os seus próprios dados, e cada pessoa da equipe acessa só o que o perfil dela permite. Você também pode apagar os dados pessoais de uma cliente quando ela pedir, de acordo com a LGPD.'},
+    {p:'Posso usar no computador e no celular?',r:'Sim. O sistema se adapta à tela e funciona no celular, no tablet e no computador, com a mesma conta.'}
+  ];
+  var REC={estoque:'Estoque e fichas técnicas',financeiro:'Despesas e relatórios',comissoes:'Comissão por profissional e vales',mensagens:'Textos das mensagens editáveis',whatsapp_auto:'WhatsApp automático: lembretes e avisos enviados sozinhos'};
+  var BASE=['Agenda e cadastro de clientes','Agendamento online com link próprio','Sinal por Pix com QR code','Lista de espera','Pacotes e fidelidade'];
+  var temRec=function(p,k){var r=p.recursos||{};return k==='whatsapp_auto'?r[k]===true:r[k]!==false};
+  var linkOk=function(u){return /^(https:\/\/|#|\/)[^\s<>"']*$/.test(u||'')};
+  function planos(L){
+    var box=$('planos-lista');
+    if(!L||!L.length){box.innerHTML='<p class="vazio">Entre no sistema para ver os planos disponíveis.</p>';return}
+    var trials=L.map(function(p){return Number(p.trial_dias)||0}),mn=Math.min.apply(null,trials),mx=Math.max.apply(null,trials);
+    $('planos-sub').textContent=(mx>0?(mn===mx?'Todos começam com '+mn+' dias grátis. ':'Teste grátis de '+mn+' a '+mx+' dias, conforme o plano. '):'')+'Cada plano inclui tudo o que o anterior tem.';
+    var iDest=-1;L.forEach(function(p,i){if(iDest<0&&temRec(p,'whatsapp_auto'))iDest=i});
+    box.innerHTML=L.map(function(p,i){
+      var ant=i>0?L[i-1]:null,li=[];
+      li.push(p.max_usuarios+(Number(p.max_usuarios)===1?' usuário':' usuários')+' e '+p.max_profissionais+(Number(p.max_profissionais)===1?' profissional':' profissionais'));
+      if(ant)li.push('<li class="mais">Tudo do '+esc(ant.nome)+'</li>');else BASE.forEach(function(x){li.push(x)});
+      var extra=Object.keys(REC).filter(function(k){return temRec(p,k)&&(!ant||!temRec(ant,k))});
+      extra.forEach(function(k){li.push(REC[k])});
+      if(temRec(p,'whatsapp_auto')&&Number(p.preco_mensagem)>0)li.push(brl(p.preco_mensagem)+' por mensagem enviada, cobrado no mês seguinte');
+      var lis=li.map(function(x){return x.indexOf('<li')===0?x:'<li>'+esc(x)+'</li>'}).join('');
+      var d=i===iDest;
+      return '<article class="plano'+(d?' dest':'')+'"><span class="tag'+(d?'':' vz')+'">'+(d?'Lembretes automáticos':'.')+'</span><h3>'+esc(p.nome)+'</h3><div class="preco">'+brl(p.preco_mensal)+'<small> /mês</small></div><ul>'+lis+'</ul><a class="btn'+(d?'':' ghost')+'" data-cta href="'+esc(ENTRAR)+'">Testar grátis</a></article>';
+    }).join('');
+    ligaCta();
+  }
+  function faq(L){
+    var f=(L&&L.length)?L:FAQ_PADRAO;
+    $('faq-lista').innerHTML=f.map(function(x){return '<details><summary>'+esc(x.p)+'</summary><p>'+esc(x.r)+'</p></details>'}).join('');
+  }
+  var textoCta='Testar grátis',linkCta=ENTRAR;
+  function ligaCta(){document.querySelectorAll('[data-cta]').forEach(function(a){a.setAttribute('href',linkCta);if(a.getAttribute('target')==null&&/^https?:/.test(linkCta)&&linkCta.indexOf(location.origin)!==0){a.setAttribute('target','_blank');a.setAttribute('rel','noopener')}if(!a.hasAttribute('data-curto'))a.textContent=textoCta})}
+  function aplica(d){
+    var c=(d&&d.config)||{};
+    if(c.titulo)document.querySelector('[data-k=titulo]').textContent=c.titulo;
+    if(c.subtitulo)document.querySelector('[data-k=subtitulo]').textContent=c.subtitulo;
+    if(c.cta_texto)textoCta=c.cta_texto;
+    if(c.cta_link&&linkOk(c.cta_link))linkCta=c.cta_link;
+    var L=(d&&d.planos)||[];
+    if(!c.cta_texto){var t=L.map(function(p){return Number(p.trial_dias)||0}),mn=t.length?Math.min.apply(null,t):0;textoCta=mn>0?'Testar '+mn+' dias grátis':'Testar grátis'}
+    var fx=$('faixa');
+    if(c.faixa_ativa&&c.faixa){fx.innerHTML=esc(c.faixa)+(c.faixa_link&&linkOk(c.faixa_link)?' <a href="'+esc(c.faixa_link)+'">Saiba mais</a>':'');fx.hidden=false}else fx.hidden=true;
+    var partes=[];
+    if(c.whatsapp&&/^55\d{10,11}$/.test(c.whatsapp)){var z=$('zap');z.href='https://wa.me/'+c.whatsapp;z.hidden=false;var n=c.whatsapp.slice(2);partes.push('WhatsApp: <b>('+n.slice(0,2)+') '+n.slice(2,n.length-4)+'-'+n.slice(-4)+'</b>')}
+    if(c.email)partes.push('E-mail: <b>'+esc(c.email)+'</b>');
+    var ct=$('contato');if(partes.length){ct.innerHTML=partes.map(function(x){return '<span>'+x+'</span>'}).join('');ct.hidden=false}else ct.hidden=true;
+    ligaCta();planos(L);faq(c.faq);
+  }
+  aplica(null);planos([]);
+  if(C.url&&C.anonKey){
+    fetch(C.url+'/rest/v1/rpc/publico_site',{method:'POST',headers:{'Content-Type':'application/json',apikey:C.anonKey,Authorization:'Bearer '+C.anonKey},body:'{}'})
+      .then(function(r){if(!r.ok)throw 0;return r.json()}).then(aplica).catch(function(){$('planos-lista').innerHTML='<p class="vazio">Não foi possível carregar os planos agora. <a href="'+esc(ENTRAR)+'">Entre no sistema</a> para ver todos.</p>'});
+  }else $('planos-lista').innerHTML='<p class="vazio">Entre no sistema para ver os planos disponíveis.</p>';
+
+  // exemplo interativo da tela da cliente (novembro de 2026 é só uma amostra)
+  var ANO=2026,MES=10,HOJE=13,SEL=18,H=['09:00','10:30','11:30','14:00','15:30','17:00'],hSel=3;
+  var dias=$('demo-dias'),horas=$('demo-horas'),data=$('demo-data');
+  var sem=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+  var ini=new Date(ANO,MES,1).getDay(),tot=new Date(ANO,MES+1,0).getDate();
+  function pinta(){
+    var h='';for(var i=0;i<ini;i++)h+='<span></span>';
+    for(var d=1;d<=tot;d++){var off=d<HOJE||new Date(ANO,MES,d).getDay()===0;
+      h+=off?'<b aria-hidden="true">'+d+'</b>':'<button type="button" data-d="'+d+'" class="'+(d===HOJE?'hoje':'')+'" aria-pressed="'+(d===SEL)+'">'+d+'</button>'}
+    dias.innerHTML=h;data.textContent=sem[new Date(ANO,MES,SEL).getDay()]+', '+SEL+' de novembro';
+    var c='';H.forEach(function(x,i){c+='<button type="button" data-i="'+i+'" aria-pressed="'+(i===hSel)+'">'+x+'</button>'});horas.innerHTML=c}
+  dias.addEventListener('click',function(e){var b=e.target.closest('[data-d]');if(!b)return;SEL=+b.getAttribute('data-d');pinta()});
+  horas.addEventListener('click',function(e){var b=e.target.closest('[data-i]');if(!b)return;hSel=+b.getAttribute('data-i');pinta()});
+  pinta();
+})();
+</script>
+</body>
+</html>

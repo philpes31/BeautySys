@@ -1,4 +1,18 @@
 {
-  "crons": [{ "path": "/api/cron", "schedule": "0 10 * * *" }],
-  "rewrites": [{ "source": "/a/:slug", "destination": "/agendar.html" }]
+  "crons": [
+    {
+      "path": "/api/cron",
+      "schedule": "0 10 * * *"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/a/:slug",
+      "destination": "/agendar.html"
+    },
+    {
+      "source": "/divulgacao",
+      "destination": "/divulgacao.html"
+    }
+  ]
 }

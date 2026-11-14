@@ -1239,9 +1239,9 @@ const nomeSalao=id=>{const s=S.pl.saloes.find(x=>x.id===id);return s?s.nome:'—
 function telaPlataforma(){
   if(!S.pl.ok)return '<p class="muted">Carregando…</p>';
   if(S.pl.erro)return aviso('Não foi possível carregar a plataforma','Rode o arquivo 04-plataforma.sql no Supabase e tente de novo.','<div class="row-actions"><button class="btn" data-act="plRecarrega">Tentar de novo</button></div>');
-  const ab=S.pl.aba,A=[['painel','Painel'],['metricas','Métricas'],['saloes','Salões'],['planos','Planos'],['pagamentos','Pagamentos'],['suporte','Suporte'],['auditoria','Auditoria']];
+  const ab=S.pl.aba,A=[['painel','Painel'],['metricas','Métricas'],['saloes','Salões'],['planos','Planos'],['site','Site'],['pagamentos','Pagamentos'],['suporte','Suporte'],['auditoria','Auditoria']];
   const nav=`<div class="segs" role="tablist">${A.map(([k,l])=>`<button class="btn ghost sm" role="tab" aria-pressed="${ab===k}" data-act="plAba" data-id="${k}"${k==='suporte'&&S.pl.pend?` data-n="${S.pl.pend}"`:''}>${l}</button>`).join('')}</div>`;
-  return nav+(ab==='saloes'?plSaloes():ab==='planos'?plPlanos():ab==='pagamentos'?plPagamentos():ab==='metricas'?plMetricas():ab==='suporte'?plSuporte():ab==='auditoria'?plAuditoria():plPainel());
+  return nav+(ab==='saloes'?plSaloes():ab==='planos'?plPlanos():ab==='site'?plSite():ab==='pagamentos'?plPagamentos():ab==='metricas'?plMetricas():ab==='suporte'?plSuporte():ab==='auditoria'?plAuditoria():plPainel());
 }
 function plPainel(){
   const i=S.pl.ind||{},k=(v,l)=>`<div class="stat"><b>${v}</b><span>${l}</span></div>`;
@@ -1361,6 +1361,56 @@ function pedirExcluirPlano(id){
     const r=await sb.rpc('plataforma_excluir_plano',{p_id:id});if(r.error)throw r.error;
     await carregarPlataforma();toast('Plano excluído.');
   });
+}
+const SITE_FAQ=[
+  {p:'Preciso pagar para começar?',r:'Não. Você cria a conta e usa o sistema durante o período de teste sem pagar. Se precisar de mais tempo para decidir, é possível pedir uma extensão do teste.'},
+  {p:'Minha cliente precisa baixar algum aplicativo?',r:'Não. Ela abre o seu link no navegador do celular, escolhe o dia e o horário e pronto. Para você, o Agendio também pode ser instalado na tela inicial do celular, como um aplicativo.'},
+  {p:'Como funciona a cobrança do sinal?',r:'Você escolhe entre um valor fixo ou uma porcentagem do serviço. A cliente vê o QR code e o Pix copia e cola, e o dinheiro cai direto na sua conta. Se o salão preferir, o sinal também pode ser cobrado pelo Mercado Pago, com confirmação automática. O sinal é opcional e você liga ou desliga quando quiser.'},
+  {p:'O WhatsApp tem custo?',r:'Enviar mensagens pelo botão, uma a uma, é grátis. O envio automático de lembretes faz parte do plano com WhatsApp automático e cada mensagem enviada é cobrada, conforme o valor do plano. O envio automático usa a API oficial do WhatsApp Business, que exige configuração própria.'},
+  {p:'Os dados do meu salão ficam seguros?',r:'Cada salão enxerga apenas os seus próprios dados, e cada pessoa da equipe acessa só o que o perfil dela permite. Você também pode apagar os dados pessoais de uma cliente quando ela pedir, de acordo com a LGPD.'},
+  {p:'Posso usar no computador e no celular?',r:'Sim. O sistema se adapta à tela e funciona no celular, no tablet e no computador, com a mesma conta.'}];
+async function carregarSite(){
+  if(!ehAdmin())return;
+  try{const r=await sb.rpc('plataforma_ler_site');if(r.error)throw r.error;const c=r.data||{};
+    S.pl.site={titulo:c.titulo||'',subtitulo:c.subtitulo||'',cta_texto:c.cta_texto||'',cta_link:c.cta_link||'',faixa:c.faixa||'',faixa_ativa:!!c.faixa_ativa,faixa_link:c.faixa_link||'',whatsapp:c.whatsapp||'',email:c.email||'',faq:(Array.isArray(c.faq)&&c.faq.length?c.faq:SITE_FAQ).map(x=>({p:x.p,r:x.r}))};S.pl.siteErro=false}
+  catch(_){S.pl.siteErro=true}
+  if(S.view==='plataforma'&&S.pl.aba==='site')render();
+}
+function lerSiteDom(){
+  const f=document.querySelector('form[data-form=plsite]');if(!f||!S.pl.site)return;
+  const d=Object.fromEntries(new FormData(f)),x=S.pl.site;
+  ['titulo','subtitulo','cta_texto','cta_link','faixa','faixa_link','whatsapp','email'].forEach(k=>{x[k]=String(d[k]||'')});x.faixa_ativa=d.faixa_ativa==='on';
+  x.faq=x.faq.map((q,i)=>({p:String(d['fq_p_'+i]||''),r:String(d['fq_r_'+i]||'')}));
+}
+function plSite(){
+  if(S.pl.siteErro)return aviso('Não foi possível carregar o site','Rode o arquivo 33-site.sql no Supabase e tente de novo.','<div class="row-actions"><button class="btn" data-act="siteRecarrega">Tentar de novo</button></div>');
+  const x=S.pl.site;if(!x)return '<p class="muted">Carregando…</p>';
+  const fq=x.faq.map((q,i)=>`<div class="panel" style="padding:12px;margin:0 0 10px"><label for="fq-p-${i}">Pergunta ${i+1}</label><input id="fq-p-${i}" name="fq_p_${i}" data-fq="p" maxlength="160" value="${esc(q.p)}"><label for="fq-r-${i}">Resposta</label><textarea id="fq-r-${i}" name="fq_r_${i}" rows="5" maxlength="1200">${esc(q.r)}</textarea><div class="acts" style="margin-top:6px"><button type="button" class="btn danger sm" data-act="siteFaqDel" data-id="${i}">Apagar esta pergunta</button></div></div>`).join('');
+  return `<div class="bar"><span class="muted grow">Tudo o que você mudar aqui aparece na hora na página pública de divulgação. Campo em branco usa o texto padrão. Os planos e preços vêm da aba Planos.</span><a class="btn ghost" href="/divulgacao" target="_blank" rel="noopener">Abrir o site</a></div>
+  <form data-form="plsite" style="max-width:720px">
+  <div class="bar" style="margin-top:10px"><button class="btn">Salvar site</button><span class="muted">Salva tudo desta página.</span></div>
+  <h3 style="margin:14px 0 4px;font-size:15px">Faixa de promoção no topo</h3>
+  <label class="chk"><input type="checkbox" name="faixa_ativa" ${x.faixa_ativa?'checked':''}> Mostrar a faixa no topo do site</label>
+  <label for="st-faixa">Texto da faixa</label><input id="st-faixa" name="faixa" maxlength="200" placeholder="Ex.: 60 dias grátis até domingo" value="${esc(x.faixa)}">
+  <label for="st-faixal">Link da faixa (opcional)</label><input id="st-faixal" name="faixa_link" maxlength="300" placeholder="https://… ou #planos" value="${esc(x.faixa_link)}">
+  <h3 style="margin:18px 0 4px;font-size:15px">Textos principais</h3>
+  <label for="st-tit">Título</label><input id="st-tit" name="titulo" maxlength="120" placeholder="Sua cliente agenda sozinha. Você só atende." value="${esc(x.titulo)}">
+  <label for="st-sub">Subtítulo</label><textarea id="st-sub" name="subtitulo" rows="3" maxlength="400" placeholder="O Agendio é o sistema de agenda e gestão para salões de beleza…">${esc(x.subtitulo)}</textarea>
+  <div class="g2"><div><label for="st-cta">Texto dos botões</label><input id="st-cta" name="cta_texto" maxlength="40" placeholder="Testar 30 dias grátis" value="${esc(x.cta_texto)}"></div><div><label for="st-ctal">Para onde os botões levam</label><input id="st-ctal" name="cta_link" maxlength="300" placeholder="https://… (em branco: o sistema)" value="${esc(x.cta_link)}"></div></div>
+  <h3 style="margin:18px 0 4px;font-size:15px">Contato</h3>
+  <div class="g2"><div><label for="st-zap">WhatsApp</label><input id="st-zap" name="whatsapp" inputmode="tel" maxlength="20" placeholder="(11) 98888-7777" value="${esc(x.whatsapp)}"></div><div><label for="st-mail">E-mail</label><input id="st-mail" name="email" type="email" maxlength="120" placeholder="contato@seudominio.com.br" value="${esc(x.email)}"></div></div>
+  <h3 style="margin:18px 0 8px;font-size:15px">Perguntas frequentes</h3>
+  ${fq||'<p class="muted">Nenhuma pergunta. O site mostra as perguntas padrão.</p>'}
+  <div class="bar" style="margin-top:6px"><button type="button" class="btn ghost sm" data-act="siteFaqAdd">Adicionar pergunta</button><button type="button" class="btn ghost sm" data-act="siteFaqPadrao">Usar as perguntas padrão</button></div>
+  <p class="erro" id="a-erro" role="alert"></p>
+  <div class="acts" style="margin-top:14px"><button type="button" class="btn ghost" data-act="siteRestaurar">Voltar ao padrão</button><button class="btn">Salvar site</button></div>
+  </form>`;
+}
+async function salvarSite(f){
+  lerSiteDom();const x=S.pl.site;
+  const p={titulo:x.titulo,subtitulo:x.subtitulo,cta_texto:x.cta_texto,cta_link:x.cta_link,faixa:x.faixa,faixa_ativa:x.faixa_ativa,faixa_link:x.faixa_link,whatsapp:x.whatsapp,email:x.email,faq:x.faq};
+  const r=await sb.rpc('plataforma_salvar_site',{p});if(r.error)throw r.error;
+  S.pl.site=null;await carregarSite();toast('Site salvo. Já está no ar.');
 }
 async function salvarPlano(id,d){
   const rec={};Object.keys(RECURSOS).forEach(k=>{rec[k]=d['rec_'+k]==='on'});
@@ -3069,11 +3119,12 @@ document.addEventListener('click',e=>{
     relAba:()=>{S.relAba=id;render()},diaRel:()=>{S.diaRel=id==='0'?hoje():addDia(S.diaRel||hoje(),Number(id));render()},juntarVer:()=>dlgRepetidas(),juntarManter:()=>confirmar('Juntar estes cadastros?','Os atendimentos das outras passam para a cliente escolhida e o cadastro repetido é removido. Não dá para desfazer.','Juntar',()=>juntarClientes(id,String(a.dataset.outras||'').split(',').filter(Boolean))),novoPacote:()=>formPacote(a.dataset.cliente),usarSessao:()=>{usarSessao(id).catch(x=>toast(falha(x),true))},encerrarPacote:()=>confirmar('Encerrar este pacote?','As sessões que sobraram deixam de poder ser usadas.','Encerrar',()=>encerrarPacote(id)),fidConfig:()=>formFid(),fidResgatar:()=>confirmar('Resgatar o prêmio?','Isso registra que a cliente já recebeu o prêmio.','Resgatar',()=>resgatarPremio(id)),novaEspera:()=>formEspera(),esAvisada:()=>{esMarcar(id,'avisada').catch(x=>toast(falha(x),true))},esRemover:()=>confirmar('Remover da lista de espera?','A cliente deixa de aparecer na lista.','Remover',()=>esMarcar(id,'remover')),retDias:()=>{S.retDias=Number(id)||60;LS.set('salao_ret_dias',String(S.retDias));render()},retChamei:()=>{const c=retContatos();c[id]=hoje();LS.set('salao_ret_contato',JSON.stringify(c));setTimeout(render,50)},mais:()=>{S.lim[id]=(S.lim[id]||100)+200;render()},voltar:()=>{S.sel=null;render()},estAba:()=>{S.estAba=id;render()},novoProd:()=>formProd(),editProd:()=>formProd(id),delProd:()=>pedirDelProd(id),movProd:()=>formMov(id),histProd:()=>histProd(id),novaFicha:()=>formFicha(id),editFicha:()=>formFicha(null,id),delFicha:()=>pedirDelFicha(id),exportJson,exportCsv,exportXlsx,novaDesp:()=>formDesp(),editDesp:()=>formDesp(id),delDesp:()=>pedirDelDesp(id),fechar:()=>$('dlg').close(),
     recarregar:()=>{S.erro='';render();recarregar()},
     tentarCtx:()=>{parar();iniciar()},
+    siteRecarrega:()=>{S.pl.siteErro=false;S.pl.site=null;render();carregarSite()},siteFaqAdd:()=>{lerSiteDom();S.pl.site.faq.push({p:'',r:''});render();const q=document.querySelectorAll('[data-fq=p]');if(q.length)q[q.length-1].focus()},siteFaqDel:()=>{lerSiteDom();S.pl.site.faq.splice(Number(id),1);render()},siteFaqPadrao:()=>{lerSiteDom();S.pl.site.faq=SITE_FAQ.map(x=>({p:x.p,r:x.r}));render()},siteRestaurar:()=>confirmar('Voltar o site aos textos padrão?','Os textos, o contato, a faixa de promoção e as perguntas que você escreveu serão apagados. Os planos continuam vindo da aba Planos.','Restaurar',async()=>{const r=await sb.rpc('plataforma_salvar_site',{p:{}});if(r.error)throw r.error;S.pl.site=null;await carregarSite();toast('Site restaurado.')}),
     plNovoPlano:()=>formPlano(''),plEditaPlano:()=>formPlano(id),plExcluiPlano:()=>pedirExcluirPlano(id),
     pedePlano:()=>{const p=(S.assin&&S.assin.planos||[]).find(x=>x.id===id);if(!p)return;confirmar('Pedir o plano '+p.nome+'?','Avisamos a equipe do Agendio, que conclui a troca e envia a cobrança.','Pedir plano',async()=>{const r=await sb.rpc('solicitar_plano',{p_plano:id,p_msg:''});if(r.error)throw r.error;toast('Pedido enviado.')})},
     insVar:()=>{const t=$('mg-'+id);if(!t)return;const v='{'+a.dataset.v+'}',i=t.selectionStart??t.value.length,f=t.selectionEnd??i;t.value=t.value.slice(0,i)+v+t.value.slice(f);t.focus();t.selectionStart=t.selectionEnd=i+v.length;t.dispatchEvent(new Event('input',{bubbles:true}))},
     padraoMsg:()=>{const t=$('mg-'+id);if(!t)return;t.value=MSG_DEF[id].d;t.dispatchEvent(new Event('input',{bubbles:true}))},
-    plAba:()=>{S.pl.aba=id;S.pl.lim=60;render();if(id==='suporte')carregarChamadosPl();if(id==='metricas'&&!S.pl.met)carregarMetricas()},chNovo:()=>formChamado(),plDiag:()=>rodarDiag(),plMet:()=>carregarMetricas(true),chAbrir:()=>chAbrir(id,a.dataset.adm==='1'),chEnviar:()=>chEnviar(!!a.dataset.resolver),chFechar:()=>$('dlg').close(),ajRecarrega:()=>{S.aj.ok=false;render();carregarAjuda()},plRecarrega:()=>{S.pl.ok=false;render();carregarPlataforma()},
+    plAba:()=>{S.pl.aba=id;S.pl.lim=60;render();if(id==='suporte')carregarChamadosPl();if(id==='metricas'&&!S.pl.met)carregarMetricas();if(id==='site'&&!S.pl.site)carregarSite()},chNovo:()=>formChamado(),plDiag:()=>rodarDiag(),plMet:()=>carregarMetricas(true),chAbrir:()=>chAbrir(id,a.dataset.adm==='1'),chEnviar:()=>chEnviar(!!a.dataset.resolver),chFechar:()=>$('dlg').close(),ajRecarrega:()=>{S.aj.ok=false;render();carregarAjuda()},plRecarrega:()=>{S.pl.ok=false;render();carregarPlataforma()},
     plSalao:()=>detSalao(id),plNovoSalao:()=>formNovoSalao(),
     plSetPlano:()=>plRpc('plataforma_definir_plano',{p_tenant:id,p_plano:$('pd-plano').value},'Plano alterado.',id),
     plSetStatus:()=>plRpc('plataforma_definir_status',{p_tenant:id,p_status:$('pd-st').value,p_motivo:$('pd-mot').value.trim()},'Situação atualizada.',id),
@@ -3187,7 +3238,7 @@ function tempoTxt(sg){return sg>=60?Math.ceil(sg/60)+' min':sg+' s'}
 
 document.addEventListener('submit',async e=>{
   const f=e.target,k=f.dataset&&f.dataset.form;
-  if(!['criar','recuperar','novasenha','salao','config','mensagens','horarios','online','pub','mpconectar'].includes(k))return;
+  if(!['criar','recuperar','novasenha','salao','config','mensagens','horarios','online','pub','mpconectar','plsite'].includes(k))return;
   e.preventDefault();if(S.busy||!sb)return;
   const d=Object.fromEntries(new FormData(f)),bt=f.querySelector('button'),er=$('a-erro');
   const ver=(c,m)=>{if(c){er.textContent=m;return true}return false};
@@ -3214,6 +3265,8 @@ document.addEventListener('submit',async e=>{
       if(r.error){er.textContent=msgAuth(r.error.message,r.error.status);return}
       S.recuperando=false;try{history.replaceState(null,'',location.pathname)}catch(_){}
       render();toast('Senha alterada.');
+    }else if(k==='plsite'){
+      try{await salvarSite(f)}catch(x){er.textContent=String((x&&(x.message||x.aviso))||'Não foi possível salvar o site.')}
     }else if(k==='pub'){
       await salvarPub(d,er);
     }else if(k==='mpconectar'){
