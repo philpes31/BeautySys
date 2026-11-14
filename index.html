@@ -111,6 +111,17 @@ a.btn.wa-btn{background:var(--ok);border-color:var(--ok);color:#fff}
 a.btn.wa-btn:hover{filter:brightness(1.08)}
 a.btn.wa-btn.ghost{background:transparent;color:var(--ok);border-color:color-mix(in srgb,var(--ok) 55%,transparent)}
 a.btn.wa-btn.ghost:hover{background:var(--ok-soft);color:var(--ok)}
+.cmp-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface);-webkit-overflow-scrolling:touch}
+.cmp{border-collapse:separate;border-spacing:0;width:100%;min-width:520px;font-size:14px}
+.cmp th,.cmp td{padding:10px 12px;text-align:center;border-bottom:1px solid var(--line);vertical-align:middle}
+.cmp tr:last-child td{border-bottom:0}
+.cmp thead th{font-weight:700;background:var(--surface);position:sticky;top:0}
+.cmp tbody th{text-align:left;font-weight:600;color:var(--muted);position:sticky;left:0;background:var(--surface);min-width:150px;z-index:1}
+.cmp .cmp-atual{background:var(--accent-soft)}
+.cmp .cmp-preco{font-size:17px;font-weight:800}
+.cmp .sim{color:var(--ok);font-weight:800}.cmp .nao{color:var(--muted);opacity:.6}
+.cmp .cmp-tag{display:block;font-size:11.5px;font-weight:600;color:var(--accent);margin-top:2px}
+.cmp .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 label.chk{display:flex;gap:8px;align-items:center;margin-top:10px;font-weight:600;color:var(--ink)}
 label.chk input{width:auto}
 
@@ -1003,6 +1014,7 @@ function blocoAssinatura(){
   ${pl?`<p class="muted" style="margin:4px 0 0">${pl.max_usuarios} usuários · ${pl.max_profissionais} profissionais</p>`:''}
   ${blocoDebito(pl)}
   <h4 style="margin:14px 0 0;font-size:14px">Cobranças</h4>${pags}
+  ${A.planos.length>1?`<h4 style="margin:14px 0 6px;font-size:14px">Comparar planos</h4>${tabelaPlanos(A.planos,(A.planos.find(p=>pl&&p.nome===pl.nome)||{}).id)}`:''}
   ${outros.length?`<h4 style="margin:14px 0 6px;font-size:14px">Outros planos</h4><div class="list">${outros.map(p=>`<div class="item"><div class="grow"><div class="t">${esc(p.nome)}</div><div class="muted">${p.max_usuarios} usuários · ${p.max_profissionais} profissionais${recTxt(p)}</div>${p.recursos&&p.recursos.whatsapp_auto===true&&Number(p.preco_mensagem)>0?custoMsg(p.preco_mensagem):''}</div><div class="side"><b>${brl(p.preco_mensal)}</b>/mês <button class="btn ghost sm" data-act="pedePlano" data-id="${esc(p.id)}">Quero este</button></div></div>`).join('')}</div>`:''}</div>`;
 }
 function blocoLgpd(){
@@ -1308,13 +1320,29 @@ const RECURSOS={estoque:'Estoque e fichas técnicas',financeiro:'Despesas e rela
 const recTxt=p=>Object.keys(RECURSOS).filter(k=>k!=='whatsapp_auto'&&p.recursos&&p.recursos[k]===false).map(k=>' · sem '+RECURSOS[k].toLowerCase()).join('')+(p.recursos&&p.recursos.whatsapp_auto===true?' · com WhatsApp automático'+(Number(p.preco_mensagem)>0?' ('+brl3(p.preco_mensagem)+' por mensagem)':''):'');
 const recAuto=()=>{const r=S.ctx&&S.ctx.plano&&S.ctx.plano.recursos;return !!(r&&r.whatsapp_auto===true)};
 const recOk=k=>{const r=S.ctx&&S.ctx.plano&&S.ctx.plano.recursos;return !r||r[k]!==false};
+function tabelaPlanos(L,atual){
+  L=(L||[]).filter(p=>p.ativo!==false).slice().sort((x,y)=>Number(x.preco_mensal)-Number(y.preco_mensal));
+  if(L.length<2)return '';
+  const th=p=>`<th class="${atual&&p.id===atual?'cmp-atual':''}">${esc(p.nome)}${atual&&p.id===atual?'<span class="cmp-tag">Seu plano</span>':''}${p.ativo===false?'<span class="cmp-tag" style="color:var(--amber)">Inativo</span>':''}</th>`;
+  const lin=(t,f)=>`<tr><th scope="row">${t}</th>${L.map(p=>`<td class="${atual&&p.id===atual?'cmp-atual':''}">${f(p)}</td>`).join('')}</tr>`;
+  const sim='<span class="sim" aria-label="Incluído">✓</span>',nao='<span class="nao" aria-label="Não incluído">—</span>';
+  const temRec=(p,k)=>k==='whatsapp_auto'?!!(p.recursos&&p.recursos[k]===true):!(p.recursos&&p.recursos[k]===false);
+  return `<div class="cmp-wrap" role="region" aria-label="Comparação dos planos" tabindex="0"><table class="cmp"><thead><tr><th scope="col"><span class="sr">Plano</span></th>${L.map(th).join('')}</tr></thead><tbody>
+  ${lin('Preço por mês',p=>`<span class="cmp-preco">${brl(p.preco_mensal)}</span>`)}
+  ${lin('Usuários',p=>esc(p.max_usuarios))}
+  ${lin('Profissionais',p=>esc(p.max_profissionais))}
+  ${lin('Teste grátis',p=>Number(p.trial_dias)>0?esc(p.trial_dias)+' dias':nao)}
+  ${Object.keys(RECURSOS).map(k=>lin(esc(RECURSOS[k].replace(/ \(.*\)$/,'')),p=>temRec(p,k)?sim:nao)).join('')}
+  ${lin('Mensagem de WhatsApp',p=>p.recursos&&p.recursos.whatsapp_auto===true?(Number(p.preco_mensagem)>0?esc(brl3(p.preco_mensagem))+' cada':'Grátis'):nao)}
+  </tbody></table></div>`;
+}
 function plPlanos(){
   const L=S.pl.planos,uso=id=>S.pl.saloes.filter(x=>x.plano_id===id).length;
   return `<div class="bar"><span class="muted grow">Preços e limites valem na hora, sem mexer no código. Salões que já assinaram mantêm o histórico.</span><button class="btn" data-act="plNovoPlano">Novo plano</button></div>
-  ${L.length?'<div class="list">'+L.map(p=>`<div class="item click" tabindex="0" role="button" data-act="plEditaPlano" data-id="${esc(p.id)}"><div class="grow"><div class="t">${esc(p.nome)} ${p.ativo?'':'<span class="tag late">Inativo</span>'}</div><div class="muted">${p.max_usuarios} ${p.max_usuarios===1?'usuário':'usuários'} · ${p.max_profissionais} ${p.max_profissionais===1?'profissional':'profissionais'} · ${p.trial_dias} dias de teste${recTxt(p)}</div></div><div class="side"><b>${brl(p.preco_mensal)}</b><div class="muted" style="font-size:12.5px">${uso(p.id)} ${uso(p.id)===1?'salão':'salões'}</div></div></div>`).join('')+'</div>':'<div class="empty"><p>Nenhum plano cadastrado.</p></div>'}`;
+  ${L.length?'<div class="list">'+L.map(p=>`<div class="item click" tabindex="0" role="button" data-act="plEditaPlano" data-id="${esc(p.id)}"><div class="grow"><div class="t">${esc(p.nome)} ${p.ativo?'':'<span class="tag late">Inativo</span>'}</div><div class="muted">${p.max_usuarios} ${p.max_usuarios===1?'usuário':'usuários'} · ${p.max_profissionais} ${p.max_profissionais===1?'profissional':'profissionais'} · ${p.trial_dias} dias de teste${recTxt(p)}</div></div><div class="side"><b>${brl(p.preco_mensal)}</b><div class="muted" style="font-size:12.5px">${uso(p.id)} ${uso(p.id)===1?'salão':'salões'}</div><button class="btn danger sm" data-act="plExcluiPlano" data-id="${esc(p.id)}" aria-label="Excluir o plano ${esc(p.nome)}">Excluir</button></div></div>`).join('')+'</div><h3 style="margin:18px 0 8px;font-size:15px">Comparar planos</h3>'+(tabelaPlanos(L)||'<p class="muted">Cadastre ao menos dois planos para comparar.</p>'):'<div class="empty"><p>Nenhum plano cadastrado.</p></div>'}`;
 }
 function formPlano(id){
-  const p=S.pl.planos.find(x=>x.id===id)||{nome:'',preco_mensal:'',max_usuarios:3,max_profissionais:2,trial_dias:14,ativo:true,recursos:{}};
+  const p=S.pl.planos.find(x=>x.id===id)||{nome:'',preco_mensal:'',max_usuarios:3,max_profissionais:2,trial_dias:30,ativo:true,recursos:{}};
   abrir(`<h2>${id?'Editar plano':'Novo plano'}</h2><form data-form="plplano" data-id="${esc(id||'')}">
   <label for="pp-nome">Nome do plano *</label><input id="pp-nome" name="nome" required maxlength="60" value="${esc(p.nome)}">
   <div class="g2"><div><label for="pp-preco">Preço mensal (R$) *</label><input id="pp-preco" name="preco_mensal" type="number" step="0.01" min="0" required value="${esc(p.preco_mensal)}"></div><div><label for="pp-trial">Teste grátis (dias)</label><input id="pp-trial" name="trial_dias" type="number" min="0" max="90" value="${esc(p.trial_dias)}"></div></div>
@@ -1324,6 +1352,15 @@ function formPlano(id){
   ${Object.keys(RECURSOS).map(k=>`<label class="chk"><input type="checkbox" name="rec_${k}" ${(k==='whatsapp_auto'?p.recursos&&p.recursos[k]===true:!(p.recursos&&p.recursos[k]===false))?'checked':''}> ${RECURSOS[k]}</label>`).join('')}
   <label class="chk"><input type="checkbox" name="ativo" ${p.ativo?'checked':''}> Plano ativo (pode ser contratado)</label>
   <div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Salvar plano</button></div></form>`);
+}
+function pedirExcluirPlano(id){
+  const p=S.pl.planos.find(x=>x.id===id);if(!p)return;
+  const n=S.pl.saloes.filter(x=>x.plano_id===id).length;
+  if(n>0){toast(n+(n===1?' salão usa':' salões usam')+' o plano '+p.nome+'. Troque o plano deles ou desative este plano.');return}
+  confirmar('Excluir o plano '+p.nome+'?','O plano some da lista e não poderá mais ser contratado. Não dá para desfazer. Se ele já teve assinantes, o sistema pede para desativar em vez de excluir.','Excluir',async()=>{
+    const r=await sb.rpc('plataforma_excluir_plano',{p_id:id});if(r.error)throw r.error;
+    await carregarPlataforma();toast('Plano excluído.');
+  });
 }
 async function salvarPlano(id,d){
   const rec={};Object.keys(RECURSOS).forEach(k=>{rec[k]=d['rec_'+k]==='on'});
@@ -1340,6 +1377,7 @@ async function detSalao(id){
   <div class="grid2" style="gap:10px 16px;margin:6px 0 12px">${L('Proprietário',x.proprietario_nome)}${L('E-mail',x.email)}${L('Telefone',x.telefone||x.whatsapp)}${L('Cidade',[x.cidade,x.uf].filter(Boolean).join(' / '))}${L('Cadastro em',fd(String(x.criado_em).slice(0,10)))}${L('Vencimento',fd(x.vencimento))}${L('Usuários',x.usuarios+(x.max_usuarios?' de '+x.max_usuarios:''))}</div>
   <h3 style="margin:14px 0 6px;font-size:15px">Plano</h3><div class="bar"><select id="pd-plano" aria-label="Plano">${S.pl.planos.map(p=>`<option value="${esc(p.id)}" ${p.id===x.plano_id?'selected':''}>${esc(p.nome)} · ${brl(p.preco_mensal)}${p.ativo?'':' (inativo)'}</option>`).join('')}</select><button class="btn ghost" data-act="plSetPlano" data-id="${esc(id)}">Trocar plano</button></div>
   <h3 style="margin:14px 0 6px;font-size:15px">Situação</h3><div class="bar"><select id="pd-st" aria-label="Situação">${Object.keys(ST_SAL).map(k=>`<option value="${k}" ${k===x.status?'selected':''}>${ST_SAL[k]}</option>`).join('')}</select><input id="pd-mot" placeholder="Motivo (opcional)" maxlength="200" aria-label="Motivo"><button class="btn ghost" data-act="plSetStatus" data-id="${esc(id)}">Aplicar</button></div>
+  ${x.status==='teste'||x.status==='vencida'?`<h3 style="margin:14px 0 6px;font-size:15px">Estender teste grátis</h3><div class="bar"><select id="pd-ext" aria-label="Dias a acrescentar"><option value="7">+ 7 dias</option><option value="15">+ 15 dias</option><option value="30" selected>+ 30 dias</option><option value="60">+ 60 dias</option></select><button class="btn ghost" data-act="plEstender" data-id="${esc(id)}">Estender teste</button></div><p class="muted" style="margin:4px 0 0;font-size:13px">Soma os dias ao fim do teste (ou a partir de hoje, se já acabou). Não vale para quem já pagou.</p>`:''}
   <h3 style="margin:14px 0 6px;font-size:15px">Vencimento</h3><div class="bar"><input id="pd-venc" type="date" value="${esc(x.vencimento||'')}" aria-label="Vencimento"><button class="btn ghost" data-act="plSetVenc" data-id="${esc(id)}">Salvar data</button></div>
   <h3 style="margin:14px 0 6px;font-size:15px">Cobranças</h3>${pg.length?'<div class="list">'+pg.slice(0,6).map(g=>`<div class="item"><div class="grow">${g.tipo==='mensagens'?esc(g.descricao||'Mensagens de WhatsApp')+' · ':''}vence ${esc(fd(g.vencimento))}</div><div class="side"><b>${brl(g.valor)}</b> ${tagSt(g.status,ST_PAG)}${g.status==='pendente'||g.status==='atrasado'?` <button class="btn sm" data-act="plPagar" data-id="${esc(g.id)}">Marcar pago</button>`:''}</div></div>`).join('')+'</div>':'<p class="muted">Nenhuma cobrança.</p>'}
   <div class="bar" style="margin-top:8px"><input id="pd-val" type="number" step="0.01" min="0" placeholder="Valor" aria-label="Valor" value="${esc(x.preco||'')}"><input id="pd-vc" type="date" aria-label="Vencimento da cobrança" value="${esc(x.vencimento||hoje())}"><input id="pd-link" type="url" placeholder="Link de pagamento (https://…)" aria-label="Link de pagamento" maxlength="500"><button class="btn ghost" data-act="plNovaCobranca" data-id="${esc(id)}">Nova cobrança</button></div>
@@ -3031,7 +3069,7 @@ document.addEventListener('click',e=>{
     relAba:()=>{S.relAba=id;render()},diaRel:()=>{S.diaRel=id==='0'?hoje():addDia(S.diaRel||hoje(),Number(id));render()},juntarVer:()=>dlgRepetidas(),juntarManter:()=>confirmar('Juntar estes cadastros?','Os atendimentos das outras passam para a cliente escolhida e o cadastro repetido é removido. Não dá para desfazer.','Juntar',()=>juntarClientes(id,String(a.dataset.outras||'').split(',').filter(Boolean))),novoPacote:()=>formPacote(a.dataset.cliente),usarSessao:()=>{usarSessao(id).catch(x=>toast(falha(x),true))},encerrarPacote:()=>confirmar('Encerrar este pacote?','As sessões que sobraram deixam de poder ser usadas.','Encerrar',()=>encerrarPacote(id)),fidConfig:()=>formFid(),fidResgatar:()=>confirmar('Resgatar o prêmio?','Isso registra que a cliente já recebeu o prêmio.','Resgatar',()=>resgatarPremio(id)),novaEspera:()=>formEspera(),esAvisada:()=>{esMarcar(id,'avisada').catch(x=>toast(falha(x),true))},esRemover:()=>confirmar('Remover da lista de espera?','A cliente deixa de aparecer na lista.','Remover',()=>esMarcar(id,'remover')),retDias:()=>{S.retDias=Number(id)||60;LS.set('salao_ret_dias',String(S.retDias));render()},retChamei:()=>{const c=retContatos();c[id]=hoje();LS.set('salao_ret_contato',JSON.stringify(c));setTimeout(render,50)},mais:()=>{S.lim[id]=(S.lim[id]||100)+200;render()},voltar:()=>{S.sel=null;render()},estAba:()=>{S.estAba=id;render()},novoProd:()=>formProd(),editProd:()=>formProd(id),delProd:()=>pedirDelProd(id),movProd:()=>formMov(id),histProd:()=>histProd(id),novaFicha:()=>formFicha(id),editFicha:()=>formFicha(null,id),delFicha:()=>pedirDelFicha(id),exportJson,exportCsv,exportXlsx,novaDesp:()=>formDesp(),editDesp:()=>formDesp(id),delDesp:()=>pedirDelDesp(id),fechar:()=>$('dlg').close(),
     recarregar:()=>{S.erro='';render();recarregar()},
     tentarCtx:()=>{parar();iniciar()},
-    plNovoPlano:()=>formPlano(''),plEditaPlano:()=>formPlano(id),
+    plNovoPlano:()=>formPlano(''),plEditaPlano:()=>formPlano(id),plExcluiPlano:()=>pedirExcluirPlano(id),
     pedePlano:()=>{const p=(S.assin&&S.assin.planos||[]).find(x=>x.id===id);if(!p)return;confirmar('Pedir o plano '+p.nome+'?','Avisamos a equipe do Agendio, que conclui a troca e envia a cobrança.','Pedir plano',async()=>{const r=await sb.rpc('solicitar_plano',{p_plano:id,p_msg:''});if(r.error)throw r.error;toast('Pedido enviado.')})},
     insVar:()=>{const t=$('mg-'+id);if(!t)return;const v='{'+a.dataset.v+'}',i=t.selectionStart??t.value.length,f=t.selectionEnd??i;t.value=t.value.slice(0,i)+v+t.value.slice(f);t.focus();t.selectionStart=t.selectionEnd=i+v.length;t.dispatchEvent(new Event('input',{bubbles:true}))},
     padraoMsg:()=>{const t=$('mg-'+id);if(!t)return;t.value=MSG_DEF[id].d;t.dispatchEvent(new Event('input',{bubbles:true}))},
@@ -3039,6 +3077,7 @@ document.addEventListener('click',e=>{
     plSalao:()=>detSalao(id),plNovoSalao:()=>formNovoSalao(),
     plSetPlano:()=>plRpc('plataforma_definir_plano',{p_tenant:id,p_plano:$('pd-plano').value},'Plano alterado.',id),
     plSetStatus:()=>plRpc('plataforma_definir_status',{p_tenant:id,p_status:$('pd-st').value,p_motivo:$('pd-mot').value.trim()},'Situação atualizada.',id),
+    plEstender:()=>{const d=Number($('pd-ext').value);plRpc('plataforma_estender_teste',{p_tenant:id,p_dias:d},'Teste estendido em '+d+' dias.',id)},
     plSetVenc:()=>{const v=$('pd-venc').value;if(!v){toast('Escolha a data.',true);return}plRpc('plataforma_vencimento',{p_tenant:id,p_data:v},'Vencimento salvo.',id)},
     plNovaCobranca:()=>{const v=Number($('pd-val').value),d=$('pd-vc').value;if(!(v>=0)||!d||$('pd-val').value===''){toast('Informe valor e vencimento.',true);return}plRpc('plataforma_pagamento',{p:{tenant_id:id,valor:v,vencimento:d,link_pagamento:$('pd-link').value.trim()}},'Cobrança criada.',id)},
     plPagar:()=>{const g=S.pl.pags.find(x=>x.id===id);if(!g)return;const dlgAberto=$('dlg').open;plRpc('plataforma_pagamento',{p:{id:g.id,tenant_id:g.tenant_id,valor:g.valor,vencimento:g.vencimento,status:'pago'}},'Pagamento registrado.',dlgAberto?g.tenant_id:null)},
