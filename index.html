@@ -1268,7 +1268,8 @@ function plDiag(){
 async function rodarDiag(){
   S.pl.diag='carregando';render();
   try{
-    const r=await fetch('/api/saude?testar=1',{cache:'no-store'});
+    const ses=await sb.auth.getSession(),tk=ses&&ses.data&&ses.data.session&&ses.data.session.access_token;
+    const r=await fetch('/api/saude?testar=1',{cache:'no-store',headers:tk?{Authorization:'Bearer '+tk}:{}});
     let j=null;try{j=await r.json()}catch(_){}
     if(!r.ok||!j||!j.grupos)S.pl.diag={erro:r.status===404||r.ok?'As funções do servidor não estão no ar: a pasta "api" não foi publicada na Vercel. Publique o site completo (index.html + pasta api + vercel.json) e tente de novo.':'O servidor respondeu com erro '+r.status+'.'};
     else S.pl.diag=j;

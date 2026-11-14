@@ -21,8 +21,9 @@ async function mpCom(token, caminho, opc) {
 function siteUrl(req) {
   const e = env('SITE_URL');
   if (e) return e.replace(/\/+$/, '');
-  const h = (req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
-  return h ? 'https://' + h : '';
+  // Sem SITE_URL: usa o domínio da própria requisição, só se parecer um domínio de verdade (evita endereço forjado em cabeçalho).
+  const h = String(req.headers.host || req.headers['x-forwarded-host'] || '').split(',')[0].trim().toLowerCase();
+  return /^[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?(:\d{1,5})?$/.test(h) ? 'https://' + h : '';
 }
 // Chave de serviço: a chave nova (sb_secret_...) vai só em "apikey"; a antiga (JWT) vai nos dois.
 function cabServico() {

@@ -39,6 +39,17 @@ async function testes() {
   return out;
 }
 
+async function souAdmin(req) {
+  const auth = String((req.headers && req.headers.authorization) || '');
+  if (!/^Bearer\s+\S+/.test(auth) || L.faltandoBase().length) return false;
+  try {
+    const r = await fetch(L.env('SUPABASE_URL').replace(/\/+$/, '') + '/rest/v1/rpc/sou_admin_plataforma', {
+      method: 'POST', headers: { apikey: L.env('SUPABASE_ANON_KEY'), Authorization: auth, 'Content-Type': 'application/json' }, body: '{}'
+    });
+    return r.ok && (await r.json()) === true;
+  } catch (_) { return false; }
+}
+
 module.exports = async (req, res) => {
   const tem = n => !!L.env(n);
   const base = ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_KEY'];
@@ -55,6 +66,10 @@ module.exports = async (req, res) => {
   ];
   const q = String(req.url || '').includes('testar=1');
   const resp = { ok: true, api: 'no ar', hora: new Date().toISOString(), site: L.siteUrl(req), webhook: L.siteUrl(req) + '/api/mp-webhook', grupos: g };
-  if (q) resp.testes = await testes();
+  if (q) {
+    // Os testes usam as chaves do servidor, então só rodam para quem é administrador da plataforma (confirmado pelo banco).
+    if (await souAdmin(req)) resp.testes = await testes();
+    else resp.aviso = 'Entre como administrador da plataforma para rodar os testes.';
+  }
   return L.json(res, 200, resp);
 };
