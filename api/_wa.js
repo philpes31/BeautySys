@@ -4,16 +4,33 @@
 //   lembrete_agendamento  {{1}} nome, {{2}} dia, {{3}} hora, {{4}} serviço, {{5}} salão
 //   pedido_aceito         mesmas 5 variáveis
 //   pedido_recusado       mesmas 5 variáveis
+// Opcional: WHATSAPP_MODELO_LEMBRETE_LINK = nome de um modelo de lembrete com as mesmas 5 variáveis e um botão
+//   "Visitar site" com URL https://SEU-SITE/a/{{1}} (o {{1}} do botão recebe "endereco?m=codigo"). Se não existir, usa o lembrete sem botão.
 const L = require('./_lib');
 const GRAPH = 'https://graph.facebook.com/v21.0';
 
 const limpa = v => String(v == null ? '' : v).replace(/[\r\n\t]+/g, ' ').replace(/ {2,}/g, ' ').trim().slice(0, 120) || '-';
 
+const SUFIXO = /^[a-z0-9-]{1,60}\?m=[a-z0-9]{32}$/;
+
+function montar(m) {
+  const ps = Array.isArray(m.params) ? m.params : [];
+  const corpo = ps.slice(0, 5).map(t => ({ type: 'text', text: limpa(t) }));
+  let nome = m.modelo;
+  const components = [{ type: 'body', parameters: corpo }];
+  const modeloLink = L.env('WHATSAPP_MODELO_LEMBRETE_LINK');
+  if (m.modelo === 'lembrete_agendamento' && modeloLink && /^[a-z0-9_]{1,60}$/.test(modeloLink) && typeof ps[5] === 'string' && SUFIXO.test(ps[5])) {
+    nome = modeloLink;
+    components.push({ type: 'button', sub_type: 'url', index: '0', parameters: [{ type: 'text', text: ps[5] }] });
+  }
+  return { nome, components };
+}
+
 async function enviarUma(m) {
+  const t = montar(m);
   const body = {
     messaging_product: 'whatsapp', to: '55' + m.telefone, type: 'template',
-    template: { name: m.modelo, language: { code: L.env('WHATSAPP_IDIOMA') || 'pt_BR' },
-      components: [{ type: 'body', parameters: (Array.isArray(m.params) ? m.params : []).map(t => ({ type: 'text', text: limpa(t) })) }] }
+    template: { name: t.nome, language: { code: L.env('WHATSAPP_IDIOMA') || 'pt_BR' }, components: t.components }
   };
   const r = await fetch(GRAPH + '/' + L.env('WHATSAPP_PHONE_ID') + '/messages', {
     method: 'POST', headers: { Authorization: 'Bearer ' + L.env('WHATSAPP_TOKEN'), 'Content-Type': 'application/json' }, body: JSON.stringify(body)
@@ -36,4 +53,4 @@ async function enviarFila() {
   }
   return { ligado: true, enviados, falhas };
 }
-module.exports = { enviarFila, enviarUma, limpa };
+module.exports = { enviarFila, enviarUma, limpa, montar };
