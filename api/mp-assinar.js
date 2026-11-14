@@ -37,12 +37,15 @@ module.exports = async (req, res) => {
   const valor = Math.round(Number(d.valor) * 100) / 100;
   if (!(valor > 0)) return L.json(res, 409, { erro: 'Seu plano ainda não tem valor mensal.' });
   const site = L.siteUrl(req);
+  // Com "token" (cartão preenchido dentro do Agendio) a assinatura já nasce autorizada; sem ele, segue o caminho pelo Mercado Pago.
+  const token = String(b.token || '');
+  if (token && !/^[A-Za-z0-9]{16,80}$/.test(token)) return L.json(res, 400, { erro: 'Dados do cartão inválidos. Preencha de novo.' });
   const corpo = {
     reason: 'Agendio - plano ' + (d.plano_nome || ''),
     external_reference: d.tenant_id,
     payer_email: d.email,
     back_url: site + '/?pg=assinatura',
-    status: 'pending',
+    status: token ? 'authorized' : 'pending',
     auto_recurring: { frequency: 1, frequency_type: 'months', transaction_amount: valor, currency_id: 'BRL' }
   };
   // Se o salão ainda tem dias pagos, o primeiro débito só acontece no vencimento (sem cobrar duas vezes).
@@ -52,9 +55,10 @@ module.exports = async (req, res) => {
     const teto = Date.now() + 36e5 * 24 * 360;
     if (dt.getTime() > Date.now() + 36e5 * 24) corpo.auto_recurring.start_date = new Date(Math.min(dt.getTime(), teto)).toISOString();
   }
+  if (token) corpo.card_token_id = token;
   const r = await L.mp('/preapproval', { method: 'POST', body: JSON.stringify(corpo) });
   const url = r.dados && r.dados.init_point, id = r.dados && r.dados.id;
-  if (!r.ok || !url || !id) {
+  if (!r.ok || !(token ? true : url) || !id) {
     const dd = r.dados || {}, causa = Array.isArray(dd.cause) && dd.cause[0] ? (dd.cause[0].description || dd.cause[0].code) : '';
     const motivo = String(causa || dd.message || dd.error || '').slice(0, 160);
     console.error('mp-assinar: MP respondeu', r.status, JSON.stringify(dd).slice(0, 400));
@@ -62,5 +66,11 @@ module.exports = async (req, res) => {
   }
   try { await L.rpcServico('mp_assinatura_gravar', { p_tenant: d.tenant_id, p_preapproval: String(id), p_plano: d.plano_id, p_valor: valor }); }
   catch (e) { console.error('mp-assinar: gravar falhou', e.status, e.message); return L.json(res, 502, { erro: 'Não foi possível guardar a assinatura (erro ' + (e.status || '?') + ': ' + String(e.message || '').slice(0, 140) + '). Avise o suporte.' }); }
+  if (token) {
+    const st = String(r.dados.status || '');
+    try { await L.rpcServico('mp_assinatura_atualizar', { p_preapproval: String(id), p_status: st, p_proximo: r.dados.next_payment_date ? L.dataSP(r.dados.next_payment_date) : null }); } catch (_) {}
+    if (st !== 'authorized') return L.json(res, 200, { ok: false, status: st, erro: 'O cartão não foi aceito para o débito automático. Confira os dados ou tente outro cartão.' });
+    return L.json(res, 200, { ok: true, status: st });
+  }
   return L.json(res, 200, { url });
 };

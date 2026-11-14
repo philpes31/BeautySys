@@ -2,6 +2,7 @@
 // Não confiamos no aviso: buscamos o pagamento no Mercado Pago com a nossa chave e conferimos
 // cobrança, valor e moeda antes de marcar como pago.
 const L = require('./_lib');
+const P = require('./_pag');
 
 function pegaId(req, b) {
   const q = req.query || {};
@@ -56,23 +57,9 @@ module.exports = async (req, res) => {
     p = r.dados || {};
   } catch (_) { return L.json(res, 502, { erro: 'Mercado Pago indisponível.' }); }
 
-  const ref = String(p.external_reference || '');
-  if (!L.UUID.test(ref)) return L.json(res, 200, { ok: true, ignorado: 'sem cobrança do Agendio' });
-  if (p.status !== 'approved') return L.json(res, 200, { ok: true, situacao: p.status || 'desconhecida' });
-
   try {
-    const c = await L.rpcServico('mp_dados_cobranca', { p_id: ref });
-    if (!c) return L.json(res, 200, { ok: true, ignorado: 'cobrança não existe' });
-    if (c.status === 'pago') return L.json(res, 200, { ok: true, repetido: true });
-    const pago = Number(p.transaction_amount);
-    if (String(p.currency_id || 'BRL') !== 'BRL' || !(pago + 0.005 >= Number(c.valor))) {
-      console.warn('mp-webhook: valor ou moeda diferente do esperado', { ref, pago, esperado: c.valor, moeda: p.currency_id });
-      return L.json(res, 200, { ok: true, ignorado: 'valor diferente do esperado' });
-    }
-    const r = await L.rpcServico('registrar_pagamento_externo', {
-      p_provedor: 'mercadopago', p_ref: ref, p_status: 'pago', p_pago_em: L.dataSP(p.date_approved)
-    });
-    return L.json(res, 200, { ok: !!(r && r.ok) });
+    const x = await P.confirmar(p);
+    return L.json(res, x.codigo, x.corpo);
   } catch (e) {
     console.error('mp-webhook:', e.message);
     return L.json(res, 500, { erro: 'Falha ao registrar o pagamento.' });          // o MP tenta de novo

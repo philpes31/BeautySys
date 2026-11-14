@@ -65,4 +65,24 @@ function dataSP(iso) {
   if (isNaN(d)) return null;
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 }
-module.exports = { env, faltando, faltandoBase, mpCom, siteUrl, rpcServico, mp, json, corpo, dataSP, UUID };
+// Cobrança do salão lida com o login da própria pessoa (a segurança do banco decide o que ela pode ver).
+async function lerCobranca(auth, id) {
+  const base = env('SUPABASE_URL').replace(/\/+$/, '');
+  const r = await fetch(base + '/rest/v1/pagamentos?select=id,valor,status,vencimento,tipo,descricao&id=eq.' + id, { headers: { apikey: env('SUPABASE_ANON_KEY'), Authorization: auth } });
+  if (r.status === 401 || r.status === 403) return { erro: 401 };
+  if (!r.ok) return { erro: 502 };
+  const l = await r.json();
+  return { g: Array.isArray(l) ? l[0] || null : null };
+}
+async function emailDe(auth) {
+  try {
+    const r = await fetch(env('SUPABASE_URL').replace(/\/+$/, '') + '/auth/v1/user', { headers: { apikey: env('SUPABASE_ANON_KEY'), Authorization: auth } });
+    const j = await r.json().catch(() => null);
+    return r.ok && j && /^[^\s@]+@[^\s@]+$/.test(j.email || '') ? String(j.email) : '';
+  } catch (_) { return ''; }
+}
+function motivoMp(r) {
+  const d = r.dados || {}, causa = Array.isArray(d.cause) && d.cause[0] ? (d.cause[0].description || d.cause[0].code) : '';
+  return String(causa || d.message || d.error || '').slice(0, 160);
+}
+module.exports = { lerCobranca, emailDe, motivoMp, env, faltando, faltandoBase, mpCom, siteUrl, rpcServico, mp, json, corpo, dataSP, UUID };

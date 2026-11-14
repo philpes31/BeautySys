@@ -238,6 +238,15 @@ body:not(.logado) main.wrap{max-width:none;padding:0}
 dialog{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:18px;padding:24px;width:min(560px,calc(100vw - 32px));max-height:90dvh;overflow:auto;box-shadow:0 24px 60px -20px rgba(20,8,16,.5)}
 dialog::backdrop{background:rgba(26,12,20,.58);backdrop-filter:blur(2px)}
 dialog h2{margin-top:0;font-size:28px}
+.pg-abas{display:flex;gap:6px;margin:0 0 14px;border-bottom:1px solid var(--line)}
+.pg-abas button{border:0;background:none;padding:9px 14px;font:inherit;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.pg-abas button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.pg-qr{display:flex;justify-content:center;margin:6px 0 12px}.pg-qr svg,.pg-qr img{width:210px;height:210px;border-radius:10px;background:#fff}
+.pg-copia{display:flex;gap:8px}.pg-copia input{flex:1;min-width:0}
+.pg-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mpf{height:46px;border:1px solid var(--line);border-radius:10px;padding:0 12px;background:var(--surface);display:flex;align-items:center}
+.mpf iframe{height:100%!important}
+
 .hr-linha{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0}.hr-linha .chk{min-width:112px;margin:0}.hr-linha input[type=time]{width:auto;min-width:104px}
 .slots{display:flex;flex-wrap:wrap;gap:8px}.slot{border:1px solid var(--line);background:var(--surface);color:inherit;border-radius:10px;padding:10px 14px;font:inherit;font-weight:600;cursor:pointer;min-width:72px}.slot:hover{border-color:var(--accent)}.slot.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
@@ -959,6 +968,122 @@ async function carregarSalao(){
   catch(_){S.salao=false}
   if(S.view==='salao')render();
 }
+/* ---------- Pagamento dentro do Agendio (Pix e cartão) ---------- */
+const MPX={mp:null,timer:null,qr:'',metodo:'',emissor:'',tentando:false};
+async function apiMp(rota,corpo){
+  const ses=await sb.auth.getSession(),tk=ses&&ses.data&&ses.data.session&&ses.data.session.access_token;
+  if(!tk)throw new Error('Entre de novo para pagar.');
+  const r=await fetch('/api/'+rota,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+tk},body:JSON.stringify(corpo)});
+  let j=null;try{j=await r.json()}catch(_){}
+  if(r.status===404&&!j)throw new Error('As funções de pagamento não estão publicadas no site. Avise o suporte. [404]');
+  return {ok:r.ok,status:r.status,j:j||{}};
+}
+function msgApi(r){const j=r.j||{};return (j.erro||'O pagamento não respondeu. Tente de novo em instantes.')+(Array.isArray(j.faltando)&&j.faltando.length?' (falta configurar: '+j.faltando.join(', ')+')':'')}
+function pararPagto(){if(MPX.timer){clearInterval(MPX.timer);MPX.timer=null}MPX.qr='';MPX.metodo='';MPX.emissor=''}
+function carregaSdkMp(){return new Promise((ok,no)=>{if(window.MercadoPago)return ok();const t=setTimeout(()=>no(new Error('sdk')),15000),e=document.createElement('script');e.src='https://sdk.mercadopago.com/js/v2';e.onload=()=>{clearTimeout(t);ok()};e.onerror=()=>{clearTimeout(t);no(new Error('sdk'))};document.head.appendChild(e)})}
+async function iniciaMp(){
+  if(MPX.mp)return MPX.mp;
+  const r=await fetch('/api/mp-config');let j=null;try{j=await r.json()}catch(_){}
+  if(!j||!j.public_key)return null;
+  await carregaSdkMp();
+  MPX.mp=new window.MercadoPago(j.public_key,{locale:'pt-BR'});return MPX.mp;
+}
+function htmlCartao(modo,id){
+  return `<p class="muted" style="margin:0 0 10px">${modo==='debito'?'Informe o cartão uma vez. A mensalidade é cobrada sozinha todo mês, e você cancela quando quiser.':'Pagamento seguro. Os dados do cartão vão direto para o Mercado Pago e não ficam guardados no Agendio.'}</p>
+  <div id="pg-cartao-corpo"><p class="muted" id="pg-cartao-carrega">Carregando o formulário seguro…</p>
+  <div id="pg-cartao-campos" hidden>
+    <label>Número do cartão</label><div id="mpc-num" class="mpf"></div>
+    <div class="pg-2"><div><label>Validade</label><div id="mpc-val" class="mpf"></div></div><div><label>Código (CVV)</label><div id="mpc-cvv" class="mpf"></div></div></div>
+    <label for="mpc-nome">Nome como está no cartão</label><input id="mpc-nome" autocomplete="cc-name" maxlength="60">
+    <label for="mpc-cpf">CPF do titular</label><input id="mpc-cpf" inputmode="numeric" autocomplete="off" maxlength="14" placeholder="000.000.000-00">
+    <p class="erro" id="pg-erro" role="alert"></p>
+    <div class="acts"><button type="button" class="btn" id="pg-cartao-ok" data-act="${modo==='debito'?'pgDebito':'pgCartao'}" data-id="${esc(id||'')}">${modo==='debito'?'Ativar débito automático':'Pagar com cartão'}</button></div>
+  </div></div>`;
+}
+async function montaCartao(){
+  const car=$('pg-cartao-carrega'),campos=$('pg-cartao-campos');if(!car||!campos)return;
+  try{
+    const mp=await iniciaMp();
+    if(!mp){car.textContent='O pagamento com cartão dentro do sistema ainda não foi ativado. Use o Pix ou o botão do Mercado Pago abaixo.';return}
+    if(!$('mpc-num'))return;
+    campos.hidden=false;car.hidden=true;
+    const n=mp.fields.create('cardNumber',{placeholder:'0000 0000 0000 0000'});n.mount('mpc-num');
+    mp.fields.create('expirationDate',{placeholder:'MM/AA'}).mount('mpc-val');
+    mp.fields.create('securityCode',{placeholder:'123'}).mount('mpc-cvv');
+    n.on('binChange',async e=>{
+      MPX.metodo='';MPX.emissor='';
+      if(!e||!e.bin)return;
+      try{const r=await mp.getPaymentMethods({bin:e.bin}),m=r&&r.results&&r.results[0];if(m){MPX.metodo=String(m.id||'');MPX.emissor=m.issuer&&m.issuer.id?String(m.issuer.id):''}}catch(_){}
+    });
+  }catch(_){car.textContent='Não foi possível carregar o formulário do cartão. Use o Pix ou o botão do Mercado Pago abaixo.'}
+}
+function abrirPagamento(id){
+  const g=((S.assin&&S.assin.pags)||[]).find(x=>x.id===id);if(!g)return;
+  pararPagto();
+  abrir(`<h2>Pagar ${brl(g.valor)}</h2><p class="muted" style="margin:-8px 0 12px">${g.tipo==='mensagens'?esc(g.descricao||'Mensagens de WhatsApp'):'Mensalidade do Agendio'} · vence ${esc(fd(g.vencimento))}</p>
+  <div class="pg-abas" role="tablist"><button type="button" role="tab" aria-selected="true" data-act="pgAba" data-id="pix">Pix</button><button type="button" role="tab" aria-selected="false" data-act="pgAba" data-id="cartao">Cartão de crédito</button></div>
+  <div id="pg-pix" data-cob="${esc(id)}"><p class="muted" style="margin:0 0 10px">Aprovação em segundos. Você escaneia o QR Code ou copia o código no app do seu banco.</p><div id="pg-pix-corpo"><div class="acts"><button type="button" class="btn" data-act="pgPix" data-id="${esc(id)}">Gerar Pix</button></div></div></div>
+  <div id="pg-cartao" hidden data-cob="${esc(id)}">${htmlCartao('cobranca',id)}</div>
+  <div class="acts" style="margin-top:14px"><button type="button" class="btn ghost" data-act="pagarMPantigo" data-id="${esc(id)}">Prefiro pagar no site do Mercado Pago</button><button type="button" class="btn ghost" data-act="fechar">Fechar</button></div>`);
+}
+function abrirDebito(){
+  const pl=S.ctx&&S.ctx.plano;pararPagto();
+  abrir(`<h2>Débito automático</h2><p class="muted" style="margin:-8px 0 12px">${pl?'Plano '+esc(pl.nome)+' · '+brl(pl.preco_mensal)+' por mês':''}</p>
+  <div id="pg-cartao">${htmlCartao('debito','')}</div>
+  <div class="acts" style="margin-top:14px"><button type="button" class="btn ghost" data-act="debitoAtivarMP">Prefiro autorizar no site do Mercado Pago</button><button type="button" class="btn ghost" data-act="fechar">Fechar</button></div>`);
+  montaCartao();
+}
+function pgAba(qual){
+  document.querySelectorAll('.pg-abas button').forEach(b=>b.setAttribute('aria-selected',b.dataset.id===qual?'true':'false'));
+  const px=$('pg-pix'),ct=$('pg-cartao');if(px)px.hidden=qual!=='pix';if(ct)ct.hidden=qual!=='cartao';
+  if(qual==='cartao'&&ct&&!ct.dataset.ok){ct.dataset.ok='1';montaCartao()}
+}
+function pgSucesso(msg){
+  pararPagto();
+  abrir(`<h2>Pagamento confirmado</h2><p>${esc(msg||'Recebemos o seu pagamento. O seu plano já está em dia.')}</p><div class="acts"><button type="button" class="btn" data-act="fechar">Fechar</button></div>`);
+  carregarSalao();
+}
+async function gerarPix(id,btn){
+  const corpo=$('pg-pix-corpo');if(btn){btn.disabled=true;btn.textContent='Gerando…'}
+  try{
+    const r=await apiMp('mp-pix',{pagamento_id:id});
+    if(!r.ok||!r.j.qr)throw new Error(msgApi(r));
+    MPX.qr=r.j.qr;
+    let svg='';try{svg=window.AgendioPix.qrSvg(r.j.qr,'QR Code do Pix')}catch(_){svg=''}
+    const img=svg||(/^[A-Za-z0-9+/=]+$/.test(r.j.qr_base64||'')?`<img alt="QR Code do Pix" width="200" height="200" src="data:image/png;base64,${r.j.qr_base64}">`:'');
+    corpo.innerHTML=`<div class="pg-qr">${img}</div><label>Pix copia e cola</label><div class="pg-copia"><input id="pg-copia" readonly value="${esc(r.j.qr)}"><button type="button" class="btn sm" data-act="pgCopia">Copiar</button></div><p class="muted" id="pg-espera" role="status" style="margin:10px 0 0">Aguardando o pagamento… esta tela confirma sozinha assim que o Pix cair.</p>`;
+    let n=0;if(MPX.timer)clearInterval(MPX.timer);
+    MPX.timer=setInterval(async()=>{
+      if(++n>360||!$('pg-pix-corpo')){pararPagto();return}
+      try{const c=await apiMp('mp-pix',{pagamento_id:id,acao:'conferir'});if(c.ok&&c.j.pago)pgSucesso('Pix recebido! O seu plano já está em dia.')}catch(_){}
+    },5000);
+  }catch(x){if(btn){btn.disabled=false;btn.textContent='Gerar Pix'}toast((x&&x.message)||'Não foi possível gerar o Pix.',true)}
+}
+async function enviarCartao(modo,id,btn){
+  const er=$('pg-erro'),fail=m=>{if(er)er.textContent=m;if(btn){btn.disabled=false;btn.textContent=btn.dataset.t||'Pagar com cartão'}MPX.tentando=false};
+  if(MPX.tentando)return;
+  const nome=(($('mpc-nome')||{}).value||'').trim(),cpf=((($('mpc-cpf')||{}).value)||'').replace(/\D/g,'');
+  if(er)er.textContent='';
+  if(nome.length<3||!/\s/.test(nome))return void(er&&(er.textContent='Digite o nome completo como está no cartão.'));
+  if(cpf.length!==11)return void(er&&(er.textContent='Digite o CPF do titular (11 números).'));
+  if(modo!=='debito'&&!MPX.metodo)return void(er&&(er.textContent='Confira o número do cartão.'));
+  MPX.tentando=true;if(btn){btn.dataset.t=btn.textContent;btn.disabled=true;btn.textContent='Processando…'}
+  try{
+    const t=await MPX.mp.fields.createCardToken({cardholderName:nome,identificationType:'CPF',identificationNumber:cpf});
+    if(!t||!t.id)throw new Error('cartao');
+    if(modo==='debito'){
+      const r=await apiMp('mp-assinar',{acao:'criar',token:t.id});
+      if(r.ok&&r.j.ok){MPX.tentando=false;pararPagto();abrir(`<h2>Débito automático ativado</h2><p>O cartão será cobrado todo mês. Você pode cancelar quando quiser.</p><div class="acts"><button type="button" class="btn" data-act="fechar">Fechar</button></div>`);carregarSalao();return}
+      return fail(r.ok?(r.j.erro||'O cartão não foi aceito.'):msgApi(r));
+    }
+    const r=await apiMp('mp-cartao',{pagamento_id:id,token:t.id,payment_method_id:MPX.metodo,issuer_id:MPX.emissor,cpf});
+    if(!r.ok)return fail(msgApi(r));
+    MPX.tentando=false;
+    if(r.j.status==='approved')return pgSucesso('Pagamento aprovado! O seu plano já está em dia.');
+    if(r.j.status==='in_process'){pararPagto();abrir(`<h2>Pagamento em análise</h2><p>O banco está analisando o pagamento. Assim que for aprovado, o seu plano é liberado sozinho.</p><div class="acts"><button type="button" class="btn" data-act="fechar">Fechar</button></div>`);return}
+    return fail(r.j.erro||'O cartão foi recusado.');
+  }catch(x){fail(x&&x.message&&x.message!=='cartao'&&!Array.isArray(x)?x.message:'Confira os dados do cartão (número, validade e código) e tente de novo.')}
+}
 async function pagarCobranca(id,btn){
   if(btn){btn.disabled=true;btn.dataset.t=btn.textContent;btn.textContent='Abrindo…'}
   const volta=()=>{if(btn){btn.disabled=false;btn.textContent=btn.dataset.t||'Pagar agora'}};
@@ -987,7 +1112,7 @@ function blocoDebito(pl){
   const a=(S.assin&&S.assin.auto)||null,st=a?a.status:'';
   if(st==='autorizada')return `<div class="panel" style="margin:14px 0 0;background:var(--accent-soft)"><b>Débito automático ativo</b><p class="muted" style="margin:4px 0 8px">O cartão é cobrado todo mês (${brl(a.valor)})${a.proximo_debito?', próximo em '+esc(fd(a.proximo_debito)):''}. Você não precisa pagar nada à mão.</p><button class="btn ghost sm" data-act="debitoParar">Cancelar débito automático</button></div>`;
   if(!pl)return '';
-  return `<div class="panel" style="margin:14px 0 0"><b>Débito automático</b><p class="muted" style="margin:4px 0 8px">${st==='pendente'?'Você começou a ativar, mas ainda não concluiu no Mercado Pago. ':st==='cancelada'||st==='pausada'?'O débito automático está '+(st==='pausada'?'pausado':'cancelado')+'. ':''}Autorize uma vez no Mercado Pago e a mensalidade do plano ${esc(pl.nome)} é cobrada sozinha no cartão. Dá para cancelar quando quiser.</p><button class="btn sm" data-act="debitoAtivar">${st==='pendente'?'Concluir no Mercado Pago':'Ativar débito automático'}</button></div>`;
+  return `<div class="panel" style="margin:14px 0 0"><b>Débito automático</b><p class="muted" style="margin:4px 0 8px">${st==='pendente'?'Você começou a ativar, mas ainda não concluiu. ':st==='cancelada'||st==='pausada'?'O débito automático está '+(st==='pausada'?'pausado':'cancelado')+'. ':''}Informe o cartão uma vez e a mensalidade do plano ${esc(pl.nome)} é cobrada sozinha todo mês. Dá para cancelar quando quiser.</p><button class="btn sm" data-act="debitoAtivar">${st==='pendente'?'Concluir ativação':'Ativar débito automático'}</button></div>`;
 }
 async function chamaAssinar(acao,btn){
   if(btn){btn.disabled=true;btn.dataset.t=btn.textContent;btn.textContent='Aguarde…'}
@@ -3071,6 +3196,7 @@ function menuMais(){
   <div class="sheet-foot"><span class="muted">${esc(em)}</span><button class="btn ghost" data-act="sair">Sair</button></div>`);
 }
 function abrir(html){const d=$('dlg');d.innerHTML=html;if(!d.open)d.showModal()}
+document.getElementById('dlg').addEventListener('close',()=>pararPagto());
 function confirmar(titulo,txt,rotulo,fn){
   S.conf=fn;
   abrir(`<h2>${esc(titulo)}</h2><p>${esc(txt)}</p><form data-form="confirmar"><div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn danger">${esc(rotulo)}</button></div></form>`);
@@ -3107,7 +3233,7 @@ document.addEventListener('click',e=>{
   const a=e.target.closest('[data-act]');if(!a)return;
   const id=a.dataset.id;
   const f={
-    novaCliente:()=>formCliente(),editCliente:()=>formCliente(id),delCliente:()=>pedirDelCliente(id),maisMenu:menuMais,pagarMP:()=>pagarCobranca(id,a),debitoAtivar:()=>chamaAssinar('criar',a),debitoParar:()=>confirmar('Cancelar o débito automático?','O cartão deixa de ser cobrado todo mês. Você poderá pagar cada mensalidade à mão ou ativar de novo.','Cancelar débito',()=>chamaAssinar('cancelar')),setStatus:()=>mudarStatus(id,a.dataset.st).catch(x=>toast(falha(x))),anonCliente:()=>pedirAnonCliente(id),exportaSalao:()=>exportarSalao().catch(x=>toast(falha(x))),excluiSalao:formExcluirSalao,
+    novaCliente:()=>formCliente(),editCliente:()=>formCliente(id),delCliente:()=>pedirDelCliente(id),maisMenu:menuMais,pagarMP:()=>abrirPagamento(id),pagarMPantigo:()=>pagarCobranca(id,a),pgAba:()=>pgAba(id),pgPix:()=>gerarPix(id,a),pgCopia:()=>{const i=$('pg-copia');if(i){i.select();try{navigator.clipboard.writeText(i.value)}catch(_){try{document.execCommand('copy')}catch(_){}}toast('Código Pix copiado.')}},pgCartao:()=>enviarCartao('cobranca',id,a),pgDebito:()=>enviarCartao('debito','',a),debitoAtivar:()=>abrirDebito(),debitoAtivarMP:()=>chamaAssinar('criar',a),debitoParar:()=>confirmar('Cancelar o débito automático?','O cartão deixa de ser cobrado todo mês. Você poderá pagar cada mensalidade à mão ou ativar de novo.','Cancelar débito',()=>chamaAssinar('cancelar')),setStatus:()=>mudarStatus(id,a.dataset.st).catch(x=>toast(falha(x))),anonCliente:()=>pedirAnonCliente(id),exportaSalao:()=>exportarSalao().catch(x=>toast(falha(x))),excluiSalao:formExcluirSalao,
     pubHora:()=>{S.pb.hora=a.dataset.hora;S.pb.prof=a.dataset.prof;render()},pubNovo:()=>{S.pb={sv:'',pf:'',dt:'',slots:null,hora:'',prof:'',nome:'',tel:'',obs:'',ok:null};render()},pubRecarrega:()=>carregarPublico(),copiaLink:()=>{try{navigator.clipboard.writeText(a.dataset.link).then(()=>toast('Link copiado.'),()=>toast('Copie o link manualmente.',true))}catch(_){toast('Copie o link manualmente.',true)}},
     aceitaPedido:()=>responderPedido(id,true).catch(x=>toast(falha(x),true)),recusaPedido:()=>{const go=()=>responderPedido(id,false).catch(x=>toast(falha(x),true));if(a.dataset.sinal)confirmar('Recusar pedido com sinal pago?','A cliente já pagou o sinal. Você precisa devolver pelo app do Mercado Pago.','Recusar',go);else go()},
     mpDesconectar:()=>confirmar('Desconectar o Mercado Pago?','O sinal automático deixa de funcionar. Pedidos com sinal pendente continuam, mas a cliente não conseguirá pagar.','Desconectar',async()=>{await chamaApi('mp-conectar',{remover:true});S.onl.mp=false;if(S.agCfg&&S.agCfg.online&&S.agCfg.online.sinal&&S.agCfg.online.sinal.modo==='mp'){const c=Object.assign({},S.agCfg);c.online=Object.assign({},c.online,{sinal:Object.assign({},c.online.sinal,{modo:'nenhum'})});await salvarAgCfg(c)}render();toast('Mercado Pago desconectado.')}),
