@@ -1972,7 +1972,7 @@ async function salvarAtend(id,d){
   if(!S.semEst)o.hora=d.hora||null;
   if(!S.semProc2)o.procedimento2=String(d.procedimento2||'').trim().slice(0,60);
   const antes=id&&S.atendTodos.find(x=>x.id===id);
-  if(!S.semPago){o.valor2=v2;o.pago=pago;o.pago_em=pago?((antes&&antes.pago&&antes.pagoEm)||hoje()):null}
+  if(!S.semPago){o.valor2=v2;o.pago=pago;o.pago_em=pago?((antes&&antes.pago&&antes.pagoEm)||(String(d.data)>hoje()?d.data:hoje())):null}
   if(!S.semDur)o.duracao=Math.min(720,Math.max(5,Math.round(Number(d.duracao)||60)));
   if(!id&&!S.semStatus)o.status='agendado';
   const aid=id||novoId();
@@ -2840,8 +2840,9 @@ function tipMostra(e){
 document.addEventListener('pointermove',tipMostra);document.addEventListener('pointerdown',tipMostra);
 document.addEventListener('scroll',tipEsconde,true);
 
+const diaCaixa=x=>{const p=String(x.pagoEm||''),d=String(x.data||'');return p&&p>d?p:d};
 function relDia(){
-  const d=S.diaRel||hoje(),f=x=>(x.pagoEm||x.data)===d;
+  const d=S.diaRel||hoje(),f=x=>diaCaixa(x)===d;
   const feitos=S.atend.filter(a=>a.data===d),caixa=S.atend.filter(a=>!aberto(a)&&f(a)),pend=feitos.filter(aberto),
     contas=S.gastos.filter(g=>g.data===d),custos=feitos.reduce((x,a)=>x+desp(a),0),
     rec=soma(caixa),dContas=soma(contas),saldo=rec-dContas-custos;
@@ -2849,7 +2850,7 @@ function relDia(){
   const formas=Object.entries(porForma).sort((x,y)=>y[1]-x[1]);
   const nav=`<div class="bar"><button class="btn ghost" data-act="diaRel" data-id="-1" aria-label="Dia anterior">‹</button><input type="date" id="diaRelData" value="${d}" aria-label="Dia do fechamento"><button class="btn ghost" data-act="diaRel" data-id="1" aria-label="Próximo dia">›</button><button class="btn ghost" data-act="diaRel" data-id="0">Hoje</button><button class="btn ghost" data-act="imprimir">Imprimir / salvar em PDF</button></div>`;
   const k=(v,l,c)=>`<div class="stat"><b class="${c||''}">${v}</b><span>${l}</span></div>`;
-  const item=a=>{const c=cli(a.clienteId)||{nome:'(cliente removida)'};return `<div class="item"><div class="grow"><div class="t">${a.hora?esc(a.hora)+' · ':''}${esc(c.nome)}</div><div class="muted num">${esc(procTxt(a))} · ${esc(a.profissional||'')}${aberto(a)?' · <b>não pago</b>':a.pagamento?' · '+esc(a.pagamento):''}${a.pagoEm&&a.pagoEm!==a.data?' · recebido em '+fd(a.pagoEm):''}</div></div><div class="side-val">${brl(a.valor)}</div></div>`};
+  const item=a=>{const c=cli(a.clienteId)||{nome:'(cliente removida)'};return `<div class="item"><div class="grow"><div class="t">${a.hora?esc(a.hora)+' · ':''}${esc(c.nome)}</div><div class="muted num">${esc(procTxt(a))} · ${esc(a.profissional||'')}${aberto(a)?' · <b>não pago</b>':a.pagamento?' · '+esc(a.pagamento):''}${diaCaixa(a)!==a.data?' · recebido em '+fd(diaCaixa(a)):''}</div></div><div class="side-val">${brl(a.valor)}</div></div>`};
   return `<p class="so-print">${esc(S.nomeSalao||salaoNome())} — fechamento de ${fd(d)}</p>`+segRel()+nav+
   `<div class="stats">${k(brl(rec),'entrou no caixa')}${k(brl(dContas+custos),'despesas do dia')}${k(brl(saldo),'saldo do dia',saldo<0?'neg':'')}${k(brl(soma(pend)),'a receber ('+pend.length+')')}</div>
   <h3>Entrou no caixa, por forma de pagamento</h3>`+(formas.length?'<div class="list">'+formas.map(([n,v])=>`<div class="item"><div class="grow t">${esc(n)}</div><div class="side-val">${brl(v)}</div></div>`).join('')+'</div>':'<p class="muted">Nada recebido neste dia.</p>')+
