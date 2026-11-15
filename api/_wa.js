@@ -26,28 +26,45 @@ function montar(m) {
   return { nome, components };
 }
 
-async function enviarUma(m) {
+// cred = { phoneId, token } do número a usar (padrão: o da plataforma, das variáveis da Vercel)
+async function enviarUma(m, cred) {
   const t = montar(m);
+  const c = cred || { phoneId: L.env('WHATSAPP_PHONE_ID'), token: L.env('WHATSAPP_TOKEN') };
   const body = {
     messaging_product: 'whatsapp', to: '55' + m.telefone, type: 'template',
     template: { name: t.nome, language: { code: L.env('WHATSAPP_IDIOMA') || 'pt_BR' }, components: t.components }
   };
-  const r = await fetch(GRAPH + '/' + L.env('WHATSAPP_PHONE_ID') + '/messages', {
-    method: 'POST', headers: { Authorization: 'Bearer ' + L.env('WHATSAPP_TOKEN'), 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+  const r = await fetch(GRAPH + '/' + c.phoneId + '/messages', {
+    method: 'POST', headers: { Authorization: 'Bearer ' + c.token, 'Content-Type': 'application/json' }, body: JSON.stringify(body)
   });
   let j = null; try { j = await r.json(); } catch (_) { j = null; }
   if (r.ok) return { ok: true };
-  const msg = String((j && j.error && (j.error.message || j.error.type)) || ('HTTP ' + r.status)).slice(0, 250);
+  let msg = String((j && j.error && (j.error.message || j.error.type)) || ('HTTP ' + r.status)).slice(0, 250);
+  if (cred && (r.status === 401 || (j && j.error && j.error.code === 190))) msg = 'A Meta recusou o token do WhatsApp do salão. Reconecte em Mensagens.';
   return { ok: false, erro: msg, definitivo: r.status >= 400 && r.status < 500 && r.status !== 429 };
 }
 
 async function enviarFila() {
-  if (!L.env('WHATSAPP_TOKEN') || !L.env('WHATSAPP_PHONE_ID')) return { ligado: false };
-  const lote = await L.rpcServico('wa_pegar', { p_limite: 30 });
+  const plataforma = !!(L.env('WHATSAPP_TOKEN') && L.env('WHATSAPP_PHONE_ID'));
+  // Sem número da plataforma, ainda enviamos as mensagens dos salões que conectaram o próprio número.
+  // (O parâmetro novo só vai quando necessário, para não quebrar quem ainda não rodou o SQL da Etapa 38.)
+  let lote;
+  try { lote = await L.rpcServico('wa_pegar', plataforma ? { p_limite: 30 } : { p_limite: 30, p_so_proprio: true }); }
+  catch (e) { if (!plataforma) return { ligado: false }; throw e; }
+  if (!plataforma && !(lote || []).length) return { ligado: false };
+  const creds = {};
   let enviados = 0, falhas = 0;
   for (const m of (lote || [])) {
     let r;
-    try { r = await enviarUma(m); } catch (e) { r = { ok: false, erro: 'rede: ' + String(e.message || e).slice(0, 200), definitivo: false }; }
+    if (!plataforma && !m.proprio) continue; // proteção extra: sem número da plataforma, só salões com número próprio
+    try {
+      let cred = null;
+      if (m.proprio) {
+        if (!(m.tenant_id in creds)) { const x = await L.rpcServico('wa_conta_ler', { p_tenant: m.tenant_id }); creds[m.tenant_id] = x && x.phone_id && x.token ? { phoneId: x.phone_id, token: x.token } : null; }
+        cred = creds[m.tenant_id];
+        if (!cred) r = { ok: false, erro: 'WhatsApp do salão desconectado.', definitivo: false };
+      }
+      if (!r) r = await enviarUma(m, cred); } catch (e) { r = { ok: false, erro: 'rede: ' + String(e.message || e).slice(0, 200), definitivo: false }; }
     try { await L.rpcServico('wa_resultado', { p_id: m.id, p_ok: r.ok, p_erro: r.erro || null, p_definitivo: !!r.definitivo }); } catch (_) { /* volta sozinho após 30 min */ }
     if (r.ok) enviados++; else falhas++;
   }
