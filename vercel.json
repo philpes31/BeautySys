@@ -1,4 +1,17 @@
 {
+  "redirects": [
+    {
+      "source": "/((?!api/).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "beautysys.vercel.app"
+        }
+      ],
+      "destination": "https://www.agendio.tec.br/$1",
+      "permanent": false
+    }
+  ],
   "crons": [
     {
       "path": "/api/cron",
