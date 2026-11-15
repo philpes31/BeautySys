@@ -333,6 +333,7 @@ textarea{min-height:0}
 @media (max-width:480px){.stat b{font-size:22px}}
 .page-head{padding-bottom:14px;margin-bottom:18px;border-bottom:1px solid var(--line)}
 .page-head h1{font-size:clamp(30px,4vw,38px);letter-spacing:-.005em}
+.faixa-pg{background:var(--rose-soft,#fbe3ea)!important;color:var(--ink,#2a1722)!important;flex-wrap:wrap;border-radius:14px!important}
 .faixa{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:99px;background:var(--amber-soft);color:var(--amber);font-size:12.5px;font-weight:600;margin:0 0 12px}
 .list,.card{border-color:var(--line);box-shadow:var(--shadow)}
 .item{transition:background .12s}
@@ -617,8 +618,25 @@ function cabecalho(){
     despesas:['Despesas','Contas do salão: aluguel, luz, água, anúncios…'],estoque:['Estoque','Produtos, fichas técnicas e custo por atendimento'],retornos:['Retornos','Clientes para chamar de volta'],
     relatorios:['Relatórios','Faturamento, despesas e resultado'],horarios:['Horários','Serviços, expediente de cada profissional e folgas'],equipe:['Equipe','Quem usa o sistema e o que cada pessoa pode ver'],plataforma:['Plataforma','Salões, assinaturas e pagamentos do Agendio'],ajuda:['Ajuda','Fale com o suporte do Agendio'],mensagens:['Mensagens','Textos enviados às clientes pelo WhatsApp'],salao:['Salão','Dados, logotipo e cor da sua marca'],backup:['Backup','Planilha Excel e cópia de segurança']}[S.view]||['',''];
   let d=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});d=d.charAt(0).toUpperCase()+d.slice(1);
-  const tn=S.ctx&&S.ctx.tenant,fx=tn&&tn.status==='teste'&&tn.vencimento?`<p class="faixa">${tn.vencimento<hoje()?'Seu período de teste terminou em ':'Período de teste grátis até '}${esc(fd(tn.vencimento))}.</p>`:'';
+  const tn=S.ctx&&S.ctx.tenant,fx=faixaCobranca(tn);
   return fx+`<div class="page-head"><div><h1>${esc(T[0])}</h1><p class="muted">${esc(T[1])}</p></div><div class="muted hoje">${esc(d)}</div></div>`;
+}
+/* Aviso para o dono do salão: teste acabando, mensalidade perto de vencer ou vencida (e quando o acesso é suspenso) */
+function faixaCobranca(tn){
+  if(!tn)return '';
+  const a=S.avisoCob,btn=`<button type="button" class="btn sm" data-go="salao">Ver cobrança</button>`;
+  if(!a||a.dias==null){
+    return tn.status==='teste'&&tn.vencimento?`<p class="faixa">${tn.vencimento<hoje()?'Seu período de teste terminou em ':'Período de teste grátis até '}${esc(fd(tn.vencimento))}.</p>`:'';
+  }
+  const d=Number(a.dias),quando=n=>n===0?'hoje':n===1?'amanhã':'em '+n+' dias',atraso=n=>n===1?'1 dia':n+' dias';
+  const susp=a.bloqueio_em?` O acesso é suspenso em ${esc(fd(a.bloqueio_em))} se não for pago.`:'';
+  if(a.status==='teste'){
+    if(d>=0)return `<p class="faixa${d<=7?' faixa-pg':''}">${d===0?'Seu teste grátis termina hoje.':'Faltam '+d+(d===1?' dia':' dias')+' do seu teste grátis (até '+esc(fd(a.vencimento))+').'}${d<=7?' Escolha um plano para continuar. ':' '}${d<=7?btn:''}</p>`;
+    return `<p class="faixa faixa-pg">Seu período de teste terminou há ${atraso(-d)}.${susp} ${btn}</p>`;
+  }
+  if(a.status==='vencida'||d<0)return `<p class="faixa faixa-pg">A mensalidade venceu há ${atraso(-d)}. Pague para manter tudo funcionando.${susp} ${btn}</p>`;
+  if(d<=3)return `<p class="faixa faixa-pg">A mensalidade vence ${quando(d)} (${esc(fd(a.vencimento))}). ${btn}</p>`;
+  return '';
 }
 function render(){
   renderTop();
@@ -712,6 +730,8 @@ async function carregarCtx(){
         if(!c.error){const r2=await sb.rpc('meu_contexto');if(!r2.error)S.ctx=r2.data}
       }
     }
+    S.avisoCob=null;
+    if(S.ctx&&S.ctx.tenant){try{const av=await sb.rpc('meu_aviso_cobranca');S.avisoCob=av.error?null:av.data}catch(_){S.avisoCob=null}}
     aplicaTema();
   }catch(_){S.ctxErro=true}
   S.ctxPronto=true;
@@ -846,7 +866,9 @@ function telaNovaSenha(){
   <p class="erro" id="a-erro" role="alert"></p><div class="acts"><button class="btn">Salvar senha</button></div></form>`);
 }
 function telaSuspenso(){
-  return telaMarca(false,`<h2>Acesso suspenso</h2><p class="muted">O acesso do seu salão ou o seu acesso está suspenso (assinatura pendente ou usuário desativado). Fale com o proprietário do salão ou com o suporte do Agendio.</p><div class="acts"><button class="btn ghost" data-act="sair">Sair</button></div>`);
+  if(S.zapSuporte===undefined){S.zapSuporte='';sb.rpc('publico_site').then(r=>{const c=r&&r.data&&r.data.config;if(c&&/^\d{12,13}$/.test(String(c.whatsapp||''))){S.zapSuporte=String(c.whatsapp);if(S.suspenso)render()}}).catch(()=>{})}
+  const zp=S.zapSuporte?`<a class="btn" target="_blank" rel="noopener" href="https://wa.me/${S.zapSuporte}?text=${encodeURIComponent('Olá! Meu acesso ao Agendio está suspenso e quero regularizar.')}">Falar no WhatsApp</a>`:'';
+  return telaMarca(false,`<h2>Acesso suspenso</h2><p class="muted">O acesso do seu salão ou o seu acesso está suspenso (mensalidade em aberto ou usuário desativado). Fale com o proprietário do salão ou com o suporte do Agendio. Assim que a mensalidade for paga, o acesso volta.</p><div class="acts">${zp}<button class="btn ghost" data-act="sair">Sair</button></div>`);
 }
 function telaCtxErro(){
   return telaMarca(false,`<h2>Não foi possível carregar</h2><p class="muted">Verifique a internet e tente de novo.</p><div class="acts"><button class="btn" data-act="tentarCtx">Tentar de novo</button><button class="btn ghost" data-act="sair">Sair</button></div>`);
@@ -1359,6 +1381,7 @@ async function carregarPlataforma(){
     const e=[i,sl,cr,pl,pg,lg].find(x=>x.error);if(e)throw e.error;
     S.pl=Object.assign(S.pl,{ok:true,erro:false,ind:i.data,saloes:sl.data||[],cresc:cr.data||[],planos:pl.data||[],pags:pg.data||[],logs:lg.data||[]});
   }catch(_){S.pl.erro=true;S.pl.ok=true}
+  try{const [al,cb]=await Promise.all([sb.rpc('plataforma_alertas'),sb.rpc('plataforma_ler_cobranca')]);S.pl.alertas=al.error?null:(al.data||[]);S.pl.cob=cb.error?null:cb.data}catch(_){S.pl.alertas=null;S.pl.cob=null}
   if(S.view==='plataforma')render();
 }
 function headPlataforma(){return `<div class="page-head"><div><h1>Plataforma</h1><p class="muted">Salões, assinaturas e pagamentos do Agendio</p></div></div>`}
@@ -1370,6 +1393,38 @@ function telaPlataforma(){
   const nav=`<div class="segs" role="tablist">${A.map(([k,l])=>`<button class="btn ghost sm" role="tab" aria-pressed="${ab===k}" data-act="plAba" data-id="${k}"${k==='suporte'&&S.pl.pend?` data-n="${S.pl.pend}"`:''}>${l}</button>`).join('')}</div>`;
   return nav+(ab==='saloes'?plSaloes():ab==='planos'?plPlanos():ab==='site'?plSite():ab==='pagamentos'?plPagamentos():ab==='metricas'?plMetricas():ab==='suporte'?plSuporte():ab==='auditoria'?plAuditoria():plPainel());
 }
+const MSG_COBRA={
+  atraso:(nome,x)=>`Olá, ${nome}! Tudo bem? Aqui é do Agendio. Notamos que a mensalidade do seu salão está em aberto. Para regularizar é só entrar no sistema, abrir "Salão" e tocar em "Pagar agora" (Pix ou cartão, leva 1 minuto). Qualquer dúvida estou aqui!`,
+  teste:(nome,x)=>`Olá, ${nome}! Tudo bem? Aqui é do Agendio. Seu teste grátis está terminando. Para continuar usando sem perder nada, é só escolher um plano em "Salão" dentro do sistema. Posso te ajudar com alguma dúvida?`};
+function plAlertas(){
+  const L=S.pl.alertas;if(L==null)return '';
+  if(!L.length)return `<p class="muted" role="status" style="margin:0 0 16px">Tudo certo: nenhum alerta no momento.</p>`;
+  const cor={erro:'late',aviso:'late',info:''},rot={erro:'Urgente',aviso:'Atenção',info:'Para ver'};
+  return `<h3 style="margin:6px 0 8px">Alertas (${L.length})</h3><div class="list" style="margin-bottom:18px">`+L.map(x=>{
+    const sl=x.tenant_id&&S.pl.saloes.find(s=>s.id===x.tenant_id),tel=sl&&String(sl.whatsapp||sl.telefone||'').replace(/\D/g,''),mk=MSG_COBRA[x.cobrar];
+    const wa=mk&&tel&&tel.length>=10?`<a class="btn sm" target="_blank" rel="noopener" href="${zap(tel)}?text=${encodeURIComponent(mk(String(sl.proprietario_nome||sl.nome||'').split(/\s+/)[0]||'tudo bem',x))}">Cobrar no WhatsApp</a>`:'';
+    return `<div class="item"><div class="grow"><div class="t">${esc(x.titulo||'')}</div><div class="muted">${esc(x.detalhe||'')}</div></div><div class="side"><span class="tag ${cor[x.nivel]||''}">${esc(rot[x.nivel]||'')}</span>${wa}</div></div>`}).join('')+'</div>';
+}
+function plBloqueio(){
+  const c=S.pl.cob;if(!c)return '';
+  return `<h3 style="margin:6px 0 8px">Bloqueio automático por falta de pagamento</h3><div class="card" style="padding:14px;margin:0 0 16px">
+  <label style="display:flex;gap:10px;align-items:center"><input type="checkbox" id="bq-auto" ${c.auto_bloquear?'checked':''}> Suspender o acesso do salão que não pagar</label>
+  <label for="bq-dias" style="margin-top:10px">Dias de tolerância depois do vencimento</label><input id="bq-dias" type="number" min="0" max="90" inputmode="numeric" value="${Number(c.carencia_dias)||0}" style="max-width:120px">
+  <p class="muted" style="margin:8px 0 0">Quando o prazo passa, o salão fica bloqueado. Assim que a mensalidade é paga, o acesso volta sozinho. O dono vê o aviso dentro do sistema antes do bloqueio. ${c.auto_bloquear?'Hoje está <b>ligado</b>.':'Hoje está <b>desligado</b>.'}</p>
+  <div class="acts" style="margin-top:10px"><button type="button" class="btn" data-act="plSalvaBloqueio">Salvar</button></div></div>`;
+}
+async function salvarBloqueio(btn){
+  const auto=!!$('bq-auto').checked,dias=parseInt($('bq-dias').value,10);
+  if(!(dias>=0&&dias<=90))return toast('Os dias de tolerância devem ficar entre 0 e 90.',true);
+  const go=async()=>{
+    if(btn)btn.disabled=true;
+    const r=await sb.rpc('plataforma_salvar_cobranca',{p_auto:auto,p_dias:dias});
+    if(btn)btn.disabled=false;
+    if(r.error)return toast(falha(r.error),true);
+    toast('Configuração salva.');await carregarPlataforma();
+  };
+  if(auto&&!(S.pl.cob&&S.pl.cob.auto_bloquear))confirmar('Ligar o bloqueio automático?',`A partir da próxima rotina diária, salões vencidos há mais de ${dias} dia(s) ficam sem acesso até pagarem.`,'Ligar',go);else go();
+}
 function plPainel(){
   const i=S.pl.ind||{},k=(v,l)=>`<div class="stat"><b>${v}</b><span>${l}</span></div>`;
   const vw=Math.max(300,Math.min(640,window.innerWidth>=860?640:window.innerWidth-32)),int=v=>String(Math.round(v));
@@ -1378,7 +1433,7 @@ function plPainel(){
   return `<div class="stats">${k(i.saloes||0,'salões cadastrados')}${k(i.ativos||0,'assinantes ativos')}${k(i.em_teste||0,'em período de teste')}${k(i.vencidos||0,'assinaturas vencidas')}</div>
   <div class="stats">${k(i.cancelados||0,'canceladas')}${k(i.bloqueados||0,'bloqueadas')}${k(brl(i.mrr||0),'receita mensal (MRR)')}${k(brl(i.arr||0),'receita anual (ARR)')}</div>
   <div class="row-actions" style="margin:6px 0 16px"><button class="btn ghost" data-act="plSituacoes">Atualizar situações</button><button class="btn ghost" data-act="plCobrancas">Gerar cobranças</button><button class="btn" data-act="plNovoSalao">Cadastrar salão</button></div>
-  ${plPedidos()}
+  ${plAlertas()}${plPedidos()}
   ${plDiag()}
   <p class="muted" style="font-size:13px">MRR soma o valor do plano dos salões com assinatura ativa. "Atualizar situações" marca como vencidos os salões com data passada. "Gerar cobranças" cria a mensalidade de cada salão ativo que não tem cobrança em aberto.</p>${g}`;
 }
@@ -1422,6 +1477,7 @@ function plPagamentos(){
   const aberto=L.filter(x=>x.status==='pendente'||x.status==='atrasado').reduce((t,x)=>t+Number(x.valor),0);
   return `<div class="stats"><div class="stat"><b>${brl(aberto)}</b><span>a receber (pendente e atrasado)</span></div><div class="stat"><b>${L.filter(x=>x.status==='atrasado').length}</b><span>cobranças atrasadas</span></div></div>
   <div class="row-actions" style="margin:0 0 14px"><button class="btn ghost" data-act="plCobrancas">Gerar cobranças</button><button class="btn ghost" data-act="plSituacoes">Atualizar situações</button></div>
+  ${plBloqueio()}
   ${L.length?'<div class="list">'+L.slice(0,S.pl.lim).map(x=>`<div class="item"><div class="grow"><div class="t">${esc(nomeSalao(x.tenant_id))}</div><div class="muted">${x.tipo==='mensagens'?esc(x.descricao||'Mensagens de WhatsApp')+' · ':''}vence ${esc(fd(x.vencimento))}${x.pago_em?' · pago em '+esc(fd(x.pago_em)):''}</div></div><div class="side"><b>${brl(x.valor)}</b> ${tagSt(x.status,ST_PAG)}${x.status==='pendente'||x.status==='atrasado'?` <button class="btn sm" data-act="plPagar" data-id="${esc(x.id)}">Marcar pago</button>`:''}</div></div>`).join('')+'</div>':'<div class="empty"><p>Nenhuma cobrança registrada. Use "Gerar cobranças" para criar a mensalidade dos salões ativos.</p></div>'}`;
 }
 function resumoLog(l){
@@ -3236,7 +3292,7 @@ document.addEventListener('click',e=>{
   const a=e.target.closest('[data-act]');if(!a)return;
   const id=a.dataset.id;
   const f={
-    novaCliente:()=>formCliente(),editCliente:()=>formCliente(id),delCliente:()=>pedirDelCliente(id),maisMenu:menuMais,pagarMP:()=>abrirPagamento(id),pagarMPantigo:()=>pagarCobranca(id,a),pgAba:()=>pgAba(id),pgPix:()=>gerarPix(id,a),pgCopia:()=>{const i=$('pg-copia');if(i){i.select();try{navigator.clipboard.writeText(i.value)}catch(_){try{document.execCommand('copy')}catch(_){}}toast('Código Pix copiado.')}},pgCartao:()=>enviarCartao('cobranca',id,a),pgDebito:()=>enviarCartao('debito','',a),debitoAtivar:()=>abrirDebito(),debitoAtivarMP:()=>chamaAssinar('criar',a),debitoParar:()=>confirmar('Cancelar o débito automático?','O cartão deixa de ser cobrado todo mês. Você poderá pagar cada mensalidade à mão ou ativar de novo.','Cancelar débito',()=>chamaAssinar('cancelar')),setStatus:()=>mudarStatus(id,a.dataset.st).catch(x=>toast(falha(x))),anonCliente:()=>pedirAnonCliente(id),exportaSalao:()=>exportarSalao().catch(x=>toast(falha(x))),excluiSalao:formExcluirSalao,
+    novaCliente:()=>formCliente(),editCliente:()=>formCliente(id),delCliente:()=>pedirDelCliente(id),maisMenu:menuMais,plSalvaBloqueio:()=>salvarBloqueio(a),pagarMP:()=>abrirPagamento(id),pagarMPantigo:()=>pagarCobranca(id,a),pgAba:()=>pgAba(id),pgPix:()=>gerarPix(id,a),pgCopia:()=>{const i=$('pg-copia');if(i){i.select();try{navigator.clipboard.writeText(i.value)}catch(_){try{document.execCommand('copy')}catch(_){}}toast('Código Pix copiado.')}},pgCartao:()=>enviarCartao('cobranca',id,a),pgDebito:()=>enviarCartao('debito','',a),debitoAtivar:()=>abrirDebito(),debitoAtivarMP:()=>chamaAssinar('criar',a),debitoParar:()=>confirmar('Cancelar o débito automático?','O cartão deixa de ser cobrado todo mês. Você poderá pagar cada mensalidade à mão ou ativar de novo.','Cancelar débito',()=>chamaAssinar('cancelar')),setStatus:()=>mudarStatus(id,a.dataset.st).catch(x=>toast(falha(x))),anonCliente:()=>pedirAnonCliente(id),exportaSalao:()=>exportarSalao().catch(x=>toast(falha(x))),excluiSalao:formExcluirSalao,
     pubHora:()=>{S.pb.hora=a.dataset.hora;S.pb.prof=a.dataset.prof;render()},pubNovo:()=>{S.pb={sv:'',pf:'',dt:'',slots:null,hora:'',prof:'',nome:'',tel:'',obs:'',ok:null};render()},pubRecarrega:()=>carregarPublico(),copiaLink:()=>{try{navigator.clipboard.writeText(a.dataset.link).then(()=>toast('Link copiado.'),()=>toast('Copie o link manualmente.',true))}catch(_){toast('Copie o link manualmente.',true)}},
     aceitaPedido:()=>responderPedido(id,true).catch(x=>toast(falha(x),true)),recusaPedido:()=>{const go=()=>responderPedido(id,false).catch(x=>toast(falha(x),true));if(a.dataset.sinal)confirmar('Recusar pedido com sinal pago?','A cliente já pagou o sinal. Você precisa devolver pelo app do Mercado Pago.','Recusar',go);else go()},
     mpDesconectar:()=>confirmar('Desconectar o Mercado Pago?','O sinal automático deixa de funcionar. Pedidos com sinal pendente continuam, mas a cliente não conseguirá pagar.','Desconectar',async()=>{await chamaApi('mp-conectar',{remover:true});S.onl.mp=false;if(S.agCfg&&S.agCfg.online&&S.agCfg.online.sinal&&S.agCfg.online.sinal.modo==='mp'){const c=Object.assign({},S.agCfg);c.online=Object.assign({},c.online,{sinal:Object.assign({},c.online.sinal,{modo:'nenhum'})});await salvarAgCfg(c)}render();toast('Mercado Pago desconectado.')}),
