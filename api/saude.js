@@ -62,6 +62,7 @@ module.exports = async (req, res) => {
     grupo('Banco de dados (Supabase)', base, 'Vercel → Settings → Environment Variables'),
     grupo('Mensalidade pelo Mercado Pago', mp.concat(base), 'Coloque o Access Token de produção em MP_ACCESS_TOKEN'),
     grupo('Pagamento com cartão dentro do sistema', ['MP_PUBLIC_KEY'], 'Coloque a Public Key do Mercado Pago em MP_PUBLIC_KEY (o Pix já funciona sem ela)'),
+    grupo('Assinatura dos avisos do Mercado Pago (opcional)', ['MP_WEBHOOK_SECRET'], 'Em Suas integrações > Webhooks do Mercado Pago, copie a "Assinatura secreta" e coloque em MP_WEBHOOK_SECRET'),
     grupo('Rotina diária (cron)', cron.concat(base), 'Crie CRON_SECRET com uma senha longa qualquer'),
     grupo('WhatsApp automático', wa.concat(base), 'Só depois de configurar o WhatsApp Business (guia)')
   ];

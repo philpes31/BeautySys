@@ -92,4 +92,21 @@ function motivoMp(r) {
   const d = r.dados || {}, causa = Array.isArray(d.cause) && d.cause[0] ? (d.cause[0].description || d.cause[0].code) : '';
   return String(causa || d.message || d.error || '').slice(0, 160);
 }
-module.exports = { marcarMp, lerCobranca, emailDe, motivoMp, env, faltando, faltandoBase, mpCom, siteUrl, rpcServico, mp, json, corpo, dataSP, UUID };
+// Assinatura do aviso do Mercado Pago (x-signature). Só vale se MP_WEBHOOK_SECRET estiver configurado na Vercel.
+function assinaturaMpValida(req, dataId) {
+  const segredo = env('MP_WEBHOOK_SECRET');
+  if (!segredo) return true;                                          // sem segredo configurado: segue a conferência pela API (como antes)
+  const h = req.headers || {}, sig = String(h['x-signature'] || ''), rid = String(h['x-request-id'] || '');
+  const ts = (sig.match(/(?:^|,)\s*ts=([^,\s]+)/) || [])[1], v1 = (sig.match(/(?:^|,)\s*v1=([a-f0-9]{64})/i) || [])[1];
+  if (!ts || !v1) return false;
+  if (!/^\d{10,13}$/.test(ts)) return false;
+  const id = /^[A-Za-z0-9]+$/.test(String(dataId || '')) ? String(dataId).toLowerCase() : String(dataId || '');
+  const manifesto = (id ? 'id:' + id + ';' : '') + (rid ? 'request-id:' + rid + ';' : '') + 'ts:' + ts + ';';
+  const crypto = require('crypto');
+  const esperado = crypto.createHmac('sha256', segredo).update(manifesto).digest('hex');
+  const a = Buffer.from(esperado, 'hex'), b = Buffer.from(v1.toLowerCase(), 'hex');
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return false;
+  const seg = ts.length === 13 ? Number(ts) / 1000 : Number(ts);
+  return Math.abs(Date.now() / 1000 - seg) < 3600;                    // aviso velho demais (repetição de ataque) não vale
+}
+module.exports = { assinaturaMpValida, marcarMp, lerCobranca, emailDe, motivoMp, env, faltando, faltandoBase, mpCom, siteUrl, rpcServico, mp, json, corpo, dataSP, UUID };

@@ -46,6 +46,7 @@ module.exports = async (req, res) => {
   if (f.length) return L.json(res, 503, { erro: 'Não configurado.' });
   const b = await L.corpo(req);
   const { tipo, id } = pegaId(req, b);
+  if (!L.assinaturaMpValida(req, (req.query || {})['data.id'] || (b && b.data && b.data.id) || id)) return L.json(res, 401, { erro: 'Assinatura inválida.' });
   if (tipo === 'subscription_preapproval' || tipo === 'subscription_authorized_payment') return assinatura(res, tipo, id);
   if (tipo !== 'payment' || !/^\d{1,20}$/.test(id)) return L.json(res, 200, { ok: true, ignorado: true });
 

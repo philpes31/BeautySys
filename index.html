@@ -1156,7 +1156,7 @@ function blocoAssinatura(){
   if(S.ctx.role!=='proprietario'||!S.ctx.tenant)return '';
   const tn=S.ctx.tenant,pl=S.ctx.plano,A=S.assin||{planos:[],pags:[]};
   const venc=tn.vencimento?(tn.vencimento<hoje()?'venceu em ':'vence em ')+fd(tn.vencimento):'';
-  const pags=A.pags.length?'<div class="list" style="margin-top:8px">'+A.pags.map(g=>`<div class="item"><div class="grow">${g.tipo==='mensagens'?esc(g.descricao||'Mensagens de WhatsApp')+' · ':''}vence ${esc(fd(g.vencimento))}</div><div class="side"><b>${brl(g.valor)}</b> ${tagSt(g.status,ST_PAG)}${g.status==='pendente'||g.status==='atrasado'?` <button class="btn sm" data-act="pagarMP" data-id="${esc(g.id)}">Pagar agora</button>`:''}</div></div>`).join('')+'</div>':'<p class="muted" style="margin:6px 0 0">Nenhuma cobrança até agora.</p>';
+  const pags=A.pags.length?'<div class="list" style="margin-top:8px">'+A.pags.map(g=>`<div class="item"><div class="grow">${g.tipo==='mensagens'?esc(g.descricao||'Mensagens de WhatsApp')+' · ':''}vence ${esc(fd(g.vencimento))}</div><div class="side"><b>${brl(g.valor)}</b> ${tagSt(g.status,ST_PAG)}${g.status==='pendente'||g.status==='atrasado'?` <button class="btn sm" data-act="pagarMP" data-id="${esc(g.id)}">Pagar agora</button>`:g.status==='pago'?` <button class="btn ghost sm" data-act="reciboPag" data-id="${esc(g.id)}">Recibo</button>`:''}</div></div>`).join('')+'</div>':'<p class="muted" style="margin:6px 0 0">Nenhuma cobrança até agora.</p>';
   const outros=A.planos.filter(p=>!pl||p.nome!==pl.nome);
   return `<div class="panel" style="max-width:640px;margin-bottom:16px"><h3 style="margin:0 0 6px;font-size:16px">Plano e assinatura</h3>
   <p style="margin:0">${pl?`<b>${esc(pl.nome)}</b> · `:''}${tagSt(tn.status,ST_SAL)} ${venc?`<span class="muted">${esc(venc)}</span>`:''}</p>
@@ -1936,13 +1936,49 @@ function btnTaxa(a){
   const msg=montaMsg('taxa',Object.assign(vCli(c),{data:fd(a.data),hora:a.hora||'',procedimento:procTxt(a),profissional:a.profissional||''}));
   return `<a class="btn ghost sm wa-btn" href="${esc(zap(c.telefone)+'?text='+encodeURIComponent(msg))}" target="_blank" rel="noopener" title="Abre o WhatsApp com a taxa de agendamento e a chave Pix">Taxa Pix</a>`;
 }
+/* ---------- Recibo (para entregar à cliente ou ao salão). Não é nota fiscal. ---------- */
+function htmlRecibo(o){
+  const linhas=o.linhas.map(([d,v])=>`<tr><td>${esc(d)}</td><td class="v">${brl(v)}</td></tr>`).join('');
+  return `<div class="rec"><div class="rec-top"><div><div class="rec-emi">${esc(o.emissor)}</div>${o.doc?`<div class="rec-s">${esc(o.doc)}</div>`:''}</div><div class="rec-n">Recibo nº ${esc(o.num)}</div></div>
+  <p class="rec-p">Recebemos de <b>${esc(o.para)}</b> a quantia de <b>${brl(o.total)}</b>${o.forma?`, paga em <b>${esc(o.forma)}</b>`:''}, referente a:</p>
+  <table>${linhas}<tr class="t"><td>Total</td><td class="v">${brl(o.total)}</td></tr></table>
+  <div class="rec-s" style="margin-top:14px">Data: ${esc(fd(o.data))}${o.obs?' · '+esc(o.obs):''}</div>
+  <div class="rec-s" style="margin-top:22px;border-top:1px solid #bbb;padding-top:6px;max-width:260px">${esc(o.emissor)}</div>
+  <div class="rec-s" style="margin-top:14px;font-size:11px">Este recibo comprova o pagamento e não substitui nota fiscal.</div></div>`;
+}
+const CSS_RECIBO='body{font:14px/1.5 system-ui,Arial,sans-serif;color:#222;margin:28px}.rec{max-width:560px;margin:0 auto;border:1px solid #bbb;border-radius:10px;padding:24px}.rec-top{display:flex;justify-content:space-between;gap:12px;border-bottom:2px solid #222;padding-bottom:10px}.rec-emi{font-size:20px;font-weight:700}.rec-n{font-weight:600;white-space:nowrap}.rec-s{color:#555;font-size:13px}.rec-p{margin:16px 0 10px}table{width:100%;border-collapse:collapse}td{padding:7px 4px;border-bottom:1px solid #ddd}td.v{text-align:right;white-space:nowrap}tr.t td{font-weight:700;border-bottom:0;border-top:2px solid #222}';
+function abrirRecibo(o,tel){
+  const txt=`Recibo nº ${o.num} - ${o.emissor}\n${o.para}: ${brl(o.total)}${o.forma?' ('+o.forma+')':''}\n${o.linhas.map(([d,v])=>d+' '+brl(v)).join('\n')}\nData: ${fd(o.data)}`;
+  S.reciboAtual=o;
+  const zp=tel&&String(tel).replace(/\D/g,'').length>=10?`<a class="btn ghost" target="_blank" rel="noopener" href="${esc(zap(tel)+'?text='+encodeURIComponent(txt))}">Enviar por WhatsApp</a>`:'';
+  abrir(`<h2>Recibo</h2><style>.rec{border:1px solid var(--line);border-radius:12px;padding:16px;margin:8px 0 14px}.rec-top{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);padding-bottom:8px}.rec-emi{font-weight:700;font-size:17px}.rec-n,.rec-s{color:var(--muted);font-size:13px}.rec-p{margin:12px 0 8px}.rec table{width:100%;border-collapse:collapse}.rec td{padding:6px 2px;border-bottom:1px solid var(--line)}.rec td.v{text-align:right;white-space:nowrap}.rec tr.t td{font-weight:700;border-bottom:0}</style>${htmlRecibo(o)}
+  <div class="acts"><button type="button" class="btn" data-act="reciboImprime">Imprimir ou salvar PDF</button>${zp}<button type="button" class="btn ghost" data-act="fechar">Fechar</button></div>`);
+}
+function imprimeRecibo(){
+  const o=S.reciboAtual;if(!o)return;
+  const f=document.createElement('iframe');f.setAttribute('aria-hidden','true');f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+  document.body.appendChild(f);
+  const d=f.contentWindow.document;d.open();d.write('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Recibo '+esc(o.num)+'</title><style>'+CSS_RECIBO+'</style></head><body>'+htmlRecibo(o)+'</body></html>');d.close();
+  setTimeout(()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(_){toast('Não foi possível abrir a impressão neste aparelho.',true)}setTimeout(()=>f.remove(),60000)},250);
+}
+function reciboAtend(id){
+  const a=S.atend.find(x=>x.id===id);if(!a)return;
+  const c=cli(a.clienteId)||{},v2=a.procedimento2?Math.min(Number(a.valor)||0,Number(a.valor2)||0):0,tn=(S.salao&&S.salao.nome)||(S.ctx&&S.ctx.tenant&&S.ctx.tenant.nome)||'Salão';
+  const L=[[a.procedimento||'Atendimento',(Number(a.valor)||0)-v2]];if(a.procedimento2)L.push([a.procedimento2,v2]);
+  abrirRecibo({emissor:tn,doc:S.salao&&S.salao.documento?(S.salao.doc_tipo==='cnpj'?'CNPJ ':'CPF ')+S.salao.documento:'',num:String(a.id).replace(/[^A-Za-z0-9]/g,'').slice(-6).toUpperCase().padStart(6,'0'),para:c.nome||'Cliente',linhas:L,total:Number(a.valor)||0,forma:a.pagamento?pagTxt(a):'',data:a.pagoEm&&a.pagoEm>a.data?a.pagoEm:a.data,obs:a.profissional?'Atendimento com '+a.profissional:''},c.telefone);
+}
+function reciboPag(id){
+  const g=((S.assin&&S.assin.pags)||[]).find(x=>x.id===id);if(!g||g.status!=='pago')return;
+  const tn=(S.salao&&S.salao.nome)||(S.ctx&&S.ctx.tenant&&S.ctx.tenant.nome)||'Salão';
+  abrirRecibo({emissor:'Agendio',doc:'',num:String(g.id).replace(/[^A-Za-z0-9]/g,'').slice(0,6).toUpperCase(),para:tn,linhas:[[g.tipo==='mensagens'?(g.descricao||'Mensagens de WhatsApp'):'Mensalidade do Agendio · vencimento '+fd(g.vencimento),Number(g.valor)||0]],total:Number(g.valor)||0,forma:'',data:g.pago_em||g.vencimento,obs:''},'');
+}
 function itemAtend(a,mostra,mes){
   const c=mostra?cli(a.clienteId):null;
   return `<div class="item"><div class="grow"><div class="t">${esc(procTxt(a))}${c?` <span class="muted">·</span> <button class="linkbtn" data-act="abrir" data-id="${esc(c.id)}">${esc(c.nome)}</button>`:''}</div>
   <div class="muted num">${fd(a.data)}${a.hora?' às '+esc(a.hora):''}${a.profissional?' · '+esc(a.profissional):''}${a.pagamento?' · '+esc(pagTxt(a)):''}${aberto(a)?' <span class="tag late">Pagamento pendente</span>':''}${a.cancCli?' <span class="tag late">Cancelado pela cliente</span>':''}${a.remarcadoEm&&!a.cancCli?' <span class="tag ok">Remarcado pela cliente</span>':''}</div>
   ${despTxt(a)}${parcMes(a,mes)}${a.retorno?`<div class="muted">Retorno previsto: ${fd(a.retorno)}</div>`:''}${a.obs?`<div class="obs">${esc(a.obs)}</div>`:''}</div>
   <div class="side-val">${brl(a.valor)}</div>
-  <div class="item-acts">${btnReceber(a)}${btnLembrete(a)}${btnAgradece(a)}${btnAvalia(a)}<button class="btn ghost sm" data-act="editAtend" data-id="${esc(a.id)}">Editar</button><button class="btn danger sm" data-act="delAtend" data-id="${esc(a.id)}">Excluir</button></div></div>`;
+  <div class="item-acts">${btnReceber(a)}${btnLembrete(a)}${btnAgradece(a)}${btnAvalia(a)}${a.valor>0&&!aberto(a)?`<button class="btn ghost sm" data-act="reciboAtend" data-id="${esc(a.id)}">Recibo</button>`:''}<button class="btn ghost sm" data-act="editAtend" data-id="${esc(a.id)}">Editar</button><button class="btn danger sm" data-act="delAtend" data-id="${esc(a.id)}">Excluir</button></div></div>`;
 }
 function blocoAvaliar(){
   if(!avaliaLink())return '';
@@ -3252,8 +3288,19 @@ function menuMais(){
   const em=S.sessao&&S.sessao.user&&S.sessao.user.email||'';
   abrir(`<div class="sheet-head"><span class="mono" aria-hidden="true">A</span><div><b>${esc(tn?tn.nome:'Agendio')}</b><span class="muted">${esc(S.ctx&&R[S.ctx.role]||(ehAdmin()?'Administrador(a) da plataforma':''))}</span></div></div>
   ${t.some(([k])=>!prim.includes(k))?'<div class="sheet-grid">':'<div hidden>'}${t.filter(([k])=>!prim.includes(k)).map(([k,l])=>`<button data-go="${k}" ${S.view===k?'aria-current="page"':''}>${ICONES[k]}<span>${esc(l)}</span></button>`).join('')}</div>
+  ${jaInstalado()?'':'<div class="acts" style="padding:0 16px 8px"><button type="button" class="btn ghost" data-act="instalarApp">Instalar o Agendio no celular</button></div>'}
   <div class="sheet-foot"><span class="muted">${esc(em)}</span><button class="btn ghost" data-act="sair">Sair</button></div>`);
 }
+/* Instalar como aplicativo (atalho na tela inicial, abre em tela cheia) */
+const jaInstalado=()=>{try{return window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true}catch(_){return false}};
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();S.instalar=e});
+window.addEventListener('appinstalled',()=>{S.instalar=null;toast('Agendio instalado!')});
+async function instalarApp(){
+  if(S.instalar){const e=S.instalar;S.instalar=null;try{await e.prompt()}catch(_){}return}
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  abrir(`<h2>Instalar o Agendio</h2><p>${ios?'No iPhone ou iPad, abra esta página no <b>Safari</b>, toque no botão <b>Compartilhar</b> (o quadrado com a seta para cima) e escolha <b>Adicionar à Tela de Início</b>.':'No Chrome do Android, toque nos <b>três pontinhos</b> do canto e escolha <b>Instalar app</b> (ou <b>Adicionar à tela inicial</b>). No computador, clique no ícone de instalar na barra de endereço.'}</p><p class="muted">Depois disso o Agendio abre em tela cheia, como um aplicativo.</p><div class="acts"><button type="button" class="btn" data-act="fechar">Entendi</button></div>`);
+}
+
 function abrir(html){const d=$('dlg');d.innerHTML=html;if(!d.open)d.showModal()}
 document.getElementById('dlg').addEventListener('close',()=>pararPagto());
 function confirmar(titulo,txt,rotulo,fn){
@@ -3292,7 +3339,7 @@ document.addEventListener('click',e=>{
   const a=e.target.closest('[data-act]');if(!a)return;
   const id=a.dataset.id;
   const f={
-    novaCliente:()=>formCliente(),editCliente:()=>formCliente(id),delCliente:()=>pedirDelCliente(id),maisMenu:menuMais,plSalvaBloqueio:()=>salvarBloqueio(a),pagarMP:()=>abrirPagamento(id),pagarMPantigo:()=>pagarCobranca(id,a),pgAba:()=>pgAba(id),pgPix:()=>gerarPix(id,a),pgCopia:()=>{const i=$('pg-copia');if(i){i.select();try{navigator.clipboard.writeText(i.value)}catch(_){try{document.execCommand('copy')}catch(_){}}toast('Código Pix copiado.')}},pgCartao:()=>enviarCartao('cobranca',id,a),pgDebito:()=>enviarCartao('debito','',a),debitoAtivar:()=>abrirDebito(),debitoAtivarMP:()=>chamaAssinar('criar',a),debitoParar:()=>confirmar('Cancelar o débito automático?','O cartão deixa de ser cobrado todo mês. Você poderá pagar cada mensalidade à mão ou ativar de novo.','Cancelar débito',()=>chamaAssinar('cancelar')),setStatus:()=>mudarStatus(id,a.dataset.st).catch(x=>toast(falha(x))),anonCliente:()=>pedirAnonCliente(id),exportaSalao:()=>exportarSalao().catch(x=>toast(falha(x))),excluiSalao:formExcluirSalao,
+    novaCliente:()=>formCliente(),editCliente:()=>formCliente(id),delCliente:()=>pedirDelCliente(id),maisMenu:menuMais,plSalvaBloqueio:()=>salvarBloqueio(a),instalarApp:()=>instalarApp(),reciboAtend:()=>reciboAtend(id),reciboPag:()=>reciboPag(id),reciboImprime:()=>imprimeRecibo(),pagarMP:()=>abrirPagamento(id),pagarMPantigo:()=>pagarCobranca(id,a),pgAba:()=>pgAba(id),pgPix:()=>gerarPix(id,a),pgCopia:()=>{const i=$('pg-copia');if(i){i.select();try{navigator.clipboard.writeText(i.value)}catch(_){try{document.execCommand('copy')}catch(_){}}toast('Código Pix copiado.')}},pgCartao:()=>enviarCartao('cobranca',id,a),pgDebito:()=>enviarCartao('debito','',a),debitoAtivar:()=>abrirDebito(),debitoAtivarMP:()=>chamaAssinar('criar',a),debitoParar:()=>confirmar('Cancelar o débito automático?','O cartão deixa de ser cobrado todo mês. Você poderá pagar cada mensalidade à mão ou ativar de novo.','Cancelar débito',()=>chamaAssinar('cancelar')),setStatus:()=>mudarStatus(id,a.dataset.st).catch(x=>toast(falha(x))),anonCliente:()=>pedirAnonCliente(id),exportaSalao:()=>exportarSalao().catch(x=>toast(falha(x))),excluiSalao:formExcluirSalao,
     pubHora:()=>{S.pb.hora=a.dataset.hora;S.pb.prof=a.dataset.prof;render()},pubNovo:()=>{S.pb={sv:'',pf:'',dt:'',slots:null,hora:'',prof:'',nome:'',tel:'',obs:'',ok:null};render()},pubRecarrega:()=>carregarPublico(),copiaLink:()=>{try{navigator.clipboard.writeText(a.dataset.link).then(()=>toast('Link copiado.'),()=>toast('Copie o link manualmente.',true))}catch(_){toast('Copie o link manualmente.',true)}},
     aceitaPedido:()=>responderPedido(id,true).catch(x=>toast(falha(x),true)),recusaPedido:()=>{const go=()=>responderPedido(id,false).catch(x=>toast(falha(x),true));if(a.dataset.sinal)confirmar('Recusar pedido com sinal pago?','A cliente já pagou o sinal. Você precisa devolver pelo app do Mercado Pago.','Recusar',go);else go()},
     mpDesconectar:()=>confirmar('Desconectar o Mercado Pago?','O sinal automático deixa de funcionar. Pedidos com sinal pendente continuam, mas a cliente não conseguirá pagar.','Desconectar',async()=>{await chamaApi('mp-conectar',{remover:true});S.onl.mp=false;if(S.agCfg&&S.agCfg.online&&S.agCfg.online.sinal&&S.agCfg.online.sinal.modo==='mp'){const c=Object.assign({},S.agCfg);c.online=Object.assign({},c.online,{sinal:Object.assign({},c.online.sinal,{modo:'nenhum'})});await salvarAgCfg(c)}render();toast('Mercado Pago desconectado.')}),
