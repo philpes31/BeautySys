@@ -37,7 +37,7 @@ module.exports = async (req, res) => {
     items: [{ id, title: g.tipo === 'mensagens' ? 'Agendio - ' + String(g.descricao || 'mensagens de WhatsApp').slice(0, 100) : 'Agendio - mensalidade' + (venc ? ' (vence ' + venc + ')' : ''), quantity: 1, currency_id: 'BRL', unit_price: Math.round(valor * 100) / 100 }],
     external_reference: id,
     notification_url: site + '/api/mp-webhook',
-    back_urls: { success: site + '/?pg=ok', pending: site + '/?pg=pendente', failure: site + '/?pg=falha' },
+    back_urls: { success: site + '/saas?pg=ok', pending: site + '/saas?pg=pendente', failure: site + '/saas?pg=falha' },
     auto_return: 'approved',
     statement_descriptor: 'AGENDIO'
   };

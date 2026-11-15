@@ -31,7 +31,7 @@ async function enviar({ para, assunto, html, texto }) {
 
 // Monta assunto e texto de cada tipo de aviso. `site` é o endereço do sistema (https://...).
 function montar(item, site) {
-  const d = item.dados || {}, nome = esc(item.nome), irSalao = { url: site ? site + '/' : '', texto: 'Abrir o Agendio' };
+  const d = item.dados || {}, nome = esc(item.nome), irSalao = { url: site ? site + '/saas' : '', texto: 'Abrir o Agendio' };
   const dias = Number(d.dias);
   let assunto, titulo, corpo, botao = irSalao;
   switch (item.tipo) {

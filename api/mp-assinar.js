@@ -44,7 +44,7 @@ module.exports = async (req, res) => {
     reason: 'Agendio - plano ' + (d.plano_nome || ''),
     external_reference: d.tenant_id,
     payer_email: d.email,
-    back_url: site + '/?pg=assinatura',
+    back_url: site + '/saas?pg=assinatura',
     status: token ? 'authorized' : 'pending',
     auto_recurring: { frequency: 1, frequency_type: 'months', transaction_amount: valor, currency_id: 'BRL' }
   };

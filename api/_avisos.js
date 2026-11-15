@@ -29,7 +29,7 @@ async function resumoAdmin(site) {
   if (!rel.length) return { enviados: 0 };
   const itens = rel.map(a => '<li style="margin:0 0 8px"><b>' + E.esc(a.titulo) + '</b>' + (a.detalhe ? '<br><span style="color:#7a6670">' + E.esc(a.detalhe) + '</span>' : '') + '</li>').join('');
   const titulo = rel.length + (rel.length === 1 ? ' alerta' : ' alertas') + ' no Agendio';
-  const x = await E.enviar({ para, assunto: titulo, html: E.layout(titulo, '<ul style="padding-left:18px;margin:0">' + itens + '</ul>', { url: site ? site + '/' : '', texto: 'Abrir a Plataforma' }),
+  const x = await E.enviar({ para, assunto: titulo, html: E.layout(titulo, '<ul style="padding-left:18px;margin:0">' + itens + '</ul>', { url: site ? site + '/saas' : '', texto: 'Abrir a Plataforma' }),
     texto: titulo + '\n\n' + rel.map(a => '- ' + a.titulo + (a.detalhe ? ' (' + a.detalhe + ')' : '')).join('\n') });
   if (!x.ok) { console.error('resumo admin falhou:', x.erro); return { enviados: 0, falha: x.erro }; }
   try { await L.rpcServico('cron_marcar_email', { p_tenant: null, p_tipo: 'admin_resumo', p_chave: hoje }); } catch (_) {}

@@ -184,7 +184,7 @@ footer{border-top:1px solid var(--line);padding-block:28px;color:var(--muted);fo
   <a class="brand" href="#topo" id="topo"><span class="mono" aria-hidden="true">A</span>Agendio</a>
   <nav class="nav" aria-label="Seções">
     <a href="#recursos">Recursos</a><a href="#planos">Planos</a><a href="#perguntas">Perguntas</a>
-    <a class="btn sm" data-cta data-curto href="/">Testar grátis</a>
+    <a class="btn sm" data-cta data-curto href="/saas">Testar grátis</a>
   </nav>
 </header>
 
@@ -195,7 +195,7 @@ footer{border-top:1px solid var(--line);padding-block:28px;color:var(--muted);fo
       <h1 id="t-hero" data-k="titulo">Sua cliente agenda sozinha. Você só atende.</h1>
       <p class="lead" data-k="subtitulo">O Agendio é o sistema de agenda e gestão para salões de beleza. Ele recebe os pedidos de horário a qualquer hora, cobra o sinal, lembra a cliente no dia anterior e mostra quanto cada profissional ganhou.</p>
       <div class="cta">
-        <a class="btn" data-cta href="/" >Testar grátis</a>
+        <a class="btn" data-cta href="/saas" >Testar grátis</a>
         <a class="btn ghost" href="#planos">Ver os planos</a>
       </div>
       <p class="small">Você cria a conta sem pagar nada e usa pelo celular ou pelo computador.</p>
@@ -278,7 +278,7 @@ footer{border-top:1px solid var(--line);padding-block:28px;color:var(--muted);fo
       <li><b>Compartilhe o seu link</b><span>Cole no perfil do Instagram e no WhatsApp. Os pedidos aparecem na sua agenda.</span></li>
     </ol>
     <div class="cta">
-      <a class="btn" data-cta href="/">Criar o meu salão</a>
+      <a class="btn" data-cta href="/saas">Criar o meu salão</a>
     </div>
   </div>
 </section>
@@ -305,7 +305,7 @@ footer{border-top:1px solid var(--line);padding-block:28px;color:var(--muted);fo
   <div class="wrap">
     <h2 id="t-fim">Seu salão com a agenda organizada ainda esta semana</h2>
     <div class="cta">
-      <a class="btn" data-cta href="/">Testar grátis</a>
+      <a class="btn" data-cta href="/saas">Testar grátis</a>
       <a class="btn ghost" id="zap" href="#" hidden target="_blank" rel="noopener">Falar no WhatsApp</a>
     </div>
     <p class="contato" id="contato" hidden></p>
@@ -324,7 +324,7 @@ footer{border-top:1px solid var(--line);padding-block:28px;color:var(--muted);fo
   var C=window.SALAO_CONFIG||{},$=function(i){return document.getElementById(i)};
   var esc=function(t){return String(t==null?'':t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
   var brl=function(v){return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})};
-  var ENTRAR=(C.siteUrl||'/')||'/';
+  var ENTRAR=(C.siteUrl||'/saas')||'/saas';
   var FAQ_PADRAO=[
     {p:'Preciso pagar para começar?',r:'Não. Você cria a conta e usa o sistema durante o período de teste sem pagar. Se precisar de mais tempo para decidir, é possível pedir uma extensão do teste.'},
     {p:'Minha cliente precisa baixar algum aplicativo?',r:'Não. Ela abre o seu link no navegador do celular, escolhe o dia e o horário e pronto. Para você, o Agendio também pode ser instalado na tela inicial do celular, como um aplicativo.'},
