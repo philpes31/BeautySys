@@ -163,7 +163,8 @@ footer{border-top:1px solid var(--line);padding-block:28px;color:var(--muted);fo
 }
 @media (max-width:520px){
   .planos{grid-template-columns:1fr}
-  .top .btn{padding:0 16px}
+  .top .btn{padding:0 12px;white-space:nowrap}
+  .nav{gap:8px}
   .cta .btn{width:100%}
 }
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.btn{transition:none}}
@@ -184,6 +185,7 @@ footer{border-top:1px solid var(--line);padding-block:28px;color:var(--muted);fo
   <a class="brand" href="#topo" id="topo"><span class="mono" aria-hidden="true">A</span>Agendio</a>
   <nav class="nav" aria-label="Seções">
     <a href="#recursos">Recursos</a><a href="#planos">Planos</a><a href="#perguntas">Perguntas</a>
+    <a class="btn ghost sm" href="/saas">Entrar</a>
     <a class="btn sm" data-cta data-curto href="/saas">Testar grátis</a>
   </nav>
 </header>
@@ -197,6 +199,7 @@ footer{border-top:1px solid var(--line);padding-block:28px;color:var(--muted);fo
       <div class="cta">
         <a class="btn" data-cta href="/saas" >Testar grátis</a>
         <a class="btn ghost" href="#planos">Ver os planos</a>
+        <a class="btn ghost" href="/saas">Já tenho conta: entrar</a>
       </div>
       <p class="small">Você cria a conta sem pagar nada e usa pelo celular ou pelo computador.</p>
     </div>
