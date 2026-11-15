@@ -49,7 +49,7 @@ module.exports = async (req, res) => {
   };
   if (site) corpo.notification_url = site + '/api/mp-webhook';
   // Mesma cobrança no mesmo dia = mesmo Pix (não gera vários QR se a pessoa abrir a tela de novo).
-  const r = await L.mp('/v1/payments', { method: 'POST', body: JSON.stringify(corpo), headers: { 'X-Idempotency-Key': 'pix-' + id + '-' + L.dataSP() } });
+  const r = await L.mp('/v1/payments', { method: 'POST', body: JSON.stringify(corpo), headers: { 'X-Idempotency-Key': 'pix-' + id + '-' + Math.round(valor * 100) + '-' + L.dataSP() } });
   const d = r.dados || {}, t = d.point_of_interaction && d.point_of_interaction.transaction_data;
   if (!r.ok || !t || !t.qr_code) {
     console.error('mp-pix: MP respondeu', r.status, JSON.stringify(d).slice(0, 400));

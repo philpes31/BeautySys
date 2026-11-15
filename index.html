@@ -243,6 +243,7 @@ dialog h2{margin-top:0;font-size:28px}
 .pg-abas button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
 .pg-qr{display:flex;justify-content:center;margin:6px 0 12px}.pg-qr svg,.pg-qr img{width:210px;height:210px;border-radius:10px;background:#fff}
 .pg-copia{display:flex;gap:8px}.pg-copia input{flex:1;min-width:0}
+.pg-cupom{margin:0 0 12px}.pg-cupom summary{cursor:pointer;color:var(--muted);font-size:14px;margin-bottom:8px}
 .pg-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .mpf{height:46px;border:1px solid var(--line);border-radius:10px;padding:0 12px;background:var(--surface);display:flex;align-items:center}
 .mpf iframe{height:100%!important}
@@ -1044,11 +1045,25 @@ function abrirPagamento(id){
   pararPagto();
   abrir(`<h2>Pagar ${brl(g.valor)}</h2><p class="muted" style="margin:-8px 0 12px">${g.tipo==='mensagens'?esc(g.descricao||'Mensagens de WhatsApp'):'Mensalidade do Agendio'} · vence ${esc(fd(g.vencimento))}</p>
   <div class="pg-abas" role="tablist"><button type="button" role="tab" aria-selected="true" data-act="pgAba" data-id="pix">Pix</button><button type="button" role="tab" aria-selected="false" data-act="pgAba" data-id="cartao">Cartão de crédito</button></div>
+  ${g.tipo!=='mensagens'&&!g.valor_original?`<details class="pg-cupom"><summary>Tem um cupom de desconto?</summary><div class="pg-copia"><input id="pg-cupom" placeholder="Digite o código" autocapitalize="characters" autocomplete="off" maxlength="30" aria-label="Código do cupom"><button type="button" class="btn sm" data-act="pgCupom" data-id="${esc(id)}">Aplicar</button></div><p class="erro" id="pg-cupom-erro" role="alert"></p></details>`:''}${g.valor_original?`<p class="muted" style="margin:0 0 10px">Cupom <b>${esc(g.cupom_codigo||'')}</b> aplicado: de ${brl(g.valor_original)} por ${brl(g.valor)}.</p>`:''}
   <div id="pg-pix" data-cob="${esc(id)}"><p class="muted" style="margin:0 0 10px">Aprovação em segundos. Você escaneia o QR Code ou copia o código no app do seu banco.</p><div id="pg-pix-corpo"><div class="acts"><button type="button" class="btn" data-act="pgPix" data-id="${esc(id)}">Gerar Pix</button></div></div></div>
   <div id="pg-cartao" hidden data-cob="${esc(id)}">${htmlCartao('cobranca',id)}</div>
   <div class="acts" style="margin-top:14px"><button type="button" class="btn ghost" data-act="pagarMPantigo" data-id="${esc(id)}">Prefiro pagar no site do Mercado Pago</button><button type="button" class="btn ghost" data-act="fechar">Fechar</button></div>`);
   // Se esta cobrança já foi paga (Pix pago e ainda não registrado), confere agora e libera.
   apiMp('mp-pix',{pagamento_id:id,acao:'conferir'}).then(c=>{if(c.ok&&c.j.pago&&$('pg-pix'))pgSucesso('Encontramos o seu pagamento. O seu plano já está em dia.')}).catch(()=>{});
+}
+async function aplicarCupom(id,btn){
+  const er=$('pg-cupom-erro'),cod=String((($('pg-cupom')||{}).value)||'').trim();
+  if(er)er.textContent='';
+  if(!cod)return void(er&&(er.textContent='Digite o código do cupom.'));
+  if(btn)btn.disabled=true;
+  try{
+    const r=await sb.rpc('aplicar_cupom',{p_pagamento:id,p_codigo:cod});
+    if(r.error)throw r.error;
+    if(!r.data||!r.data.ok){if(er)er.textContent=(r.data&&r.data.erro)||'Cupom inválido.';return}
+    toast('Cupom aplicado! Você economizou '+brl(r.data.desconto)+'.');
+    await carregarSalao();abrirPagamento(id);
+  }catch(x){if(er)er.textContent=x&&x.code==='42501'?'Só o proprietário do salão pode aplicar cupom.':'Não foi possível aplicar o cupom agora. Tente de novo.'}finally{if(btn)btn.disabled=false}
 }
 function abrirDebito(){
   const pl=S.ctx&&S.ctx.plano;pararPagto();
@@ -1381,7 +1396,7 @@ async function carregarPlataforma(){
     const e=[i,sl,cr,pl,pg,lg].find(x=>x.error);if(e)throw e.error;
     S.pl=Object.assign(S.pl,{ok:true,erro:false,ind:i.data,saloes:sl.data||[],cresc:cr.data||[],planos:pl.data||[],pags:pg.data||[],logs:lg.data||[]});
   }catch(_){S.pl.erro=true;S.pl.ok=true}
-  try{const [al,cb]=await Promise.all([sb.rpc('plataforma_alertas'),sb.rpc('plataforma_ler_cobranca')]);S.pl.alertas=al.error?null:(al.data||[]);S.pl.cob=cb.error?null:cb.data}catch(_){S.pl.alertas=null;S.pl.cob=null}
+  try{const [al,cb,cp]=await Promise.all([sb.rpc('plataforma_alertas'),sb.rpc('plataforma_ler_cobranca'),sb.rpc('plataforma_cupons')]);S.pl.alertas=al.error?null:(al.data||[]);S.pl.cob=cb.error?null:cb.data;S.pl.cupons=cp.error?null:(cp.data||[])}catch(_){S.pl.alertas=null;S.pl.cob=null;S.pl.cupons=null}
   if(S.view==='plataforma')render();
 }
 function headPlataforma(){return `<div class="page-head"><div><h1>Plataforma</h1><p class="muted">Salões, assinaturas e pagamentos do Agendio</p></div></div>`}
@@ -1389,9 +1404,9 @@ const nomeSalao=id=>{const s=S.pl.saloes.find(x=>x.id===id);return s?s.nome:'—
 function telaPlataforma(){
   if(!S.pl.ok)return '<p class="muted">Carregando…</p>';
   if(S.pl.erro)return aviso('Não foi possível carregar a plataforma','Rode o arquivo 04-plataforma.sql no Supabase e tente de novo.','<div class="row-actions"><button class="btn" data-act="plRecarrega">Tentar de novo</button></div>');
-  const ab=S.pl.aba,A=[['painel','Painel'],['metricas','Métricas'],['saloes','Salões'],['planos','Planos'],['site','Site'],['pagamentos','Pagamentos'],['suporte','Suporte'],['auditoria','Auditoria']];
+  const ab=S.pl.aba,A=[['painel','Painel'],['metricas','Métricas'],['saloes','Salões'],['planos','Planos'],['site','Site'],['cupons','Cupons'],['pagamentos','Pagamentos'],['suporte','Suporte'],['auditoria','Auditoria']];
   const nav=`<div class="segs" role="tablist">${A.map(([k,l])=>`<button class="btn ghost sm" role="tab" aria-pressed="${ab===k}" data-act="plAba" data-id="${k}"${k==='suporte'&&S.pl.pend?` data-n="${S.pl.pend}"`:''}>${l}</button>`).join('')}</div>`;
-  return nav+(ab==='saloes'?plSaloes():ab==='planos'?plPlanos():ab==='site'?plSite():ab==='pagamentos'?plPagamentos():ab==='metricas'?plMetricas():ab==='suporte'?plSuporte():ab==='auditoria'?plAuditoria():plPainel());
+  return nav+(ab==='saloes'?plSaloes():ab==='planos'?plPlanos():ab==='site'?plSite():ab==='cupons'?plCupons():ab==='pagamentos'?plPagamentos():ab==='metricas'?plMetricas():ab==='suporte'?plSuporte():ab==='auditoria'?plAuditoria():plPainel());
 }
 const MSG_COBRA={
   atraso:(nome,x)=>`Olá, ${nome}! Tudo bem? Aqui é do Agendio. Notamos que a mensalidade do seu salão está em aberto. Para regularizar é só entrar no sistema, abrir "Salão" e tocar em "Pagar agora" (Pix ou cartão, leva 1 minuto). Qualquer dúvida estou aqui!`,
@@ -1424,6 +1439,30 @@ async function salvarBloqueio(btn){
     toast('Configuração salva.');await carregarPlataforma();
   };
   if(auto&&!(S.pl.cob&&S.pl.cob.auto_bloquear))confirmar('Ligar o bloqueio automático?',`A partir da próxima rotina diária, salões vencidos há mais de ${dias} dia(s) ficam sem acesso até pagarem.`,'Ligar',go);else go();
+}
+function plCupons(){
+  const L=S.pl.cupons;
+  if(L==null)return aviso('Cupons ainda não disponíveis','Rode o arquivo agendio-TUDO.sql no Supabase (etapa 36) e recarregue.','');
+  const desc=c=>c.tipo==='percentual'?Number(c.valor)+'%':brl(c.valor);
+  return `<form data-form="plcupom" class="panel" style="margin:0 0 16px" novalidate><h3 style="margin:0 0 8px">Novo cupom</h3>
+  <div class="grid2"><div><label for="cp-cod">Código</label><input id="cp-cod" name="codigo" maxlength="30" autocapitalize="characters" autocomplete="off" placeholder="BEMVINDA10"></div>
+  <div><label for="cp-tipo">Tipo de desconto</label><select id="cp-tipo" name="tipo"><option value="percentual">Porcentagem (%)</option><option value="valor">Valor em reais (R$)</option></select></div></div>
+  <div class="grid2"><div><label for="cp-val">Desconto</label><input id="cp-val" name="valor" type="number" step="0.01" min="0.01" inputmode="decimal"></div>
+  <div><label for="cp-ate">Vale até (opcional)</label><input id="cp-ate" name="valido_ate" type="date"></div></div>
+  <label for="cp-max">Limite de salões que podem usar (opcional)</label><input id="cp-max" name="max_usos" type="number" min="1" inputmode="numeric" style="max-width:160px">
+  <p class="muted" style="margin:8px 0 0">O salão digita o código ao pagar a mensalidade. Cada salão usa o mesmo cupom uma vez. O desconto vale para a cobrança em aberto (Pix, cartão ou link), não para o débito automático.</p>
+  <p class="erro" id="a-erro" role="alert"></p><div class="acts"><button class="btn">Criar cupom</button></div></form>
+  ${L.length?'<div class="list">'+L.map(c=>{const venc=c.valido_ate&&c.valido_ate<hoje(),esg=c.max_usos&&c.usos>=c.max_usos;return `<div class="item"><div class="grow"><div class="t"><b>${esc(c.codigo)}</b> · ${esc(desc(c))} de desconto</div><div class="muted">${c.usos} uso(s)${c.max_usos?' de '+c.max_usos:''}${c.valido_ate?' · vale até '+esc(fd(c.valido_ate)):''}${venc?' · vencido':''}${esg?' · esgotado':''}</div></div><div class="side">${c.ativo?'<span class="tag ok">Ativo</span>':'<span class="tag">Desligado</span>'}<button class="btn ghost sm" data-act="plCupomAtivo" data-id="${esc(c.id)}" data-v="${c.ativo?'0':'1'}">${c.ativo?'Desligar':'Ligar'}</button></div></div>`}).join('')+'</div>':'<p class="muted">Nenhum cupom ainda.</p>'}`;
+}
+async function criarCupom(f){
+  const er=$("a-erro"),fd2=new FormData(f),cod=String(fd2.get('codigo')||'').trim().toUpperCase(),tipo=String(fd2.get('tipo')),val=Number(String(fd2.get('valor')||'').replace(',','.')),ate=String(fd2.get('valido_ate')||'')||null,mx=String(fd2.get('max_usos')||'').trim();
+  if(er)er.textContent='';
+  if(!/^[A-Z0-9_-]{4,30}$/.test(cod))return void(er.textContent='O código deve ter de 4 a 30 letras, números, hífen ou sublinhado.');
+  if(!(val>0))return void(er.textContent='Informe o desconto.');
+  if(tipo==='percentual'&&val>100)return void(er.textContent='O desconto percentual não pode passar de 100%.');
+  const r=await sb.rpc('plataforma_salvar_cupom',{p_codigo:cod,p_tipo:tipo,p_valor:val,p_valido_ate:ate,p_max_usos:mx?parseInt(mx,10):null});
+  if(r.error){const c=r.error.code,m=String(r.error.message||'');er.textContent=['22023','23505'].includes(c)?m:'Não foi possível criar o cupom. Confira se o SQL da etapa 36 foi rodado.';return}
+  toast('Cupom criado.');await carregarPlataforma();
 }
 function plPainel(){
   const i=S.pl.ind||{},k=(v,l)=>`<div class="stat"><b>${v}</b><span>${l}</span></div>`;
@@ -3339,7 +3378,7 @@ document.addEventListener('click',e=>{
   const a=e.target.closest('[data-act]');if(!a)return;
   const id=a.dataset.id;
   const f={
-    novaCliente:()=>formCliente(),editCliente:()=>formCliente(id),delCliente:()=>pedirDelCliente(id),maisMenu:menuMais,plSalvaBloqueio:()=>salvarBloqueio(a),instalarApp:()=>instalarApp(),reciboAtend:()=>reciboAtend(id),reciboPag:()=>reciboPag(id),reciboImprime:()=>imprimeRecibo(),pagarMP:()=>abrirPagamento(id),pagarMPantigo:()=>pagarCobranca(id,a),pgAba:()=>pgAba(id),pgPix:()=>gerarPix(id,a),pgCopia:()=>{const i=$('pg-copia');if(i){i.select();try{navigator.clipboard.writeText(i.value)}catch(_){try{document.execCommand('copy')}catch(_){}}toast('Código Pix copiado.')}},pgCartao:()=>enviarCartao('cobranca',id,a),pgDebito:()=>enviarCartao('debito','',a),debitoAtivar:()=>abrirDebito(),debitoAtivarMP:()=>chamaAssinar('criar',a),debitoParar:()=>confirmar('Cancelar o débito automático?','O cartão deixa de ser cobrado todo mês. Você poderá pagar cada mensalidade à mão ou ativar de novo.','Cancelar débito',()=>chamaAssinar('cancelar')),setStatus:()=>mudarStatus(id,a.dataset.st).catch(x=>toast(falha(x))),anonCliente:()=>pedirAnonCliente(id),exportaSalao:()=>exportarSalao().catch(x=>toast(falha(x))),excluiSalao:formExcluirSalao,
+    novaCliente:()=>formCliente(),editCliente:()=>formCliente(id),delCliente:()=>pedirDelCliente(id),maisMenu:menuMais,plSalvaBloqueio:()=>salvarBloqueio(a),plCupomAtivo:async()=>{const r=await sb.rpc('plataforma_cupom_ativo',{p_id:id,p_ativo:a.dataset.v==='1'});if(r.error)return toast(falha(r.error),true);await carregarPlataforma()},pgCupom:()=>aplicarCupom(id,a),instalarApp:()=>instalarApp(),reciboAtend:()=>reciboAtend(id),reciboPag:()=>reciboPag(id),reciboImprime:()=>imprimeRecibo(),pagarMP:()=>abrirPagamento(id),pagarMPantigo:()=>pagarCobranca(id,a),pgAba:()=>pgAba(id),pgPix:()=>gerarPix(id,a),pgCopia:()=>{const i=$('pg-copia');if(i){i.select();try{navigator.clipboard.writeText(i.value)}catch(_){try{document.execCommand('copy')}catch(_){}}toast('Código Pix copiado.')}},pgCartao:()=>enviarCartao('cobranca',id,a),pgDebito:()=>enviarCartao('debito','',a),debitoAtivar:()=>abrirDebito(),debitoAtivarMP:()=>chamaAssinar('criar',a),debitoParar:()=>confirmar('Cancelar o débito automático?','O cartão deixa de ser cobrado todo mês. Você poderá pagar cada mensalidade à mão ou ativar de novo.','Cancelar débito',()=>chamaAssinar('cancelar')),setStatus:()=>mudarStatus(id,a.dataset.st).catch(x=>toast(falha(x))),anonCliente:()=>pedirAnonCliente(id),exportaSalao:()=>exportarSalao().catch(x=>toast(falha(x))),excluiSalao:formExcluirSalao,
     pubHora:()=>{S.pb.hora=a.dataset.hora;S.pb.prof=a.dataset.prof;render()},pubNovo:()=>{S.pb={sv:'',pf:'',dt:'',slots:null,hora:'',prof:'',nome:'',tel:'',obs:'',ok:null};render()},pubRecarrega:()=>carregarPublico(),copiaLink:()=>{try{navigator.clipboard.writeText(a.dataset.link).then(()=>toast('Link copiado.'),()=>toast('Copie o link manualmente.',true))}catch(_){toast('Copie o link manualmente.',true)}},
     aceitaPedido:()=>responderPedido(id,true).catch(x=>toast(falha(x),true)),recusaPedido:()=>{const go=()=>responderPedido(id,false).catch(x=>toast(falha(x),true));if(a.dataset.sinal)confirmar('Recusar pedido com sinal pago?','A cliente já pagou o sinal. Você precisa devolver pelo app do Mercado Pago.','Recusar',go);else go()},
     mpDesconectar:()=>confirmar('Desconectar o Mercado Pago?','O sinal automático deixa de funcionar. Pedidos com sinal pendente continuam, mas a cliente não conseguirá pagar.','Desconectar',async()=>{await chamaApi('mp-conectar',{remover:true});S.onl.mp=false;if(S.agCfg&&S.agCfg.online&&S.agCfg.online.sinal&&S.agCfg.online.sinal.modo==='mp'){const c=Object.assign({},S.agCfg);c.online=Object.assign({},c.online,{sinal:Object.assign({},c.online.sinal,{modo:'nenhum'})});await salvarAgCfg(c)}render();toast('Mercado Pago desconectado.')}),
@@ -3471,7 +3510,7 @@ function tempoTxt(sg){return sg>=60?Math.ceil(sg/60)+' min':sg+' s'}
 
 document.addEventListener('submit',async e=>{
   const f=e.target,k=f.dataset&&f.dataset.form;
-  if(!['criar','recuperar','novasenha','salao','config','mensagens','horarios','online','pub','mpconectar','plsite'].includes(k))return;
+  if(!['criar','recuperar','novasenha','salao','config','mensagens','horarios','online','pub','mpconectar','plsite','plcupom'].includes(k))return;
   e.preventDefault();if(S.busy||!sb)return;
   const d=Object.fromEntries(new FormData(f)),bt=f.querySelector('button'),er=$('a-erro');
   const ver=(c,m)=>{if(c){er.textContent=m;return true}return false};
@@ -3498,6 +3537,8 @@ document.addEventListener('submit',async e=>{
       if(r.error){er.textContent=msgAuth(r.error.message,r.error.status);return}
       S.recuperando=false;try{history.replaceState(null,'',location.pathname)}catch(_){}
       render();toast('Senha alterada.');
+    }else if(k==='plcupom'){
+      await criarCupom(f);
     }else if(k==='plsite'){
       try{await salvarSite(f)}catch(x){er.textContent=String((x&&(x.message||x.aviso))||'Não foi possível salvar o site.')}
     }else if(k==='pub'){
