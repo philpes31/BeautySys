@@ -1,6 +1,7 @@
 // Confere um pagamento do Mercado Pago (já buscado com a NOSSA chave) e, se for da cobrança e estiver certo, marca como pago.
 // Usado pelo aviso automático (mp-webhook) e pela conferência da tela de Pix/cartão.
 const L = require('./_lib');
+const A = require('./_avisos');
 
 async function confirmar(p) {
   const ref = String(p.external_reference || '');
@@ -16,7 +17,12 @@ async function confirmar(p) {
   }
   await L.marcarMp(ref);
   const r = await L.rpcServico('registrar_pagamento_externo', { p_provedor: 'mercadopago', p_ref: ref, p_status: 'pago', p_pago_em: L.dataSP(p.date_approved) });
-  if (!(r && r.ok)) console.error('pagamento: não foi possível registrar', ref, JSON.stringify(r));
+  if (!(r && r.ok)) {
+    console.error('pagamento: não foi possível registrar', ref, JSON.stringify(r));
+    try { await A.avisarAdmin('Pagamento recebido e não registrado', ['O Mercado Pago aprovou um pagamento, mas o Agendio não conseguiu marcar a cobrança como paga.', 'Cobrança: ' + ref, 'Confira em Plataforma > Pagamentos e marque como pago se necessário.']); } catch (_) {}
+  } else {
+    try { await A.processar({ tipos: ['recibo'], limite: 5 }); } catch (e) { console.error('recibo por e-mail:', e.message); }
+  }
   return { codigo: 200, corpo: { ok: !!(r && r.ok), registrado: !!(r && r.ok) } };
 }
 module.exports = { confirmar };

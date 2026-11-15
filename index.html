@@ -1484,7 +1484,16 @@ function plDiag(){
     const li=(ok,t,dica)=>`<div class="item"><div class="grow"><div class="t">${ok?'✓':'✗'} ${esc(t)}</div>${!ok&&dica?`<div class="muted">${esc(dica)}</div>`:''}</div><div class="side"><span class="tag ${ok?'ok':'late'}">${ok?'OK':'Corrigir'}</span></div></div>`;
     corpo+='<div class="list">'+(d.grupos||[]).map(g=>li(g.pronto,g.nome,g.faltando&&g.faltando.length?'Falta na Vercel (Settings > Environment Variables): '+g.faltando.join(', ')+'. '+(g.como||''):'')).join('')+(d.testes||[]).map(t=>li(t.ok,t.nome,t.dica)).join('')+'</div>'+(d.webhook?`<p class="muted" style="font-size:13px;margin:8px 0 0">Endereço do aviso de pagamento (cadastre no Mercado Pago, em Webhooks): <b>${esc(d.webhook)}</b></p>`:'')+'<p class="muted" style="font-size:13px;margin:6px 0 0">Depois de mudar uma variável na Vercel, faça um novo Deploy (Redeploy).</p>';
   }
-  return `<div class="panel" style="margin-bottom:14px"><b>Diagnóstico do pagamento online</b>${corpo}<div class="row-actions"><button class="btn ghost sm" data-act="plDiag">${d&&d!=='carregando'?'Testar de novo':'Testar agora'}</button></div></div>`;
+  return `<div class="panel" style="margin-bottom:14px"><b>Diagnóstico do pagamento online</b>${corpo}<div class="row-actions"><button class="btn ghost sm" data-act="plDiag">${d&&d!=='carregando'?'Testar de novo':'Testar agora'}</button><button class="btn ghost sm" data-act="plEmailTeste">Enviar e-mail de teste</button></div></div>`;
+}
+async function enviarEmailTeste(){
+  try{
+    const ses=await sb.auth.getSession(),tk=ses&&ses.data&&ses.data.session&&ses.data.session.access_token;
+    const r=await fetch('/api/email-teste',{method:'POST',cache:'no-store',headers:tk?{Authorization:'Bearer '+tk}:{}});
+    let j=null;try{j=await r.json()}catch(_){}
+    if(j&&j.ok)toast('E-mail de teste enviado para '+j.enviado_para+'. Veja sua caixa de entrada (e o spam).');
+    else toast((j&&j.erro)||'Não foi possível enviar o e-mail de teste.');
+  }catch(_){toast('Não foi possível falar com o servidor do site.')}
 }
 async function rodarDiag(){
   S.pl.diag='carregando';render();
@@ -3396,7 +3405,7 @@ document.addEventListener('click',e=>{
     pedePlano:()=>{const p=(S.assin&&S.assin.planos||[]).find(x=>x.id===id);if(!p)return;confirmar('Pedir o plano '+p.nome+'?','Avisamos a equipe do Agendio, que conclui a troca e envia a cobrança.','Pedir plano',async()=>{const r=await sb.rpc('solicitar_plano',{p_plano:id,p_msg:''});if(r.error)throw r.error;toast('Pedido enviado.')})},
     insVar:()=>{const t=$('mg-'+id);if(!t)return;const v='{'+a.dataset.v+'}',i=t.selectionStart??t.value.length,f=t.selectionEnd??i;t.value=t.value.slice(0,i)+v+t.value.slice(f);t.focus();t.selectionStart=t.selectionEnd=i+v.length;t.dispatchEvent(new Event('input',{bubbles:true}))},
     padraoMsg:()=>{const t=$('mg-'+id);if(!t)return;t.value=MSG_DEF[id].d;t.dispatchEvent(new Event('input',{bubbles:true}))},
-    plAba:()=>{S.pl.aba=id;S.pl.lim=60;render();if(id==='suporte')carregarChamadosPl();if(id==='metricas'&&!S.pl.met)carregarMetricas();if(id==='site'&&!S.pl.site)carregarSite()},chNovo:()=>formChamado(),plDiag:()=>rodarDiag(),plMet:()=>carregarMetricas(true),chAbrir:()=>chAbrir(id,a.dataset.adm==='1'),chEnviar:()=>chEnviar(!!a.dataset.resolver),chFechar:()=>$('dlg').close(),ajRecarrega:()=>{S.aj.ok=false;render();carregarAjuda()},plRecarrega:()=>{S.pl.ok=false;render();carregarPlataforma()},
+    plAba:()=>{S.pl.aba=id;S.pl.lim=60;render();if(id==='suporte')carregarChamadosPl();if(id==='metricas'&&!S.pl.met)carregarMetricas();if(id==='site'&&!S.pl.site)carregarSite()},chNovo:()=>formChamado(),plDiag:()=>rodarDiag(),plEmailTeste:()=>enviarEmailTeste(),plMet:()=>carregarMetricas(true),chAbrir:()=>chAbrir(id,a.dataset.adm==='1'),chEnviar:()=>chEnviar(!!a.dataset.resolver),chFechar:()=>$('dlg').close(),ajRecarrega:()=>{S.aj.ok=false;render();carregarAjuda()},plRecarrega:()=>{S.pl.ok=false;render();carregarPlataforma()},
     plSalao:()=>detSalao(id),plNovoSalao:()=>formNovoSalao(),
     plSetPlano:()=>plRpc('plataforma_definir_plano',{p_tenant:id,p_plano:$('pd-plano').value},'Plano alterado.',id),
     plSetStatus:()=>plRpc('plataforma_definir_status',{p_tenant:id,p_status:$('pd-st').value,p_motivo:$('pd-mot').value.trim()},'Situação atualizada.',id),

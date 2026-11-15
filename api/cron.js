@@ -3,6 +3,7 @@
 // cobra as mensagens de WhatsApp enviadas no mês anterior, limpa a lista de espera antiga, coloca os lembretes de amanhã na fila e envia a fila de WhatsApp (se as chaves existirem).
 const L = require('./_lib');
 const W = require('./_wa');
+const A = require('./_avisos');
 
 module.exports = async (req, res) => {
   const seg = L.env('CRON_SECRET');
@@ -21,7 +22,10 @@ module.exports = async (req, res) => {
     try { lembretes = await L.rpcServico('cron_enfileirar_whatsapp', {}); } catch (e) { console.error('cron lembretes:', e.message); }
     try { espera = await L.rpcServico('cron_limpar_espera', {}); } catch (e) { console.error('cron espera:', e.message); }
     try { whatsapp = await W.enviarFila(); } catch (e) { console.error('cron whatsapp:', e.message); }
-    return L.json(res, 200, { ok: true, situacoes, cobrancas_geradas: geradas, saloes_bloqueados: bloqueados, cobrancas_mensagens: msgsCobradas, sinais_expirados: sinais, lembretes_na_fila: lembretes, espera_removida: espera, whatsapp });
+    let emails = null, resumo = null;
+    try { emails = await A.processar({ site: L.siteUrl(req) }); } catch (e) { console.error('cron emails:', e.message); }
+    try { resumo = await A.resumoAdmin(L.siteUrl(req)); } catch (e) { console.error('cron resumo:', e.message); }
+    return L.json(res, 200, { ok: true, emails, resumo_admin: resumo, situacoes, cobrancas_geradas: geradas, saloes_bloqueados: bloqueados, cobrancas_mensagens: msgsCobradas, sinais_expirados: sinais, lembretes_na_fila: lembretes, espera_removida: espera, whatsapp });
   } catch (e) {
     console.error('cron:', e.message);
     return L.json(res, 500, { erro: 'Falha na rotina diária.' });
