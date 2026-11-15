@@ -41,6 +41,13 @@ async function rpcServico(nome, args) {
   if (!r.ok) { const e = new Error((j && j.message) || ('Erro ' + r.status + ' em ' + nome)); e.status = r.status; throw e; }
   return j;
 }
+// Marca a cobrança como "do Mercado Pago" (a rotina que registra o pagamento procura por esta marca).
+async function marcarMp(id) {
+  const r = await fetch(env('SUPABASE_URL').replace(/\/+$/, '') + '/rest/v1/pagamentos?id=eq.' + id + '&status=in.(pendente,atrasado)', {
+    method: 'PATCH', headers: Object.assign({ Prefer: 'return=minimal' }, cabServico()), body: JSON.stringify({ provedor: 'mercadopago', ref_externa: String(id) })
+  });
+  if (!r.ok) throw new Error('Erro ' + r.status + ' ao marcar a cobrança');
+}
 async function mp(caminho, opc) {
   const r = await fetch(MP + caminho, Object.assign({}, opc, {
     headers: Object.assign({ Authorization: 'Bearer ' + env('MP_ACCESS_TOKEN'), 'Content-Type': 'application/json' }, opc && opc.headers)
@@ -85,4 +92,4 @@ function motivoMp(r) {
   const d = r.dados || {}, causa = Array.isArray(d.cause) && d.cause[0] ? (d.cause[0].description || d.cause[0].code) : '';
   return String(causa || d.message || d.error || '').slice(0, 160);
 }
-module.exports = { lerCobranca, emailDe, motivoMp, env, faltando, faltandoBase, mpCom, siteUrl, rpcServico, mp, json, corpo, dataSP, UUID };
+module.exports = { marcarMp, lerCobranca, emailDe, motivoMp, env, faltando, faltandoBase, mpCom, siteUrl, rpcServico, mp, json, corpo, dataSP, UUID };

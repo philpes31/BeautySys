@@ -1025,6 +1025,8 @@ function abrirPagamento(id){
   <div id="pg-pix" data-cob="${esc(id)}"><p class="muted" style="margin:0 0 10px">Aprovação em segundos. Você escaneia o QR Code ou copia o código no app do seu banco.</p><div id="pg-pix-corpo"><div class="acts"><button type="button" class="btn" data-act="pgPix" data-id="${esc(id)}">Gerar Pix</button></div></div></div>
   <div id="pg-cartao" hidden data-cob="${esc(id)}">${htmlCartao('cobranca',id)}</div>
   <div class="acts" style="margin-top:14px"><button type="button" class="btn ghost" data-act="pagarMPantigo" data-id="${esc(id)}">Prefiro pagar no site do Mercado Pago</button><button type="button" class="btn ghost" data-act="fechar">Fechar</button></div>`);
+  // Se esta cobrança já foi paga (Pix pago e ainda não registrado), confere agora e libera.
+  apiMp('mp-pix',{pagamento_id:id,acao:'conferir'}).then(c=>{if(c.ok&&c.j.pago&&$('pg-pix'))pgSucesso('Encontramos o seu pagamento. O seu plano já está em dia.')}).catch(()=>{});
 }
 function abrirDebito(){
   const pl=S.ctx&&S.ctx.plano;pararPagto();
@@ -1055,7 +1057,7 @@ async function gerarPix(id,btn){
     let n=0;if(MPX.timer)clearInterval(MPX.timer);
     MPX.timer=setInterval(async()=>{
       if(++n>360||!$('pg-pix-corpo')){pararPagto();return}
-      try{const c=await apiMp('mp-pix',{pagamento_id:id,acao:'conferir'});if(c.ok&&c.j.pago)pgSucesso('Pix recebido! O seu plano já está em dia.')}catch(_){}
+      try{const c=await apiMp('mp-pix',{pagamento_id:id,acao:'conferir'});if(c.ok&&c.j.pago)pgSucesso('Pix recebido! O seu plano já está em dia.');else if(c.ok&&c.j.aviso){const e=$('pg-espera');if(e)e.textContent=c.j.aviso}}catch(_){}
     },5000);
   }catch(x){if(btn){btn.disabled=false;btn.textContent='Gerar Pix'}toast((x&&x.message)||'Não foi possível gerar o Pix.',true)}
 }

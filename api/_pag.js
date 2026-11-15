@@ -14,7 +14,9 @@ async function confirmar(p) {
     console.warn('pagamento: valor ou moeda diferente do esperado', { ref, pago, esperado: c.valor, moeda: p.currency_id });
     return { codigo: 200, corpo: { ok: true, ignorado: 'valor diferente do esperado' } };
   }
+  await L.marcarMp(ref);
   const r = await L.rpcServico('registrar_pagamento_externo', { p_provedor: 'mercadopago', p_ref: ref, p_status: 'pago', p_pago_em: L.dataSP(p.date_approved) });
-  return { codigo: 200, corpo: { ok: !!(r && r.ok) } };
+  if (!(r && r.ok)) console.error('pagamento: não foi possível registrar', ref, JSON.stringify(r));
+  return { codigo: 200, corpo: { ok: !!(r && r.ok), registrado: !!(r && r.ok) } };
 }
 module.exports = { confirmar };

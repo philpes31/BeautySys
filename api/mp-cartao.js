@@ -57,7 +57,9 @@ module.exports = async (req, res) => {
     return L.json(res, 502, { erro: 'O Mercado Pago não processou o cartão' + (r.status ? ' (erro ' + r.status + (m ? ': ' + m : '') + ')' : '') + '. Confira os dados e tente de novo.' });
   }
   if (d.status === 'approved') {
-    try { await P.confirmar(d); } catch (e) { console.error('mp-cartao confirmar:', e.message); }   // o aviso automático também registra
+    let x = null;
+    try { x = await P.confirmar(d); } catch (e) { console.error('mp-cartao confirmar:', e.message); }   // o aviso automático também registra
+    if (!x || (!x.corpo.registrado && !x.corpo.repetido)) return L.json(res, 200, { status: 'in_process' });
     return L.json(res, 200, { status: 'approved' });
   }
   if (d.status === 'in_process' || d.status === 'pending') return L.json(res, 200, { status: 'in_process' });

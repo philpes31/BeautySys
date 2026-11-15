@@ -27,7 +27,9 @@ module.exports = async (req, res) => {
     if (!r.ok) return L.json(res, 502, { erro: 'O Mercado Pago não respondeu. Tente de novo.' });
     const ok = ((r.dados && r.dados.results) || []).find(p => p && p.status === 'approved' && String(p.external_reference) === id);
     if (!ok) return L.json(res, 200, { pago: false });
-    try { await P.confirmar(ok); } catch (e) { console.error('mp-pix conferir:', e.message); return L.json(res, 500, { erro: 'Falha ao registrar o pagamento.' }); }
+    let x;
+    try { x = await P.confirmar(ok); } catch (e) { console.error('mp-pix conferir:', e.message); return L.json(res, 500, { erro: 'Falha ao registrar o pagamento.' }); }
+    if (!x.corpo.registrado && !x.corpo.repetido) return L.json(res, 200, { pago: false, aviso: 'Pagamento recebido pelo Mercado Pago, mas ainda não foi registrado. Avise o suporte.' });
     return L.json(res, 200, { pago: true });
   }
 
