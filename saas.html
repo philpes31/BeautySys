@@ -10,46 +10,30 @@
 <meta name="apple-mobile-web-app-title" content="Agendio">
 <meta name="robots" content="noindex,nofollow">
 <title>Agendio</title>
-<meta name="theme-color" content="#2a1722">
+<meta name="theme-color" content="#c9e2cd">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Figtree:wght@400..800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..600&family=DM+Sans:opsz,wght@9..40,400..700&display=swap">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
 <script src="pix.js"></script>
 <style>
-/* Visual "ateliê de cor": menu lateral ameixa, fundo pérola, títulos em serifa e a carta de tons de cabelo como assinatura. */
+/* Mesma identidade do site: verde claro, verde-floresta como cor de marca, títulos em serifa macia (Fraunces) e texto em DM Sans. */
 :root{
   color-scheme:light;
-  --bg:#f5f1f3;--surface:#ffffff;--ink:#27191f;--muted:#716068;--line:#e7dde2;--line-2:#f0e8ec;
-  --accent:#9b2f58;--accent-hover:#832649;--accent-ink:#ffffff;--accent-soft:#f6e7ee;
-  --side:#2a1722;--side-ink:#f3e8ee;--side-muted:#b9a3af;--side-hover:rgba(255,255,255,.07);--side-on:rgba(255,255,255,.12);
-  --gold:#c9a46c;--viz-1:#9b2f58;--viz-2:#2a78d6;
-  --ok:#23704b;--ok-soft:#e0f1e8;--warn:#b0322a;--warn-soft:#fbe6e3;--amber:#8a5a00;--amber-soft:#fcefd2;
-  --font-display:'Instrument Serif',Georgia,'Times New Roman',serif;
-  --font-body:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;
-  --shadow:0 1px 2px rgba(42,23,34,.05),0 6px 20px -12px rgba(42,23,34,.18);
+  --bg:#f3f6f2;--surface:#ffffff;--ink:#10231d;--muted:#51625b;--line:#dfe6e1;--line-2:#eaf0ec;
+  --accent:#10382f;--accent-hover:#0a261f;--accent-ink:#ffffff;--accent-soft:#dcebdf;
+  --side:#c9e2cd;--side-ink:#10231d;--side-muted:#3d5a4b;--side-hover:rgba(16,56,47,.08);--side-on:rgba(16,56,47,.15);
+  --gold:#f6e9a8;--viz-1:#1f6f55;--viz-2:#5a46c8;
+  --ok:#1d7a52;--ok-soft:#dcf1e6;--warn:#b0322a;--warn-soft:#fbe6e3;--amber:#8a5a00;--amber-soft:#fcefd2;
+  --font-display:'Fraunces',Georgia,'Times New Roman',serif;
+  --font-body:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --shadow:0 1px 2px rgba(16,35,29,.05),0 6px 20px -12px rgba(16,35,29,.2);
   --tons:linear-gradient(90deg,#1d1411 0 11.11%,#3a2418 0 22.22%,#5b3a22 0 33.33%,#7e5532 0 44.44%,#a57a48 0 55.55%,#c99f66 0 66.66%,#e0bf86 0 77.77%,#efd8ab 0 88.88%,#f6e8cd 0 100%);
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --bg:#161017;--surface:#211a20;--ink:#f3eaef;--muted:#ab9aa3;--line:#372c33;--line-2:#2b2229;
-    --accent:#e47aa4;--accent-hover:#ee93b7;--accent-ink:#2a1119;--accent-soft:#3a2530;
-    --side:#1a0f16;--viz-1:#d9628f;--viz-2:#3987e5;--ok:#6fcf9b;--ok-soft:#1f3329;--warn:#ff8f82;--warn-soft:#3d2320;--amber:#f0c26b;--amber-soft:#3a2d12;
-    --shadow:0 1px 2px rgba(0,0,0,.3);
-    color-scheme:dark;
-  }
-}
-:root[data-theme="dark"]{
-  --bg:#161017;--surface:#211a20;--ink:#f3eaef;--muted:#ab9aa3;--line:#372c33;--line-2:#2b2229;
-  --accent:#e47aa4;--accent-hover:#ee93b7;--accent-ink:#2a1119;--accent-soft:#3a2530;
-  --side:#1a0f16;--viz-1:#d9628f;--viz-2:#3987e5;--ok:#6fcf9b;--ok-soft:#1f3329;--warn:#ff8f82;--warn-soft:#3d2320;--amber:#f0c26b;--amber-soft:#3a2d12;
-  --shadow:0 1px 2px rgba(0,0,0,.3);
-  color-scheme:dark;
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -63,7 +47,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body)
 .brand-row{display:flex;align-items:center;justify-content:space-between;gap:4px 12px;flex-wrap:wrap;padding-block:12px 4px}
 .brand{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-size:21px;line-height:1.1;letter-spacing:.005em}
 .brand-name span{margin-left:.25em}
-.mono{flex:none;display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--gold);color:#2a1722;font-family:var(--font-display);font-size:16px;letter-spacing:0}
+.mono{flex:none;display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#10382f;color:#f6e9a8;font-family:var(--font-display);font-size:16px;letter-spacing:0}
 .tone{height:4px;border-radius:2px;background:var(--tons);margin:6px 0 2px}
 .sync{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--side-muted)}
 .sync .linkbtn{color:var(--side-ink);text-decoration:underline;text-underline-offset:3px}
@@ -74,15 +58,15 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body)
 .tabs::-webkit-scrollbar{display:none}
 .tabs button{display:inline-flex;align-items:center;gap:7px;border:0;background:none;padding:8px 13px;border-radius:99px;font:inherit;font-weight:500;color:var(--side-muted);white-space:nowrap;cursor:pointer}
 .tabs button:hover{background:var(--side-hover);color:var(--side-ink)}
-.tabs button[aria-current="page"]{background:var(--side-on);color:#fff;font-weight:600}
+.tabs button[aria-current="page"]{background:var(--side-on);color:var(--side-ink);font-weight:700}
 .ic{width:18px;height:18px;flex:none}
 
 main.wrap{padding-block:20px 72px}
 .page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:6px 16px;flex-wrap:wrap;margin:2px 0 18px}
-h1{font-family:var(--font-display);font-weight:400;font-size:32px;line-height:1.1;letter-spacing:-.005em;margin:0}
+h1{font-family:var(--font-display);font-weight:500;font-size:34px;line-height:1.05;letter-spacing:-.025em;margin:0;font-variation-settings:'opsz' 120,'SOFT' 100}
 .page-head p{margin:4px 0 0;font-size:14px}
 .page-head .hoje{font-size:13px}
-h2{font-family:var(--font-display);font-weight:400;font-size:26px;line-height:1.15;margin:4px 0 12px;text-wrap:balance}
+h2{font-family:var(--font-display);font-weight:500;font-size:27px;line-height:1.12;letter-spacing:-.02em;font-variation-settings:'opsz' 96,'SOFT' 100;margin:4px 0 12px;text-wrap:balance}
 h3{font-family:var(--font-body);font-weight:700;font-size:14px;color:var(--ink);margin:26px 0 10px;letter-spacing:.005em}
 .muted{color:var(--muted)}
 
@@ -194,21 +178,21 @@ body:not(.logado) main.wrap{max-width:none;padding:0}
 .erro{color:var(--warn);min-height:1.3em;margin:10px 0 0;font-weight:500}
 .entrada{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);min-height:100vh;min-height:100dvh}
 .entrada-marca{position:relative;overflow:hidden;color:var(--side-ink);padding:36px clamp(28px,5vw,76px);display:grid;grid-template-rows:auto 1fr auto;gap:28px;
-  background:radial-gradient(110% 70% at 0% 0%,#43253a 0,#2a1722 48%,#1b0e16 100%)}
-.entrada-marca::after{content:"";position:absolute;inset:auto 0 0 0;height:6px;background:var(--tons);opacity:.9}
-.marca-topo{display:flex;align-items:center;gap:11px;font-family:var(--font-display);font-size:26px;line-height:1;color:#fff}
+  background:radial-gradient(110% 70% at 0% 0%,#e3f2e6 0,#c9e2cd 52%,#b3d3ba 100%)}
+.entrada-marca::after{content:"";position:absolute;inset:auto 0 0 0;height:6px;background:linear-gradient(90deg,#10382f 0 25%,#f9dcd6 0 50%,#f6e9a8 0 75%,#e4dcf5 0)}
+.marca-topo{display:flex;align-items:center;gap:11px;font-family:var(--font-display);font-size:26px;line-height:1;color:var(--side-ink)}
 .marca-topo .mono{width:36px;height:36px;font-size:17px}
 .marca-meio{align-self:center;max-width:520px}
-.entrada-marca h1{font-size:clamp(38px,4.4vw,60px);line-height:1.03;color:#fff;margin:0 0 16px;text-wrap:balance}
+.entrada-marca h1{font-size:clamp(38px,4.4vw,60px);line-height:1.03;color:var(--side-ink);margin:0 0 16px;text-wrap:balance}
 .marca-meio>p{margin:0 0 34px;max-width:40ch;color:var(--side-muted);font-size:17px;line-height:1.55}
-.amostra{margin:0;max-width:430px;padding:16px 18px 8px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.11);box-shadow:0 30px 60px -30px rgba(0,0,0,.6)}
+.amostra{margin:0;max-width:430px;padding:16px 18px 8px;border-radius:18px;background:rgba(255,255,255,.55);border:1px solid rgba(16,56,47,.12);box-shadow:0 30px 60px -30px rgba(0,0,0,.6)}
 .amostra figcaption{display:flex;justify-content:space-between;gap:12px;margin-bottom:8px;font-size:12px;color:var(--side-muted)}
-.amostra figcaption b{color:#fff;font-weight:650}
-.am-linha{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;padding:8px 0;border-top:1px solid rgba(255,255,255,.08)}
+.amostra figcaption b{color:var(--side-ink);font-weight:700}
+.am-linha{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;padding:8px 0;border-top:1px solid rgba(16,56,47,.1)}
 .am-hora{padding-top:9px;font-size:12.5px;color:var(--side-muted);font-variant-numeric:tabular-nums}
 .am-bloco{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:9px 12px;border-radius:10px;color:#241510;font-size:14px;font-weight:650}
 .am-bloco small{font-weight:550;opacity:.72;white-space:nowrap}
-.am-livre{align-items:center;border:1px dashed rgba(255,255,255,.22);background:transparent;color:var(--side-muted);font-weight:500}
+.am-livre{align-items:center;border:1px dashed rgba(16,56,47,.3);background:transparent;color:var(--side-muted);font-weight:500}
 .marca-pe{margin:0;max-width:46ch;font-size:13px;color:var(--side-muted)}
 .entrada>.login-lado{display:grid;align-items:center;justify-items:center;padding:32px 20px;background:var(--bg)}
 .login{width:min(420px,100%);padding:34px 32px 30px;border-radius:20px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow),0 30px 60px -40px rgba(42,23,34,.35)}
@@ -255,7 +239,7 @@ dialog h2{margin-top:0;font-size:28px}
 @media (max-width:480px){.grid2{grid-template-columns:1fr}}
 .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:22px}
 #toast{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;pointer-events:none;padding:0 max(16px,env(safe-area-inset-left,0px)) 18px;z-index:40}
-.toast-in{background:var(--side);color:#fff;padding:12px 18px;border-radius:12px;font-weight:600;max-width:100%;box-shadow:0 10px 30px -10px rgba(20,8,16,.5)}
+.toast-in{background:#10382f;color:#fff;padding:12px 18px;border-radius:12px;font-weight:600;max-width:100%;box-shadow:0 10px 30px -10px rgba(20,8,16,.5)}
 .toast-in.err{background:var(--warn);color:#fff}
 /* Gráficos */
 .vz .sub{margin:2px 0 10px;font-size:13px}
@@ -302,8 +286,8 @@ dialog h2{margin-top:0;font-size:28px}
   body.logado .tone{order:2;margin:10px 10px 18px;height:5px}
   body.logado .tabs{order:3;flex-direction:column;overflow-x:hidden;overflow-y:auto;flex:1 1 auto;min-height:0;scrollbar-width:thin;gap:2px;padding:0 14px;margin-inline:-14px}
   body.logado .tabs button{width:100%;text-align:left;border-radius:10px;padding:11px 12px;gap:12px;position:relative}
-  body.logado .tabs button[aria-current="page"]::before{content:"";position:absolute;left:-14px;top:9px;bottom:9px;width:3px;border-radius:0 3px 3px 0;background:var(--gold)}
-  body.logado .sync{order:4;margin-top:auto;padding:14px 10px 0;border-top:1px solid rgba(255,255,255,.1);flex-wrap:wrap}
+  body.logado .tabs button[aria-current="page"]::before{content:"";position:absolute;left:-14px;top:9px;bottom:9px;width:3px;border-radius:0 3px 3px 0;background:#10382f}
+  body.logado .sync{order:4;margin-top:auto;padding:14px 10px 0;border-top:1px solid rgba(16,56,47,.18);flex-wrap:wrap}
   body.logado .who{display:block;flex-basis:100%;color:var(--side-muted);font-size:12px;overflow:hidden;text-overflow:ellipsis}
   body.logado main.wrap{max-width:1120px;margin:0;padding-inline:40px;padding-block:34px 72px}
   body.logado #toast{left:252px}
@@ -326,7 +310,7 @@ dialog h2{margin-top:0;font-size:28px}
 .tag{padding:2px 10px}
 input,select,textarea{min-height:44px;border-radius:10px}
 textarea{min-height:0}
-.tabs button[aria-current="page"]{box-shadow:inset 3px 0 0 var(--gold)}
+.tabs button[aria-current="page"]{box-shadow:inset 3px 0 0 #10382f}
 @media (max-width:759px){.tabs button[aria-current="page"]{box-shadow:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 .stat span{letter-spacing:.005em}
@@ -368,7 +352,6 @@ body.logado .salao-id div{display:flex;flex-direction:column;min-width:0}
 .msg-vars{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0}
 .msg-prev{margin-top:10px}
 .wa-bolha{margin-top:6px;padding:10px 12px;border-radius:4px 14px 14px 14px;background:#e7f6e2;color:#1d2b1a;white-space:pre-wrap;font-size:14px;line-height:1.45;max-width:420px;overflow-wrap:anywhere}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .wa-bolha{background:#1e3a2a;color:#e4f3e0}}
 :root[data-theme="dark"] .wa-bolha{background:#1e3a2a;color:#e4f3e0}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
@@ -754,9 +737,9 @@ const rgbCss=c=>'rgb('+c.join(',')+')';
 function aplicaTema(){
   const st=document.documentElement.style,ks=['--accent','--accent-hover','--accent-ink','--accent-soft'];
   const c=(S.ctx&&S.ctx.tenant&&S.ctx.tenant.cor_principal)||(S.pubSlug&&S.pub&&S.pub.cor),base=hexRgb(c);
-  if(!base||c.toLowerCase()==='#9b2f58'){ks.forEach(k=>st.removeProperty(k));return}
+  if(!base||c.toLowerCase()==='#9b2f58'||c.toLowerCase()==='#10382f'){ks.forEach(k=>st.removeProperty(k));return}
   const th=document.documentElement.dataset.theme;
-  const dark=th==='dark'||(th!=='light'&&window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches);
+  const dark=false;
   let acc=base,n=0;
   if(dark){while(contraste(acc,[33,26,32])<4.5&&n++<30)acc=mixC(acc,[255,255,255],.08)}
   else{while(contraste(acc,[255,255,255])<4.5&&n++<30)acc=mixC(acc,[0,0,0],.08)}
@@ -849,7 +832,7 @@ function telaVendas(){
   const seg=`<div class="seg" role="group" aria-label="Vendas"><button class="btn sm ${ab==='vendas'?'':'ghost'}" data-act="vdAba" data-id="vendas" aria-pressed="${ab==='vendas'}">Vendas</button><button class="btn sm ${ab==='prod'?'':'ghost'}" data-act="vdAba" data-id="prod" aria-pressed="${ab==='prod'}">Produtos à venda</button></div>`;
   const k=(v,l,c)=>`<div class="stat"><b class="${c||''}">${v}</b><span>${l}</span></div>`;
   if(ab==='prod'){
-    const P=[...(S.pvs||[])].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')),val=P.reduce((t,p)=>t+p.estoque*p.custo,0),venda=P.reduce((t,p)=>t+p.estoque*p.preco,0);
+    const TODOS=S.pvs||[],cats=[...new Set(TODOS.map(x=>x.categoria).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR')),fc=cats.includes(S.pvCat)?S.pvCat:'',P=[...TODOS].filter(x=>!fc||x.categoria===fc).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')),val=P.reduce((t,p)=>t+p.estoque*p.custo,0),venda=P.reduce((t,p)=>t+p.estoque*p.preco,0);
     const item=p=>{const mg=p.preco>0?Math.round((p.preco-p.custo)/p.preco*100):0;
       const tg=!p.ativo?'<span class="tag">Desativado</span>':p.estoque<=0?'<span class="tag late">Sem estoque</span>':pvBaixo(p)?'<span class="tag late">Estoque baixo</span>':'';
       return `<div class="item" style="align-items:flex-start"><div class="grow"><div class="t">${esc(p.nome)} ${tg}</div>
@@ -857,7 +840,7 @@ function telaVendas(){
       ${pode?`<div class="row-actions" style="margin-top:8px"><button type="button" class="btn sm" data-act="pvAjusta" data-id="${esc(p.id)}">Entrada / ajuste</button><button type="button" class="btn ghost sm" data-act="pvEdit" data-id="${esc(p.id)}">Editar</button><button type="button" class="btn ghost sm" data-act="pvExcluir" data-id="${esc(p.id)}">Excluir</button></div>`:''}</div>
       <div class="side-val">${p.estoque} un.<div class="muted" style="font-size:12px">em estoque</div></div></div>`};
     return seg+`<div class="stats">${k(P.length,'produtos')}${k(P.filter(pvBaixo).length,'em falta ou baixos')}${k(brl(val),'estoque a preço de custo')}${k(brl(venda),'estoque a preço de venda')}</div>
-    <div class="bar">${pode?'<button type="button" class="btn" data-act="pvNovo">Novo produto</button>':''}</div>`+
+    <div class="bar">${pode?'<button type="button" class="btn" data-act="pvNovo">Novo produto</button>':''}</div>${cats.length?`<div class="seg" role="group" aria-label="Categoria"><button type="button" class="btn sm ${fc?'ghost':''}" data-act="pvCat" data-id="" aria-pressed="${!fc}">Todas</button>${cats.map(c=>`<button type="button" class="btn sm ${fc===c?'':'ghost'}" data-act="pvCat" data-id="${esc(c)}" aria-pressed="${fc===c}">${esc(c)}</button>`).join('')}</div>`:''}`+
     (P.length?`<div class="list">${P.map(item).join('')}</div>`:`<div class="empty"><h2>Nenhum produto cadastrado</h2><p>Cadastre o que você vende, como shampoo, perfume, pomada ou balm de barba, com preço e quantidade em estoque.</p></div>`);
   }
   const V=[...(S.vendas||[])].sort((a,b)=>String(b.data).localeCompare(String(a.data))||0).slice(0,S.vdLim||60);
@@ -879,7 +862,8 @@ function formProdutoVenda(id){
   const cats=[...new Set([...PV_CAT,...(S.pvs||[]).map(x=>x.categoria).filter(Boolean)])];
   abrir(`<h2>${id?'Editar':'Novo'} produto à venda</h2><form data-form="pvsalvar" data-id="${esc(id||'')}">
   <label for="pv-n">Nome *</label><input id="pv-n" name="nome" required maxlength="80" value="${esc(p.nome)}" placeholder="Ex.: Shampoo 300ml, Pomada modeladora, Balm para barba">
-  <div class="grid2"><div><label for="pv-c">Categoria</label><input id="pv-c" name="categoria" maxlength="40" list="pv-cats" value="${esc(p.categoria)}"><datalist id="pv-cats">${cats.map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>
+  <div class="grid2"><div><label for="pv-c">Categoria</label><select id="pv-c" name="categoria"><option value="">Sem categoria</option>${cats.map(c=>`<option value="${esc(c)}" ${c===p.categoria?'selected':''}>${esc(c)}</option>`).join('')}<option value="__nova">+ Nova categoria…</option></select>
+  <input id="pv-cn" name="categoria_nova" maxlength="40" placeholder="Nome da nova categoria" aria-label="Nome da nova categoria" hidden style="margin-top:6px"></div>
   <div><label for="pv-p">Preço de venda (R$) *</label><input id="pv-p" name="preco" type="number" step="0.01" min="0" required inputmode="decimal" value="${esc(p.preco)}"></div>
   <div><label for="pv-k">Quanto você pagou (R$)</label><input id="pv-k" name="custo" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(p.custo)}" placeholder="Para calcular o lucro"></div>
   <div><label for="pv-m">Avisar quando restar até</label><input id="pv-m" name="minimo" type="number" step="1" min="0" inputmode="numeric" value="${esc(p.minimo||'')}" placeholder="Ex.: 2"></div>
@@ -889,7 +873,9 @@ function formProdutoVenda(id){
 }
 async function salvarProdutoVenda(id,d){
   const preco=Number(d.preco);if(!(preco>=0)||d.preco==='')throw erroUi('Informe o preço de venda.');
-  await vdChama('pv_salvar',{p_id:id||null,p_nome:String(d.nome||'').trim(),p_categoria:String(d.categoria||'').trim(),p_preco:din(d.preco),p_custo:din(d.custo),p_estoque:id?0:Math.max(0,Math.floor(Number(d.estoque)||0)),p_minimo:Math.max(0,Math.floor(Number(d.minimo)||0)),p_ativo:id?d.ativo==='on':true});
+  const cat=d.categoria==='__nova'?String(d.categoria_nova||'').trim().slice(0,40):String(d.categoria||'').trim();
+  if(d.categoria==='__nova'&&!cat)throw erroUi('Digite o nome da nova categoria ou escolha uma da lista.');
+  await vdChama('pv_salvar',{p_id:id||null,p_nome:String(d.nome||'').trim(),p_categoria:cat,p_preco:din(d.preco),p_custo:din(d.custo),p_estoque:id?0:Math.max(0,Math.floor(Number(d.estoque)||0)),p_minimo:Math.max(0,Math.floor(Number(d.minimo)||0)),p_ativo:id?d.ativo==='on':true});
   await recarregar();toast('Produto salvo.');
 }
 function formAjustePv(id){
@@ -1412,7 +1398,7 @@ function telaSalao(){
   <h3 style="margin:0 0 10px;font-size:16px">Marca</h3>
   <div class="logo-linha"><div class="logo-prev" id="cf-prev">${logo?`<img src="${esc(logo)}" alt="Logotipo">`:'<span class="muted">Sem logotipo</span>'}</div>
   <div><input id="cf-logo" type="file" accept="image/png,image/jpeg,image/webp" ${ro}> ${logo&&!ro?'<button type="button" class="btn ghost sm" data-act="tiraLogo">Remover logotipo</button>':''}<p class="muted" style="font-size:12.5px;margin:6px 0 0">A imagem é reduzida automaticamente.</p></div></div>
-  <label for="cf-cor">Cor principal do sistema</label><input id="cf-cor" name="cor_principal" type="color" value="${esc(t.cor_principal||'#9b2f58')}" ${ro} style="height:44px;padding:4px;max-width:120px">
+  <label for="cf-cor">Cor principal do sistema</label><input id="cf-cor" name="cor_principal" type="color" value="${esc(t.cor_principal||'#10382f')}" ${ro} style="height:44px;padding:4px;max-width:120px">
   <h3 style="margin:20px 0 10px;font-size:16px">Dados do estabelecimento</h3>
   ${f('nome','Nome do estabelecimento','required maxlength="120"')}${f('razao_social','Razão social','maxlength="160"')}${f('documento','CPF ou CNPJ','inputmode="numeric" maxlength="18"')}${f('proprietario_nome','Nome do proprietário','maxlength="120"')}
   <div class="g2">${f('telefone','Telefone','type="tel" maxlength="20"')}${f('whatsapp','WhatsApp','type="tel" maxlength="20"')}</div>
@@ -3711,7 +3697,7 @@ document.addEventListener('click',e=>{
     aceitaPedido:()=>responderPedido(id,true).catch(x=>toast(falha(x),true)),recusaPedido:()=>{const go=()=>responderPedido(id,false).catch(x=>toast(falha(x),true));if(a.dataset.sinal)confirmar('Recusar pedido com sinal pago?','A cliente já pagou o sinal. Você precisa devolver pelo app do Mercado Pago.','Recusar',go);else go()},
     waFb:()=>conectarFb(),
     anNova:()=>formAnamnese(id),anLimpa:()=>window.anLimpaSig(),anExcluir:()=>confirmar('Excluir esta ficha?','A ficha de anamnese e a assinatura são apagadas definitivamente.','Excluir',async()=>{const r=await sb.rpc('anamnese_excluir',{p_id:id});if(r.error)throw r.error;if(!r.data||r.data.ok!==true)throw erroUi((r.data&&r.data.erro)||'Não foi possível excluir.');await recarregar();toast('Ficha excluída.')}),
-    vdAba:()=>{S.vdAba=id;render()},vdNova:()=>formVenda(),vdMais:()=>{S.vdLim=(S.vdLim||60)+60;render()},vdVer:()=>vdVer(id).catch(x=>toast(falha(x),true)),pvNovo:()=>formProdutoVenda(),pvEdit:()=>formProdutoVenda(id),pvAjusta:()=>formAjustePv(id),
+    pvCat:()=>{S.pvCat=id;render()},vdAba:()=>{S.vdAba=id;render()},vdNova:()=>formVenda(),vdMais:()=>{S.vdLim=(S.vdLim||60)+60;render()},vdVer:()=>vdVer(id).catch(x=>toast(falha(x),true)),pvNovo:()=>formProdutoVenda(),pvEdit:()=>formProdutoVenda(id),pvAjusta:()=>formAjustePv(id),
     pvExcluir:()=>{const p=(S.pvs||[]).find(x=>x.id===id);if(p)confirmar('Excluir '+p.nome+'?','O produto sai da lista. As vendas antigas continuam no histórico.','Excluir',async()=>{await vdChama('pv_excluir',{p_id:id});await recarregar();toast('Produto excluído.')})},
     vdCancela:()=>confirmar('Cancelar esta venda?','Os produtos voltam para o estoque. Se foi paga com cartão-presente, o saldo volta para o cartão.','Cancelar venda',async()=>{await vdChama('venda_cancelar',{p_venda:id});await recarregar();toast('Venda cancelada.')}),
     cpVender:()=>formCartao(),cpUsar:()=>formUsarCartao(id),cpWpp:()=>cpWpp(id),cpImp:()=>cpImprimir(id),
@@ -3782,6 +3768,7 @@ document.addEventListener('change',e=>{
   else if(t.classList&&t.classList.contains('com-pct'))salvarComissao(t.dataset.prof,t.value).catch(x=>toast(falha(x)));
   else if(t.id==='mesDesp'){S.mesDesp=t.value;S.lim.gasto=100;render()}
   else if(t.id==='a-pag'||t.id==='a-parc'||t.id==='a-pago')atualizaParc();
+  else if(t.id==='pv-c'){const n=$('pv-cn');if(n){n.hidden=t.value!=='__nova';if(!n.hidden)n.focus()}}
   else if(t.id==='a-ret'){delete t.dataset.auto}
   else if(t.id==='a-data'){const rt=$('a-ret'),pr=servicosCat(),A=pr.find(x=>x.nome===($('a-proc')||{}).value),B=pr.find(x=>x.nome===($('a-proc2')||{}).value),dias=Math.max((A&&A.retornoDias)||0,(B&&B.retornoDias)||0);if(rt&&rt.dataset.auto==='1'&&dias>0&&t.value)rt.value=addDia(t.value,dias)}
   else if(t.id==='a-proc'||t.id==='a-proc2'){atualizaEstq(true);const c1=servicosCat(),f=n=>c1.find(x=>x.nome===n),A=f($('a-proc').value),B=$('a-proc2')?f($('a-proc2').value):null;
