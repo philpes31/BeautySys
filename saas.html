@@ -541,8 +541,8 @@ async function recarregar(){
     let semD=false,semE=false;
     const desde=new Date(Date.now()-120*864e5).toISOString().slice(0,10),ignE=()=>{semE=true;return []};
     let semB=false;const ignB=()=>{semB=true;return []};let semC=false;
-    let semV=false;const ignV=()=>{semV=true;return []};
-    const [c,a,g,pr,fi,mv,bq,pd,es,pk,rs,ag,vl,cp,cmv,pvd,vnd]=await Promise.all([todos('clientes'),todos('atendimentos'),todos('despesas').catch(()=>{semD=true;return []}),
+    let semV=false;const ignV=()=>{semV=true;return []};let semAn=false;
+    const [c,a,g,pr,fi,mv,bq,pd,es,pk,rs,ag,vl,cp,cmv,pvd,vnd,anm]=await Promise.all([todos('clientes'),todos('atendimentos'),todos('despesas').catch(()=>{semD=true;return []}),
       todos('produtos').catch(ignE),todos('ficha_procedimento').catch(ignE),todos('movimentacoes_estoque',q=>q.gte('data',desde)).catch(ignE),
       S.legado?Promise.resolve([]):todos('bloqueios',q=>q.gte('data',desde)).catch(ignB),
       S.legado?Promise.resolve([]):todos('pedidos_agenda',q=>q.gte('data',desde)).catch(()=>[]),
@@ -562,12 +562,13 @@ async function recarregar(){
       S.legado?Promise.resolve([]):todos('cartoes_presente').catch(()=>{semC=true;return []}),
       S.legado?Promise.resolve([]):todos('cartao_movs').catch(()=>{semC=true;return []}),
       S.legado?Promise.resolve([]):todos('produtos_venda').catch(ignV),
-      S.legado?Promise.resolve([]):todos('vendas',q=>q.gte('data',new Date(Date.now()-400*864e5).toISOString().slice(0,10))).catch(ignV)]);
-    S.semVendas=semV;S.semCartao=semC;S.semDesp=semD;S.semEst=semE;S.semBloq=S.legado||semB;
-    const sig=JSON.stringify([c,a,g,pr,fi,mv,bq,pd,es,pk,rs,ag,vl,cp,cmv,pvd,vnd]);
+      S.legado?Promise.resolve([]):todos('vendas',q=>q.gte('data',new Date(Date.now()-400*864e5).toISOString().slice(0,10))).catch(ignV),
+      S.legado?Promise.resolve([]):todos('anamneses').catch(()=>{semAn=true;return []})]);
+    S.semAnam=semAn;S.semVendas=semV;S.semCartao=semC;S.semDesp=semD;S.semEst=semE;S.semBloq=S.legado||semB;
+    const sig=JSON.stringify([c,a,g,pr,fi,mv,bq,pd,es,pk,rs,ag,vl,cp,cmv,pvd,vnd,anm]);
     const mudou=sig!==S.sig||tinhaErro||!S.got;
     S.sig=sig;S.erro='';
-    if(mudou){S.pvs=(pvd||[]).map(pvRow);S.vendas=(vnd||[]).map(vdRow);S.cartoes=(cp||[]).map(cpRow);S.cmovs=(cmv||[]).map(cpMov);S.vales=(vl||[]).map(r=>({id:r.id,prof:r.profissional||'',data:r.data,valor:Number(r.valor)||0,obs:r.obs||''}));S.clientes=c.map(rowC);S.atendTodos=a.map(rowA);S.atend=S.atendTodos.filter(x=>!inativo(x));S.gastos=g.map(rowD);S.produtos=pr.map(rowP);S.fichas=fi.map(rowF);S.movs=mv.map(rowM);S.bloq=bq.map(b=>({id:b.id,profissional:b.profissional||'',data:b.data,inicio:b.inicio?String(b.inicio).slice(0,5):'',fim:b.fim?String(b.fim).slice(0,5):'',motivo:b.motivo||''}));S.pedidos=pd.filter(x=>x.status==='pendente'||(x.status==='recusado'&&x.sinal_status==='pago')).map(x=>({id:x.id,nome:x.nome,telefone:x.telefone,servico:x.servico,profissional:x.profissional,data:x.data,hora:String(x.hora||'').slice(0,5),obs:x.obs||'',duracao:x.duracao,status:x.status,sinalValor:Number(x.sinal_valor)||0,sinalStatus:x.sinal_status||'nenhum'})).sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora));S.pacotes=pk.map(x=>({id:x.id,clienteId:x.cliente_id,nome:x.nome,servico:x.servico||'',total:Number(x.total_sessoes)||0,usadas:Number(x.usadas)||0,preco:Number(x.preco)||0,validade:x.validade||'',status:x.status||'ativo',criado:x.criado_em||''}));S.resgates=rs.map(x=>({id:x.id,clienteId:x.cliente_id,premio:x.premio||'',criado:x.criado_em||''}));S.espera=es.filter(x=>x.status==='aguardando'||x.status==='avisada').map(x=>({id:x.id,nome:x.nome,telefone:x.telefone,servico:x.servico,profissional:x.profissional||'',data:x.data,periodo:x.periodo||'qualquer',obs:x.obs||'',status:x.status,origem:x.origem||'salao',avisadaEm:x.avisada_em||''})).sort((a,b)=>(a.data+a.status).localeCompare(b.data+b.status));S.agCfg=(ag&&ag.agenda_config)||{};S.onl=ag?{slug:ag.slug||'',on:!!ag.online_ativo,wa:ag._wa,mp:ag._mp,uso:ag._uso||null,wp:ag._wp||null}:{slug:'',on:false,wa:null,mp:null,uso:null,wp:null};S.got=true;render()}
+    if(mudou){S.anams=(anm||[]).map(anRow);S.pvs=(pvd||[]).map(pvRow);S.vendas=(vnd||[]).map(vdRow);S.cartoes=(cp||[]).map(cpRow);S.cmovs=(cmv||[]).map(cpMov);S.vales=(vl||[]).map(r=>({id:r.id,prof:r.profissional||'',data:r.data,valor:Number(r.valor)||0,obs:r.obs||''}));S.clientes=c.map(rowC);S.atendTodos=a.map(rowA);S.atend=S.atendTodos.filter(x=>!inativo(x));S.gastos=g.map(rowD);S.produtos=pr.map(rowP);S.fichas=fi.map(rowF);S.movs=mv.map(rowM);S.bloq=bq.map(b=>({id:b.id,profissional:b.profissional||'',data:b.data,inicio:b.inicio?String(b.inicio).slice(0,5):'',fim:b.fim?String(b.fim).slice(0,5):'',motivo:b.motivo||''}));S.pedidos=pd.filter(x=>x.status==='pendente'||(x.status==='recusado'&&x.sinal_status==='pago')).map(x=>({id:x.id,nome:x.nome,telefone:x.telefone,servico:x.servico,profissional:x.profissional,data:x.data,hora:String(x.hora||'').slice(0,5),obs:x.obs||'',duracao:x.duracao,status:x.status,sinalValor:Number(x.sinal_valor)||0,sinalStatus:x.sinal_status||'nenhum'})).sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora));S.pacotes=pk.map(x=>({id:x.id,clienteId:x.cliente_id,nome:x.nome,servico:x.servico||'',total:Number(x.total_sessoes)||0,usadas:Number(x.usadas)||0,preco:Number(x.preco)||0,validade:x.validade||'',status:x.status||'ativo',criado:x.criado_em||''}));S.resgates=rs.map(x=>({id:x.id,clienteId:x.cliente_id,premio:x.premio||'',criado:x.criado_em||''}));S.espera=es.filter(x=>x.status==='aguardando'||x.status==='avisada').map(x=>({id:x.id,nome:x.nome,telefone:x.telefone,servico:x.servico,profissional:x.profissional||'',data:x.data,periodo:x.periodo||'qualquer',obs:x.obs||'',status:x.status,origem:x.origem||'salao',avisadaEm:x.avisada_em||''})).sort((a,b)=>(a.data+a.status).localeCompare(b.data+b.status));S.agCfg=(ag&&ag.agenda_config)||{};S.onl=ag?{slug:ag.slug||'',on:!!ag.online_ativo,wa:ag._wa,mp:ag._mp,uso:ag._uso||null,wp:ag._wp||null}:{slug:'',on:false,wa:null,mp:null,uso:null,wp:null};S.got=true;render()}
   }catch(e){S.erro=(e&&(e.code||e.message))||'erro';render()}
 }
 let tmr;
@@ -585,7 +586,7 @@ async function iniciar(){
   try{S.canal=sb.channel('salao-mudancas').on('postgres_changes',{event:'*',schema:'public'},agendar).subscribe()}catch(_){}
 }
 function parar(){
-  S.iniciado=false;S.got=false;S.pvs=[];S.vendas=[];S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
+  S.iniciado=false;S.got=false;S.anams=[];S.pvs=[];S.vendas=[];S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
   if(S.canal&&sb){try{sb.removeChannel(S.canal)}catch(_){}}
   S.canal=null;
 }
@@ -1981,10 +1982,56 @@ function detalhe(){
     <div class="item-acts"><button class="btn ghost sm" data-act="editCliente" data-id="${esc(c.id)}">Editar</button>${!S.legado&&NV('clientes')==='escrita'&&c.nome!=='Cliente removida'?`<button class="btn ghost sm" data-act="anonCliente" data-id="${esc(c.id)}">Apagar dados pessoais</button>`:''}<button class="btn danger sm" data-act="delCliente" data-id="${esc(c.id)}">Excluir</button></div></div>
   <div class="stats"><div class="stat"><b>${a.length}</b><span>atendimentos</span></div><div class="stat"><b>${brl(soma(a))}</b><span>total gasto</span></div>${a.filter(aberto).length?`<div class="stat"><b>${brl(soma(a.filter(aberto)))}</b><span>a receber (${a.filter(aberto).length})</span></div>`:''}</div>
   ${(()=>{const u=a.find(x=>x.obs);return u?`<div class="panel"><b>Última fórmula / observação</b> <span class="muted num">${fd(u.data)} · ${esc(procTxt(u))}</span><p class="obs" style="margin:6px 0 0">${esc(u.obs)}</p></div>`:''})()}
-  ${blocoFidelidade(c)}${blocoPacotes(c)}
+  ${blocoFidelidade(c)}${blocoPacotes(c)}${blocoAnamnese(c)}
   <div class="bar"><button class="btn" data-act="novoAtend" data-cliente="${esc(c.id)}">Novo atendimento</button></div>
   <h3>Histórico</h3>`+(a.length?'<div class="list">'+a.map(x=>itemAtend(x,false)).join('')+'</div>':'<p class="muted">Nenhum procedimento registrado para esta cliente.</p>');
 }
+/* ---------- Anamnese digital e termo de consentimento ---------- */
+const AN_PERG=[['alergia','Tem alergia a produtos, cosméticos, látex ou anestésicos?'],['remedio','Usa algum medicamento de uso contínuo?'],['gravida','Está grávida ou amamentando?'],['circulacao','Tem diabetes, pressão alta ou problema de circulação?'],['pele','Tem doença de pele ou cicatrização difícil?'],['reacao','Já teve reação a algum procedimento estético?'],['tratamento','Faz tratamento oncológico ou usa anticoagulante?']];
+const AN_TERMO='Declaro que as informações acima são verdadeiras e que fui orientada sobre o procedimento, os cuidados e os possíveis riscos. Autorizo a realização do atendimento e o armazenamento destes dados no cadastro do estabelecimento, para uso exclusivo no meu atendimento (LGPD).';
+const anRow=r=>({id:r.id,clienteId:r.cliente_id,data:r.data,respostas:(r.respostas&&typeof r.respostas==='object')?r.respostas:{},obs:r.obs||'',consentimento:!!r.consentimento,assinatura:r.assinatura||''});
+const anSims=a=>AN_PERG.filter(([k])=>a.respostas[k]==='sim').map(x=>x[1]);
+function blocoAnamnese(c){
+  if(S.semAnam)return '';
+  const L=(S.anams||[]).filter(x=>x.clienteId===c.id).sort((a,b)=>String(b.data).localeCompare(String(a.data))||0),pode=!S.legado&&NV('clientes')==='escrita';
+  if(!L.length&&!pode)return '';
+  const it=a=>{const s=anSims(a);return `<div class="item" style="align-items:flex-start"><div class="grow"><div class="t">Ficha de ${fd(a.data)} ${a.consentimento?'<span class="tag ok">Termo assinado</span>':'<span class="tag">Sem termo</span>'}</div>
+    <div class="muted">${s.length?'<b>Respondeu sim:</b> '+s.map(esc).join('; '):'Nenhuma condição de atenção informada.'}</div>${a.obs?`<div class="obs" style="margin-top:4px">${esc(a.obs)}</div>`:''}
+    ${a.assinatura?`<img src="${esc(a.assinatura)}" alt="Assinatura da cliente" style="max-width:200px;height:auto;border:1px solid var(--line);border-radius:8px;margin-top:6px;background:#fff">`:''}
+    ${pode?`<div class="row-actions" style="margin-top:6px"><button type="button" class="btn ghost sm" data-act="anExcluir" data-id="${esc(a.id)}">Excluir ficha</button></div>`:''}</div></div>`};
+  const alerta=L[0]&&anSims(L[0]).length?'<span class="tag late" role="note">Atenção</span> ':'';
+  return `<h3>${alerta}Anamnese e termo</h3>`+(L.length?'<div class="list">'+L.map(it).join('')+'</div>':'<p class="muted">Nenhuma ficha de anamnese ainda.</p>')+(pode?`<div class="bar"><button class="btn ghost" data-act="anNova" data-id="${esc(c.id)}">Nova ficha de anamnese</button></div>`:'');
+}
+function formAnamnese(cid){
+  const c=cli(cid);if(!c)return;
+  abrir(`<h2>Anamnese de ${esc(c.nome)}</h2><form data-form="anamnese" data-id="${esc(cid)}">
+  ${AN_PERG.map(([k,q])=>`<fieldset style="border:0;padding:0;margin:0 0 10px"><legend style="font-weight:600;font-size:15px;margin-bottom:4px">${esc(q)}</legend><label class="chk" style="display:inline-flex;margin-right:14px"><input type="radio" name="p_${k}" value="nao" checked> Não</label><label class="chk" style="display:inline-flex"><input type="radio" name="p_${k}" value="sim"> Sim</label></fieldset>`).join('')}
+  <label for="an-o">Detalhes das respostas “sim” e outras informações</label><textarea id="an-o" name="obs" rows="3" maxlength="1000" placeholder="Ex.: alergia a amônia; usa anticoncepcional"></textarea>
+  <label class="chk" style="margin-top:10px"><input type="checkbox" name="consent" id="an-cons"> A cliente leu e concorda com o termo abaixo</label>
+  <p class="muted" style="font-size:13px;margin:4px 0 8px">${esc(AN_TERMO)}</p>
+  <div id="an-sig-wrap"><label>Assinatura da cliente (desenhe com o dedo ou o mouse)</label><canvas id="an-sig" width="560" height="180" style="width:100%;max-width:420px;height:auto;aspect-ratio:560/180;border:1.5px solid var(--line);border-radius:12px;background:#fff;touch-action:none;display:block"></canvas>
+  <button type="button" class="btn ghost sm" data-act="anLimpa" style="margin-top:6px">Limpar assinatura</button></div>
+  <p class="erro" id="a-erro" role="alert"></p><div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Salvar ficha</button></div></form>`);
+}
+(function(){
+  let des=false,tem=false;
+  const ctx=cv=>{const x=cv.getContext('2d');x.lineWidth=3;x.lineCap='round';x.lineJoin='round';x.strokeStyle='#10231d';return x};
+  const pos=(cv,e)=>{const r=cv.getBoundingClientRect();return [(e.clientX-r.left)*cv.width/r.width,(e.clientY-r.top)*cv.height/r.height]};
+  document.addEventListener('pointerdown',e=>{const cv=e.target;if(!cv||cv.id!=='an-sig')return;e.preventDefault();des=true;tem=true;cv.dataset.tem='1';try{cv.setPointerCapture(e.pointerId)}catch(_){}const x=ctx(cv),p=pos(cv,e);x.beginPath();x.moveTo(p[0],p[1]);x.lineTo(p[0]+.1,p[1]+.1);x.stroke()});
+  document.addEventListener('pointermove',e=>{const cv=e.target;if(!des||!cv||cv.id!=='an-sig')return;const x=ctx(cv),p=pos(cv,e);x.lineTo(p[0],p[1]);x.stroke()});
+  const fim=()=>{des=false};document.addEventListener('pointerup',fim);document.addEventListener('pointercancel',fim);
+  window.anLimpaSig=()=>{const cv=document.getElementById('an-sig');if(!cv)return;cv.getContext('2d').clearRect(0,0,cv.width,cv.height);delete cv.dataset.tem};
+})();
+async function salvarAnamnese(cid,d){
+  const resp={};AN_PERG.forEach(([k])=>{resp[k]=d['p_'+k]==='sim'?'sim':'nao'});
+  const cons=d.consent==='on',cv=document.getElementById('an-sig'),temSig=cv&&cv.dataset.tem==='1';
+  if(cons&&!temSig)throw erroUi('Peça para a cliente assinar no quadro para registrar o termo.');
+  const r=await sb.rpc('anamnese_salvar',{p_cliente:cid,p_respostas:resp,p_obs:String(d.obs||'').trim(),p_consentimento:cons,p_assinatura:temSig?cv.toDataURL('image/png'):null});
+  if(r.error){if(r.error.code==='PGRST202'||r.error.code==='42883')throw erroUi('Rode o arquivo 41-anamnese.sql (ou o agendio-TUDO.sql) no Supabase.');throw r.error}
+  if(!r.data||r.data.ok!==true)throw erroUi((r.data&&r.data.erro)||'Não foi possível salvar.');
+  await recarregar();toast('Ficha de anamnese salva.');
+}
+
 /* ---------- Pacotes e fidelidade ---------- */
 const hojeISO=()=>hoje();
 const pacVencido=x=>x.status==='ativo'&&x.validade&&String(x.validade)<hoje();
@@ -3663,6 +3710,7 @@ document.addEventListener('click',e=>{
     pubHora:()=>{S.pb.hora=a.dataset.hora;S.pb.prof=a.dataset.prof;render()},pubNovo:()=>{S.pb={sv:'',pf:'',dt:'',slots:null,hora:'',prof:'',nome:'',tel:'',obs:'',ok:null};render()},pubRecarrega:()=>carregarPublico(),linkWpp:()=>linkWpp(),linkQr:()=>linkQr(),qrImprime:()=>imprimeQr(),copiaLink:()=>{try{navigator.clipboard.writeText(a.dataset.link).then(()=>toast('Link copiado.'),()=>toast('Copie o link manualmente.',true))}catch(_){toast('Copie o link manualmente.',true)}},
     aceitaPedido:()=>responderPedido(id,true).catch(x=>toast(falha(x),true)),recusaPedido:()=>{const go=()=>responderPedido(id,false).catch(x=>toast(falha(x),true));if(a.dataset.sinal)confirmar('Recusar pedido com sinal pago?','A cliente já pagou o sinal. Você precisa devolver pelo app do Mercado Pago.','Recusar',go);else go()},
     waFb:()=>conectarFb(),
+    anNova:()=>formAnamnese(id),anLimpa:()=>window.anLimpaSig(),anExcluir:()=>confirmar('Excluir esta ficha?','A ficha de anamnese e a assinatura são apagadas definitivamente.','Excluir',async()=>{const r=await sb.rpc('anamnese_excluir',{p_id:id});if(r.error)throw r.error;if(!r.data||r.data.ok!==true)throw erroUi((r.data&&r.data.erro)||'Não foi possível excluir.');await recarregar();toast('Ficha excluída.')}),
     vdAba:()=>{S.vdAba=id;render()},vdNova:()=>formVenda(),vdMais:()=>{S.vdLim=(S.vdLim||60)+60;render()},vdVer:()=>vdVer(id).catch(x=>toast(falha(x),true)),pvNovo:()=>formProdutoVenda(),pvEdit:()=>formProdutoVenda(id),pvAjusta:()=>formAjustePv(id),
     pvExcluir:()=>{const p=(S.pvs||[]).find(x=>x.id===id);if(p)confirmar('Excluir '+p.nome+'?','O produto sai da lista. As vendas antigas continuam no histórico.','Excluir',async()=>{await vdChama('pv_excluir',{p_id:id});await recarregar();toast('Produto excluído.')})},
     vdCancela:()=>confirmar('Cancelar esta venda?','Os produtos voltam para o estoque. Se foi paga com cartão-presente, o saldo volta para o cartão.','Cancelar venda',async()=>{await vdChama('venda_cancelar',{p_venda:id});await recarregar();toast('Venda cancelada.')}),
@@ -3775,6 +3823,7 @@ $('dlg').addEventListener('submit',async e=>{
     else if(k==='pacote')await salvarPacote(id,dados);
     else if(k==='fidelidade')await salvarFid(dados);
     else if(k==='vale')await salvarVale(dados);
+    else if(k==='anamnese')await salvarAnamnese(id,dados);
     else if(k==='pvsalvar')await salvarProdutoVenda(id,dados);
     else if(k==='pvajuste')await salvarAjustePv(id,dados);
     else if(k==='venda')await salvarVenda(dados);
