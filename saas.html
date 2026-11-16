@@ -819,6 +819,7 @@ const PV_CAT=['Cabelo','Barba','Perfume','Unhas','Pele','Maquiagem','Acessório'
 const FORMAS_PAG=['Pix','Dinheiro','Cartão de débito','Cartão de crédito','Outro'];
 const pvBaixo=p=>p.ativo&&p.estoque<=0||(p.ativo&&p.minimo>0&&p.estoque<=p.minimo);
 const pvPode=()=>!S.legado&&NV('agenda')==='escrita';
+const vdMes=m=>{const L=(S.vendas||[]).filter(v=>v.status==='ativa'&&(!m||String(v.data).startsWith(m)));return {t:L.reduce((x,v)=>x+v.total,0),c:L.reduce((x,v)=>x+v.custo,0),n:L.length}};
 function vdDia(d){const L=(S.vendas||[]).filter(v=>v.status==='ativa'&&v.data===d);const r={t:0,porForma:{},itens:L};L.forEach(v=>{if(v.forma==='Cartão-presente')return;r.t+=v.total;const k=v.forma||'Sem forma informada';r.porForma[k]=(r.porForma[k]||0)+v.total});return r}
 async function vdChama(nome,args){
   const r=await sb.rpc(nome,args);
@@ -2712,10 +2713,10 @@ function linhaAg(a){
 }
 function telaInicio(){
   const h=hoje(),mes=h.slice(0,7),mm=h.slice(5,7);
-  const rec=S.atend.reduce((s,a)=>s+noMes(a,mes),0),feitos=S.atend.filter(a=>String(a.data).startsWith(mes));
-  const res=rec-feitos.reduce((s,a)=>s+desp(a),0)-soma(gastosDoMes(mes));
+  const vm=vdMes(mes),rec=S.atend.reduce((s,a)=>s+noMes(a,mes),0)+vm.t,feitos=S.atend.filter(a=>String(a.data).startsWith(mes));
+  const res=rec-feitos.reduce((s,a)=>s+desp(a),0)-soma(gastosDoMes(mes))-vm.c;
   const fiados=S.atend.filter(a=>aberto(a)&&String(a.data)<=h).sort((a,b)=>String(a.data).localeCompare(String(b.data))),totFiado=soma(fiados);
-  const rPas=S.atend.reduce((s,a)=>s+noMes(a,addMes(mes,-1)),0);
+  const rPas=S.atend.reduce((s,a)=>s+noMes(a,addMes(mes,-1)),0)+vdMes(addMes(mes,-1)).t;
   const meta=Number(LS.get('salao_meta','0'))||0,pct=meta>0?Math.min(100,Math.round(rec/meta*100)):0;
   const dia=S.atend.filter(a=>a.data===h).sort(byHora);
   const aniv=S.clientes.filter(c=>c.nascimento&&String(c.nascimento).slice(5,7)===mm).sort((a,b)=>String(a.nascimento).slice(8).localeCompare(String(b.nascimento).slice(8)));
@@ -2746,7 +2747,7 @@ function telaInicio(){
   const sm=sumidas().length;if(sm)al.push([`${sm} ${sm===1?'cliente sem voltar':'clientes sem voltar'} há mais de 60 dias.`,'retornos','Ver quem']);
   const atras=S.atend.filter(a=>a.retorno&&String(a.retorno)<h&&cli(a.clienteId)&&!S.atend.some(b=>b.clienteId===a.clienteId&&String(b.data)>String(a.data))).length;
   if(atras)al.push([`${atras} ${atras===1?'retorno atrasado':'retornos atrasados'}.`,'retornos','Ver retornos']);
-  return `<div class="stats"><div class="stat"><b>${brl(rec)}</b><span>recebido em ${esc(mesNome(mes))}${rPas>0?` · mês passado: ${brl(rPas)}`:''}</span></div><div class="stat"><b class="${res<0?'neg':''}">${brl(res)}</b><span>resultado do mês (recebido − despesas)</span></div><div class="stat"><b>${dia.length}</b><span>${dia.length===1?'atendimento hoje':'atendimentos hoje'}</span></div><div class="stat"><b>${brl(totFiado)}</b><span>a receber (fiado)</span></div></div>
+  return `<div class="stats"><div class="stat"><b>${brl(rec)}</b><span>recebido em ${esc(mesNome(mes))}${vm.t>0?` (inclui ${brl(vm.t)} de produtos)`:''}${rPas>0?` · mês passado: ${brl(rPas)}`:''}</span></div><div class="stat"><b class="${res<0?'neg':''}">${brl(res)}</b><span>resultado do mês (recebido − despesas)</span></div><div class="stat"><b>${dia.length}</b><span>${dia.length===1?'atendimento hoje':'atendimentos hoje'}</span></div><div class="stat"><b>${brl(totFiado)}</b><span>a receber (fiado)</span></div></div>
   <div class="panel"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><div><b>Meta do mês</b><div class="muted num">${meta>0?`${brl(rec)} de ${brl(meta)} (${pct}%)`:'Defina quanto você quer faturar neste mês.'}</div></div><button class="btn ghost sm" data-act="meta">${meta>0?'Alterar meta':'Definir meta'}</button></div>${meta>0?`<div class="barv" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></div>`:''}</div>`+
   (faltam?`<div class="panel" style="margin:0 0 12px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><b>Primeiros passos (${passos.length-faltam} de ${passos.length})</b><button class="btn ghost sm" data-act="ocultaPassos">Ocultar</button></div><div class="list" style="margin-top:8px">${passos.map(x=>`<div class="item"><div class="grow" ${x[1]?'style="text-decoration:line-through;opacity:.6"':''}>${x[1]?'✓ ':''}${esc(x[0])}</div>${x[1]?'':`<button class="btn ghost sm" data-go="${x[2]}">${esc(x[3])}</button>`}</div>`).join('')}</div></div>`:'')+
   ((dono||(S.ctx&&S.ctx.role==='gerente'))&&!S.legado&&S.onl&&!S.semOnline&&!S.semAg?(()=>{
@@ -3308,15 +3309,15 @@ function telaRel(){
   if(S.relAba==='dia')return relDia();
   if(S.relAba==='cartao')return segRel()+telaCartoes();
   const atual=hoje().slice(0,7),m=S.mesRel;
-  const meses=[...new Set([atual,...mesesDe(),...mesesGastos()])].filter(Boolean).sort().reverse();
+  const meses=[...new Set([atual,...mesesDe(),...mesesGastos(),...(S.vendas||[]).map(v=>String(v.data).slice(0,7))])].filter(Boolean).sort().reverse();
   const L=(m?S.atend.filter(a=>plano(a).some(p=>p.mes===m)):S.atend).map(a=>({a,v:m?noMes(a,m):(Number(a.valor)||0)}));
   const feitos=S.atend.filter(a=>!m||String(a.data).startsWith(m));
   const tot=L.reduce((s,x)=>s+x.v,0),nCli=new Set(feitos.map(a=>a.clienteId)).size,mm=atual.slice(5,7);
   const parc=m&&S.atend.some(a=>a.pagamento==='Cartão de crédito'&&PARC(a.parcelas)>1);
   const aniv=S.clientes.filter(c=>c.nascimento&&String(c.nascimento).slice(5,7)===mm).sort((a,b)=>String(a.nascimento).slice(8).localeCompare(String(b.nascimento).slice(8)));
   const head=`<p class="so-print">${esc(S.nomeSalao||salaoNome())} — ${m?esc(mesNome(m)):'todo o período'}</p><div class="bar"><button class="btn ghost" data-act="imprimir">Imprimir / salvar em PDF</button><select id="mesRel" aria-label="Período"><option value="">Todo o período</option>${meses.map(x=>`<option value="${x}" ${x===m?'selected':''}>${esc(mesNome(x))}</option>`).join('')}</select></div>${segRel()}`;
-  const despAt=feitos.reduce((x,a)=>x+desp(a),0),G=gastosDoMes(m),despTot=despAt+soma(G),res=tot-despTot;
-  const resumo=`<div class="stats"><div class="stat"><b>${brl(tot)}</b><span>${m?'recebido no mês':'faturado'}</span></div><div class="stat"><b>${brl(despTot)}</b><span>despesas (atendimentos + contas)</span></div><div class="stat"><b class="${res<0?'neg':''}">${brl(res)}</b><span>resultado (${m?'recebido':'faturado'} − despesas)</span></div></div>`;
+  const vv=vdMes(m||''),despAt=feitos.reduce((x,a)=>x+desp(a),0),G=gastosDoMes(m),despTot=despAt+soma(G)+vv.c,totR=tot+vv.t,res=totR-despTot;
+  const resumo=`<div class="stats"><div class="stat"><b>${brl(totR)}</b><span>${m?'recebido no mês':'faturado'}${vv.t>0?' (atendimentos + produtos)':''}</span></div><div class="stat"><b>${brl(despTot)}</b><span>despesas (atendimentos + contas${vv.c>0?' + custo dos produtos vendidos':''})</span></div><div class="stat"><b class="${res<0?'neg':''}">${brl(res)}</b><span>resultado (${m?'recebido':'faturado'} − despesas)</span></div></div>${vv.n>0?`<div class="panel" style="margin:0 0 12px"><b>Vendas de produtos${m?' no mês':''}</b><div class="muted num">${vv.n} ${vv.n===1?'venda':'vendas'} · ${brl(vv.t)} vendidos · custo ${brl(vv.c)} · lucro ${brl(vv.t-vv.c)}. Esse valor já está somado ao faturamento acima.</div></div>`:''}`;
   if(S.relAba==='desp')return head+resumo+relDesp(m,feitos,G);
   if(S.relAba==='custos')return head+relCustos(m,feitos);
   return head+resumo+`
