@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
+<meta name="color-scheme" content="light">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Agendio | Agenda e gestão para beleza e estética</title>
 <meta name="description" content="Sua cliente agenda sozinha pelo celular, paga o sinal por Pix e recebe lembrete. Você controla comissão, caixa e estoque. Teste grátis.">
@@ -16,6 +17,7 @@
    verde-floresta profundo como cor de marca, títulos em serifa macia (Fraunces), cantos bem arredondados.
    Nada de colunas iguais: tudo é bloco, linha ou etiqueta de tamanhos diferentes. */
 :root{
+  color-scheme:light;
   --page:#ffffff;--ink:#10231d;--muted:#51625b;--line:#dfe6e1;
   --forest:#10382f;--forest-ink:#f3f7f4;--forest-muted:#a9c2b8;
   --blush:#f9dcd6;--sage:#d9e6d3;--butter:#f6e9a8;--lilac:#e4dcf5;
@@ -26,16 +28,6 @@
   --font-display:"Fraunces",Georgia,"Times New Roman",serif;
   --font-body:"DM Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
 }
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --page:#0d1512;--ink:#eaf1ed;--muted:#9db1a8;--line:#24342d;
-  --forest:#0a1f19;--forest-ink:#f3f7f4;--forest-muted:#9db8ad;
-  --blush:#3a2523;--sage:#22342b;--butter:#3b3516;--lilac:#2a2540;
-  --btn:#f6e9a8;--btn-ink:#10231d;--btn-hover:#fff3bd;--pop:#f6e9a8;--surface:#16211c;--hero:#0a1f19;--hero-ink:#f3f7f4;--hero-muted:#9db8ad;--hero-soft:rgba(255,255,255,.08);--hero-line:rgba(255,255,255,.35);--hero-btn:#f6e9a8;--hero-btn-ink:#10231d;--hero-btn-hover:#fff3bd;--foot:#0a1f19;--foot-ink:#9db8ad;color-scheme:dark}}
-:root[data-theme="dark"]{
-  --page:#0d1512;--ink:#eaf1ed;--muted:#9db1a8;--line:#24342d;
-  --forest:#0a1f19;--forest-ink:#f3f7f4;--forest-muted:#9db8ad;
-  --blush:#3a2523;--sage:#22342b;--butter:#3b3516;--lilac:#2a2540;
-  --btn:#f6e9a8;--btn-ink:#10231d;--btn-hover:#fff3bd;--pop:#f6e9a8;--surface:#16211c;--hero:#0a1f19;--hero-ink:#f3f7f4;--hero-muted:#9db8ad;--hero-soft:rgba(255,255,255,.08);--hero-line:rgba(255,255,255,.35);--hero-btn:#f6e9a8;--hero-btn-ink:#10231d;--hero-btn-hover:#fff3bd;--foot:#0a1f19;--foot-ink:#9db8ad;color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html{scroll-behavior:smooth}
@@ -131,8 +123,6 @@ a{color:inherit}
 .bloco.b2{grid-column:span 3;background:var(--sage)}
 .bloco.b3{grid-column:span 6;background:var(--lilac)}
 .dark-t .bloco{color:var(--ink)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .bloco{color:var(--ink)}}
-:root[data-theme="dark"] .bloco{color:var(--ink)}
 .bloco h3{margin-bottom:6px}
 .bloco .sub{opacity:.75;font-size:16px;margin-bottom:22px}
 .bloco ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:18px}
@@ -143,8 +133,6 @@ a{color:inherit}
 /* passos: uma linha do tempo */
 .passos{padding-block:clamp(64px,9vw,112px);background:var(--butter);color:#10231d;border-radius:clamp(32px,6vw,72px)}
 .dark-keep{color:#10231d}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .passos{color:var(--ink)}}
-:root[data-theme="dark"] .passos{color:var(--ink)}
 .passos .sec-h p{color:inherit;opacity:.78}
 .steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(24px,3.5vw,52px);position:relative;counter-reset:p}
 .steps li{counter-increment:p;min-width:0;position:relative;padding-top:64px}
@@ -155,8 +143,6 @@ a{color:inherit}
 .steps span{opacity:.8}
 .passos .cta{margin-top:44px}
 .passos .btn{background:#10382f;border-color:#10382f;color:#fff}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .passos .btn{background:#f6e9a8;border-color:#f6e9a8;color:#10231d}}
-:root[data-theme="dark"] .passos .btn{background:#f6e9a8;border-color:#f6e9a8;color:#10231d}
 .passos .btn:hover{opacity:.9}
 
 /* planos como linhas */
@@ -175,13 +161,9 @@ a{color:inherit}
 .plano li::before{content:"✓";font-weight:800;flex:none;color:var(--forest)}
 .plano.dest li::before{color:var(--pop)}
 .plano li.mais{font-weight:700}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .plano li::before{color:var(--pop)}}
-:root[data-theme="dark"] .plano li::before{color:var(--pop)}
 .plano .btn{grid-area:btn;align-self:center}
 .plano.dest .btn{background:var(--pop);border-color:var(--pop);color:#10231d}
 .nota{margin-top:22px;padding:18px 24px;border-radius:22px;background:var(--sage);color:#10231d;font-size:15.5px;font-weight:500}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .nota{color:var(--ink)}}
-:root[data-theme="dark"] .nota{color:var(--ink)}
 
 /* perguntas: título fixo à esquerda, respostas à direita */
 .perg{padding-block:0 clamp(64px,9vw,112px)}
@@ -198,8 +180,6 @@ details p{margin-top:12px;color:var(--muted);max-width:56ch}
 
 /* final */
 .fim-b{background:var(--blush);color:#10231d;border-radius:clamp(32px,6vw,72px) clamp(32px,6vw,72px) 0 0;padding-block:clamp(72px,10vw,132px);text-align:center}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .fim-b{color:var(--ink)}}
-:root[data-theme="dark"] .fim-b{color:var(--ink)}
 .fim-b h2{font-size:clamp(40px,7vw,92px);max-width:11em;margin:0 auto;letter-spacing:-.04em}
 .fim-b .cta{justify-content:center}
 .fim-b .btn.ghost{color:inherit}
