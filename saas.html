@@ -2684,9 +2684,42 @@ function blocoOnline(pode){
   <label for="on-av">Recado extra para a cliente, depois do pedido (opcional)</label><textarea id="on-av" name="aviso" rows="3" maxlength="400" ${pode?'':'disabled'} placeholder="Ex.: Chegue 10 minutos antes. Cancelamentos até 24 h antes.">${esc(oc.aviso||'')}</textarea>
   <p class="erro" id="a-erro" role="alert"></p>${pode?'<div class="acts" style="justify-content:flex-start"><button class="btn">Salvar</button></div>':''}</form>${blocoMp(pode)}`;
 }
+function carregaFb(cfg){return new Promise((ok,err)=>{
+  if(window.FB){ok();return}
+  window.fbAsyncInit=function(){try{FB.init({appId:cfg.app_id,autoLogAppEvents:false,xfbml:false,version:'v21.0'});ok()}catch(e){err(e)}};
+  const sc=document.createElement('script');sc.src='https://connect.facebook.net/pt_BR/sdk.js';sc.async=true;sc.onerror=()=>err(new Error('Não foi possível carregar o Facebook. Desative bloqueadores de anúncios e tente de novo.'));document.head.appendChild(sc);
+})}
+async function conectarFb(){
+  const cfg=S.waFb;if(!cfg||!cfg.ativo)return;
+  const bt=document.querySelector('[data-act=waFb]'),er=$('wa-fb-erro'),msg=t=>{if(er){er.textContent=t;er.style.display=t?'block':'none'}};
+  msg('');if(bt){bt.disabled=true;bt.textContent='Aguardando o Facebook…'}
+  let sess=null;const onMsg=ev=>{
+    if(!/^https:\/\/(www|web)\.facebook\.com$/.test(ev.origin))return;
+    try{const d=typeof ev.data==='string'?JSON.parse(ev.data):ev.data;
+      if(d&&d.type==='WA_EMBEDDED_SIGNUP'){if(d.event==='FINISH'&&d.data)sess={phone_id:String(d.data.phone_number_id||''),waba_id:String(d.data.waba_id||'')};else if(d.event==='CANCEL')sess={cancel:true}}}catch(_){}
+  };
+  window.addEventListener('message',onMsg);
+  const volta=()=>{window.removeEventListener('message',onMsg);if(bt){bt.disabled=false;bt.textContent='Conectar com o Facebook'}};
+  try{
+    await carregaFb(cfg);
+    const resp=await new Promise(res=>FB.login(res,{config_id:cfg.config_id,response_type:'code',override_default_response_type:true,extras:{setup:{},featureType:'',sessionInfoVersion:'3'}}));
+    const code=resp&&resp.authResponse&&resp.authResponse.code;
+    if(!code||(sess&&sess.cancel)){volta();msg('A conexão foi cancelada. Tente de novo quando quiser.');return}
+    for(let i=0;i<40&&!(sess&&sess.phone_id);i++)await new Promise(r=>setTimeout(r,150));
+    if(!sess||!sess.phone_id||!sess.waba_id){volta();msg('O Facebook não terminou o cadastro do número. Tente de novo.');return}
+    const j=await chamaApi('wa-signup',{code,phone_id:sess.phone_id,waba_id:sess.waba_id});
+    volta();S.onl.wp={conectado:true,numero:j.numero||'',nome:j.nome||''};S.sig='';render();
+    toast(j.modelos_criados===3?'WhatsApp conectado. Os modelos de mensagem foram enviados para aprovação da Meta.':'WhatsApp conectado, mas alguns modelos de mensagem não foram criados. Avise o suporte.',j.modelos_criados!==3);
+  }catch(x){volta();msg(String((x&&(x.aviso||x.message))||'Não foi possível conectar.'))}
+}
+async function waFbConfig(){
+  if(S.waFb!==undefined)return;S.waFb=null;
+  try{const r=await fetch((window.__API_BASE||'')+'/api/wa-config',{cache:'no-store'});if(r.ok){const j=await r.json();if(j&&j.ativo){S.waFb=j;if(S.view==='mensagens')render()}}}catch(_){}
+}
 const WA_MODELOS=[['lembrete_agendamento','Olá, {{1}}! Lembrete do seu horário: {{2}} às {{3}}, serviço {{4}}, no {{5}}. Até lá!'],['pedido_aceito','Olá, {{1}}! Seu pedido de horário foi aceito: {{2}} às {{3}}, serviço {{4}}, no {{5}}. Te esperamos!'],['pedido_recusado','Olá, {{1}}! Não conseguimos confirmar o horário pedido para {{2}} às {{3}}, serviço {{4}}, no {{5}}. Escolha outro horário pelo nosso link.']];
 function blocoWaProprio(pode){
   const w=S.onl&&S.onl.wp;if(!w||S.legado)return '';
+  if(!w.conectado&&S.waFb===undefined)waFbConfig();
   const mod=WA_MODELOS.map(m=>`<li style="margin:6px 0"><b>Nome:</b> <code>${m[0]}</code><br><b>Texto:</b> ${esc(m[1])}</li>`).join('');
   const guia=`<details style="margin:8px 0"><summary class="muted" style="cursor:pointer">Como conectar (passo a passo)</summary><ol class="muted" style="margin:6px 0 0;padding-left:20px;max-width:620px">
   <li>Crie a conta no <b>Meta Business</b> (business.facebook.com) e, em <b>Meta for Developers</b> (developers.facebook.com), crie um app do tipo <b>Empresa</b> com o produto <b>WhatsApp</b>.</li>
@@ -2695,7 +2728,7 @@ function blocoWaProprio(pode){
   <li>No <b>Gerenciador do WhatsApp, Modelos de mensagem</b>, crie estes 3 modelos (categoria <b>Utilidade</b>, idioma <b>Português (BR)</b>) com exatamente estes nomes e textos, e espere a aprovação da Meta:<ul style="margin:6px 0">${mod}</ul></li>
   <li>Cole aqui o ID do número e o token e toque em <b>Conectar</b>.</li></ol></details>`;
   if(w.conectado)return `<div class="panel msg-card" style="margin-bottom:12px"><b>WhatsApp Business do salão</b><p style="margin:6px 0">Conectado${w.numero?`: <b>${esc(w.numero)}</b>`:''}${w.nome?` (${esc(w.nome)})`:''}. Os lembretes saem do número do seu salão e o Agendio <b>não cobra por mensagem</b>; a Meta cobra direto de você, conforme a tabela dela.</p>${pode?'<button type="button" class="btn ghost sm" data-act="waDesconectar">Desconectar</button>':''}${guia}</div>`;
-  return `<div class="panel msg-card" style="margin-bottom:12px"><b>WhatsApp Business do salão</b><p class="muted" style="margin:6px 0;max-width:620px">Conecte o número do seu salão para os lembretes saírem dele (a cliente responde direto para você) e sem cobrança de mensagem do Agendio. Precisa de uma conta no WhatsApp Business da Meta e do plano com envio automático.</p>${guia}${pode?`<form data-form="waconectar"><label for="wp-id">ID do número de telefone</label><input id="wp-id" name="phone_id" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="só números"><label for="wp-tk">Token permanente</label><input id="wp-tk" name="token" type="password" autocomplete="off" spellcheck="false" placeholder="EAAG..."><p class="erro" id="a-erro" role="alert"></p><div class="acts" style="justify-content:flex-start"><button class="btn">Conectar</button></div></form>`:'<p class="muted">Só a proprietária conecta.</p>'}</div>`;
+  return `<div class="panel msg-card" style="margin-bottom:12px"><b>WhatsApp Business do salão</b><p class="muted" style="margin:6px 0;max-width:620px">Conecte o número do seu salão para os lembretes saírem dele (a cliente responde direto para você) e sem cobrança de mensagem do Agendio. Precisa de uma conta no WhatsApp Business da Meta e do plano com envio automático.</p>${pode&&S.waFb?`<div style="margin:10px 0"><button type="button" class="btn" data-act="waFb">Conectar com o Facebook</button><p class="muted" style="margin:6px 0 0;max-width:620px">Você entra no Facebook, escolhe ou cria sua conta do WhatsApp Business e confirma o número com um código por SMS. O Agendio cria os modelos de mensagem sozinho.</p><p class="erro" id="wa-fb-erro" role="alert"></p></div>`:''}${S.waFb?'':guia}${pode?`<details${S.waFb?'':' open'} style="margin-top:8px"><summary class="muted" style="cursor:pointer">${S.waFb?'Conexão manual (para quem já tem o token)':'Colar o ID e o token'}</summary>${S.waFb?guia:''}<form data-form="waconectar"><label for="wp-id">ID do número de telefone</label><input id="wp-id" name="phone_id" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="só números"><label for="wp-tk">Token permanente</label><input id="wp-tk" name="token" type="password" autocomplete="off" spellcheck="false" placeholder="EAAG..."><p class="erro" id="a-erro" role="alert"></p><div class="acts" style="justify-content:flex-start"><button class="btn">Conectar</button></div></form></details>`:'<p class="muted">Só a proprietária conecta.</p>'}</div>`;
 }
 function blocoMp(pode){
   const o=S.onl||{};if(o.mp===null||o.mp===undefined)return '';
@@ -3423,6 +3456,7 @@ document.addEventListener('click',e=>{
     novaCliente:()=>formCliente(),editCliente:()=>formCliente(id),delCliente:()=>pedirDelCliente(id),maisMenu:menuMais,plSalvaBloqueio:()=>salvarBloqueio(a),plCupomAtivo:async()=>{const r=await sb.rpc('plataforma_cupom_ativo',{p_id:id,p_ativo:a.dataset.v==='1'});if(r.error)return toast(falha(r.error),true);await carregarPlataforma()},pgCupom:()=>aplicarCupom(id,a),instalarApp:()=>instalarApp(),reciboAtend:()=>reciboAtend(id),reciboPag:()=>reciboPag(id),reciboImprime:()=>imprimeRecibo(),pagarMP:()=>abrirPagamento(id),pagarMPantigo:()=>pagarCobranca(id,a),pgAba:()=>pgAba(id),pgPix:()=>gerarPix(id,a),pgCopia:()=>{const i=$('pg-copia');if(i){i.select();try{navigator.clipboard.writeText(i.value)}catch(_){try{document.execCommand('copy')}catch(_){}}toast('Código Pix copiado.')}},pgCartao:()=>enviarCartao('cobranca',id,a),pgDebito:()=>enviarCartao('debito','',a),debitoAtivar:()=>abrirDebito(),debitoAtivarMP:()=>chamaAssinar('criar',a),debitoParar:()=>confirmar('Cancelar o débito automático?','O cartão deixa de ser cobrado todo mês. Você poderá pagar cada mensalidade à mão ou ativar de novo.','Cancelar débito',()=>chamaAssinar('cancelar')),setStatus:()=>mudarStatus(id,a.dataset.st).catch(x=>toast(falha(x))),anonCliente:()=>pedirAnonCliente(id),exportaSalao:()=>exportarSalao().catch(x=>toast(falha(x))),excluiSalao:formExcluirSalao,
     pubHora:()=>{S.pb.hora=a.dataset.hora;S.pb.prof=a.dataset.prof;render()},pubNovo:()=>{S.pb={sv:'',pf:'',dt:'',slots:null,hora:'',prof:'',nome:'',tel:'',obs:'',ok:null};render()},pubRecarrega:()=>carregarPublico(),linkWpp:()=>linkWpp(),linkQr:()=>linkQr(),qrImprime:()=>imprimeQr(),copiaLink:()=>{try{navigator.clipboard.writeText(a.dataset.link).then(()=>toast('Link copiado.'),()=>toast('Copie o link manualmente.',true))}catch(_){toast('Copie o link manualmente.',true)}},
     aceitaPedido:()=>responderPedido(id,true).catch(x=>toast(falha(x),true)),recusaPedido:()=>{const go=()=>responderPedido(id,false).catch(x=>toast(falha(x),true));if(a.dataset.sinal)confirmar('Recusar pedido com sinal pago?','A cliente já pagou o sinal. Você precisa devolver pelo app do Mercado Pago.','Recusar',go);else go()},
+    waFb:()=>conectarFb(),
     waDesconectar:()=>confirmar('Desconectar o WhatsApp do salão?','Os lembretes voltam a sair do número do Agendio (com a cobrança por mensagem do seu plano). As mensagens já na fila seguem por ele.','Desconectar',async()=>{await chamaApi('wa-conectar',{remover:true});S.onl.wp={conectado:false};S.sig='';render();toast('WhatsApp do salão desconectado.')}),
     mpDesconectar:()=>confirmar('Desconectar o Mercado Pago?','O sinal automático deixa de funcionar. Pedidos com sinal pendente continuam, mas a cliente não conseguirá pagar.','Desconectar',async()=>{await chamaApi('mp-conectar',{remover:true});S.onl.mp=false;if(S.agCfg&&S.agCfg.online&&S.agCfg.online.sinal&&S.agCfg.online.sinal.modo==='mp'){const c=Object.assign({},S.agCfg);c.online=Object.assign({},c.online,{sinal:Object.assign({},c.online.sinal,{modo:'nenhum'})});await salvarAgCfg(c)}render();toast('Mercado Pago desconectado.')}),
     ocultaPassos:()=>{LS.set('salao_passos_off','1');render();toast('Primeiros passos ocultados. Para ver de novo, use o botão no cartão Agendamento online.')},

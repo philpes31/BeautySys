@@ -63,6 +63,7 @@ module.exports = async (req, res) => {
     grupo('Mensalidade pelo Mercado Pago', mp.concat(base), 'Coloque o Access Token de produção em MP_ACCESS_TOKEN'),
     grupo('Pagamento com cartão dentro do sistema', ['MP_PUBLIC_KEY'], 'Coloque a Public Key do Mercado Pago em MP_PUBLIC_KEY (o Pix já funciona sem ela)'),
     grupo('Assinatura dos avisos do Mercado Pago (opcional)', ['MP_WEBHOOK_SECRET'], 'Em Suas integrações > Webhooks do Mercado Pago, copie a "Assinatura secreta" e coloque em MP_WEBHOOK_SECRET'),
+    grupo('Conectar WhatsApp do salão pelo Facebook (opcional)', ['META_APP_ID', 'META_APP_SECRET', 'META_CONFIG_ID'], 'Só depois de a Meta aprovar o app (Cadastro Incorporado). Coloque o ID do app, o segredo do app e o ID da configuração'),
     grupo('E-mails automáticos (Resend)', ['RESEND_API_KEY', 'EMAIL_REMETENTE', 'EMAIL_ADMIN'], 'Crie a conta no Resend, verifique seu domínio e coloque RESEND_API_KEY, EMAIL_REMETENTE (ex.: Agendio <avisos@agendio.tec.br>) e EMAIL_ADMIN (seu e-mail)'),
     grupo('Rotina diária (cron)', cron.concat(base), 'Crie CRON_SECRET com uma senha longa qualquer'),
     grupo('WhatsApp automático', wa.concat(base), 'Só depois de configurar o WhatsApp Business (guia)')
