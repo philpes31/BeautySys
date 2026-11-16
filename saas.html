@@ -2597,8 +2597,8 @@ function telaRet(){
     .sort((a,b)=>String(a.retorno).localeCompare(String(b.retorno)));
   return `<h2>Retornos previstos</h2><p class="muted">Clientes com data de retorno que ainda não voltaram depois do último atendimento.</p>`+
   (l.length?'<div class="list">'+l.map(a=>{
-    const c=cli(a.clienteId),late=a.retorno<h;
-    return `<div class="item"><div class="grow"><div class="t">${esc(c.nome)} <span class="tag ${late?'late':'ok'}">${late?'Atrasada':'No prazo'}</span></div>
+    const c=cli(a.clienteId),late=a.retorno<h,sem=!late&&a.retorno<=addDia(h,7);
+    return `<div class="item"><div class="grow"><div class="t">${esc(c.nome)} <span class="tag ${late?'late':'ok'}">${late?'Atrasada':sem?'Esta semana':'No prazo'}</span></div>
     <div class="muted num">Retorno: ${fd(a.retorno)} · Último: ${esc(procTxt(a))} (${fd(a.data)})</div></div>
     <div class="item-acts">${c.telefone?`<a class="wa" href="${zap(c.telefone)}" target="_blank" rel="noopener">WhatsApp</a>`:''}<button class="btn ghost sm" data-act="abrir" data-id="${esc(c.id)}">Abrir</button></div></div>`;
   }).join('')+'</div>':'<div class="empty"><p>Nenhum retorno pendente.</p></div>');
@@ -2786,11 +2786,13 @@ async function salvarHorarios(d){
   await salvarAgCfg(Object.assign({},S.agCfg,{profissionais:out}));render();toast('Horários salvos.');
 }
 function formServico(i){
-  const x=i===''?{nome:'',duracao:60,preco:'',ativo:true}:(S.agCfg.servicos||[])[Number(i)];if(!x)return;
+  const x=i===''?{nome:'',duracao:60,preco:'',ativo:true,retornoDias:''}:(S.agCfg.servicos||[])[Number(i)];if(!x)return;
   abrir(`<h2>${i===''?'Novo serviço':'Editar serviço'}</h2><form data-form="servico" data-id="${esc(i)}">
   <label for="sv-n">Nome *</label><input id="sv-n" name="nome" required maxlength="60" value="${esc(x.nome)}">
   <div class="grid2"><div><label for="sv-d">Duração (minutos) *</label><input id="sv-d" name="duracao" type="number" min="5" max="720" step="5" required value="${esc(x.duracao||60)}"></div>
-  <div><label for="sv-p">Preço sugerido (R$)</label><input id="sv-p" name="preco" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(x.preco||'')}"></div></div>
+  <div><label for="sv-p">Preço sugerido (R$)</label><input id="sv-p" name="preco" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(x.preco||'')}"></div>
+  <div><label for="sv-r">A cliente volta a cada (dias)</label><input id="sv-r" name="retornoDias" type="number" min="0" max="730" step="1" inputmode="numeric" value="${esc(x.retornoDias||'')}" placeholder="Ex.: 30"></div></div>
+  <p class="muted" style="margin:4px 0 0">Opcional. Ao registrar este serviço, a data de retorno já vem preenchida e a cliente aparece na aba Retornos quando o prazo chegar.</p>
   <label class="chk"><input type="checkbox" name="ativo" ${x.ativo===false?'':'checked'}> Disponível</label>
   <p class="erro" id="a-erro" role="alert"></p>
   <div class="acts">${i===''?'':'<button type="button" class="btn danger" data-act="delServico" data-id="'+esc(i)+'" style="margin-right:auto">Remover</button>'}<button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Salvar</button></div></form>`);
@@ -2799,7 +2801,7 @@ async function salvarServico(i,d){
   const nome=String(d.nome||'').trim().slice(0,60);if(!nome)throw erroUi('Informe o nome do serviço.');
   const lista=[...(S.agCfg.servicos||[])];
   if(lista.some((x,k)=>k!==(i===''?-1:Number(i))&&String(x.nome).toLowerCase()===nome.toLowerCase()))throw erroUi('Já existe um serviço com esse nome.');
-  const it={nome,duracao:Math.min(720,Math.max(5,Math.round(Number(d.duracao)||60))),preco:Math.max(0,Number(d.preco)||0),ativo:d.ativo==='on'};
+  const it={nome,duracao:Math.min(720,Math.max(5,Math.round(Number(d.duracao)||60))),preco:Math.max(0,Number(d.preco)||0),ativo:d.ativo==='on',retornoDias:Math.min(730,Math.max(0,Math.round(Number(d.retornoDias)||0)))};
   if(i==='')lista.push(it);else lista[Number(i)]=it;
   await salvarAgCfg(Object.assign({},S.agCfg,{servicos:lista}));render();toast('Serviço salvo.');
 }
@@ -3732,8 +3734,11 @@ document.addEventListener('change',e=>{
   else if(t.classList&&t.classList.contains('com-pct'))salvarComissao(t.dataset.prof,t.value).catch(x=>toast(falha(x)));
   else if(t.id==='mesDesp'){S.mesDesp=t.value;S.lim.gasto=100;render()}
   else if(t.id==='a-pag'||t.id==='a-parc'||t.id==='a-pago')atualizaParc();
+  else if(t.id==='a-ret'){delete t.dataset.auto}
+  else if(t.id==='a-data'){const rt=$('a-ret'),pr=servicosCat(),A=pr.find(x=>x.nome===($('a-proc')||{}).value),B=pr.find(x=>x.nome===($('a-proc2')||{}).value),dias=Math.max((A&&A.retornoDias)||0,(B&&B.retornoDias)||0);if(rt&&rt.dataset.auto==='1'&&dias>0&&t.value)rt.value=addDia(t.value,dias)}
   else if(t.id==='a-proc'||t.id==='a-proc2'){atualizaEstq(true);const c1=servicosCat(),f=n=>c1.find(x=>x.nome===n),A=f($('a-proc').value),B=$('a-proc2')?f($('a-proc2').value):null;
     if(A||B){$('a-dur').value=((A&&A.duracao)||0)+((B&&B.duracao)||0)||60;const v=$('a-val'),v2=$('a-val2'),pa=(A&&Number(A.preco))||0,pb=(B&&Number(B.preco))||0;if(v&&pa>0&&(!Number(v.value)||v.dataset.auto==='1')){v.value=pa;v.dataset.auto='1'}if(v2&&pb>0&&(!Number(v2.value)||v2.dataset.auto==='1')){v2.value=pb;v2.dataset.auto='1'}}
+    const dias=Math.max((A&&A.retornoDias)||0,(B&&B.retornoDias)||0),rt=$('a-ret'),dt=$('a-data');if(rt&&dt&&dias>0&&dt.value&&(!rt.value||rt.dataset.auto==='1')){rt.value=addDia(dt.value,dias);rt.dataset.auto='1'}else if(rt&&rt.dataset.auto==='1'&&dias===0){rt.value='';delete rt.dataset.auto}
     atualizaParc()}
   else if(t.id==='bq-dia'){$('bq-h').hidden=t.checked}
   else if(t.id==='on-sa'){const c=$('sinal-campos');if(c)c.hidden=!t.checked}
