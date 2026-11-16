@@ -381,7 +381,7 @@ footer{background:var(--foot);color:var(--foot-ink);padding-block:26px;font-size
     {p:'Os dados do meu salão ficam seguros?',r:'Cada salão enxerga apenas os seus próprios dados, e cada pessoa da equipe acessa só o que o perfil dela permite. Você também pode apagar os dados pessoais de uma cliente quando ela pedir, de acordo com a LGPD.'},
     {p:'Posso usar no computador e no celular?',r:'Sim. O sistema se adapta à tela e funciona no celular, no tablet e no computador, com a mesma conta.'}
   ];
-  var REC={estoque:'Estoque e fichas técnicas',financeiro:'Despesas e relatórios',comissoes:'Comissão por profissional e vales',mensagens:'Textos das mensagens editáveis',whatsapp_auto:'WhatsApp automático: lembretes e avisos enviados sozinhos'};
+  var REC={estoque:'Estoque e fichas técnicas',financeiro:'Despesas e relatórios',comissoes:'Comissão por profissional e vales',mensagens:'Textos das mensagens editáveis',vendas:'Venda de produtos com controle de estoque',whatsapp_auto:'WhatsApp automático: lembretes e avisos enviados sozinhos'};
   var BASE=['Agenda e cadastro de clientes','Agendamento online com link próprio','Sinal por Pix com QR code','Lista de espera','Pacotes e fidelidade'];
   var temRec=function(p,k){var r=p.recursos||{};return k==='whatsapp_auto'?r[k]===true:r[k]!==false};
   var linkOk=function(u){return /^(https:\/\/|#|\/)[^\s<>"']*$/.test(u||'')};
