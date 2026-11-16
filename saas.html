@@ -1312,7 +1312,7 @@ async function montaCartao(){
 function abrirPagamento(id){
   const g=((S.assin&&S.assin.pags)||[]).find(x=>x.id===id);if(!g)return;
   pararPagto();
-  abrir(`<h2>Pagar ${brl(g.valor)}</h2><p class="muted" style="margin:-8px 0 12px">${g.tipo==='mensagens'?esc(g.descricao||'Mensagens de WhatsApp'):'Mensalidade do Agendio'} · vence ${esc(fd(g.vencimento))}</p>
+  abrir(`<h2>Pagar ${brl(g.valor)}</h2><p class="muted" style="margin:-8px 0 12px">${g.tipo==='mensagens'?esc(g.descricao||'Mensagens de WhatsApp'):Number(g.meses)>1?'Plano de '+Number(g.meses)+' meses do Agendio':'Mensalidade do Agendio'} · vence ${esc(fd(g.vencimento))}</p>
   <div class="pg-abas" role="tablist"><button type="button" role="tab" aria-selected="true" data-act="pgAba" data-id="pix">Pix</button><button type="button" role="tab" aria-selected="false" data-act="pgAba" data-id="cartao">Cartão de crédito</button></div>
   ${g.tipo!=='mensagens'&&!g.valor_original?`<details class="pg-cupom"><summary>Tem um cupom de desconto?</summary><div class="pg-copia"><input id="pg-cupom" placeholder="Digite o código" autocapitalize="characters" autocomplete="off" maxlength="30" aria-label="Código do cupom"><button type="button" class="btn sm" data-act="pgCupom" data-id="${esc(id)}">Aplicar</button></div><p class="erro" id="pg-cupom-erro" role="alert"></p></details>`:''}${g.valor_original?`<p class="muted" style="margin:0 0 10px">Cupom <b>${esc(g.cupom_codigo||'')}</b> aplicado: de ${brl(g.valor_original)} por ${brl(g.valor)}.</p>`:''}
   <div id="pg-pix" data-cob="${esc(id)}"><p class="muted" style="margin:0 0 10px">Aprovação em segundos. Você escaneia o QR Code ou copia o código no app do seu banco.</p><div id="pg-pix-corpo"><div class="acts"><button type="button" class="btn" data-act="pgPix" data-id="${esc(id)}">Gerar Pix</button></div></div></div>
@@ -1436,16 +1436,33 @@ async function chamaAssinar(acao,btn){
     throw new Error(r.status===404?'As funções de pagamento não estão publicadas no site (pasta "api" ausente na Vercel). Avise o suporte. [404]':'O Mercado Pago não respondeu. Tente de novo em instantes.');
   }catch(x){volta();toast((x&&x.message)||'Não foi possível continuar.',true)}
 }
+const PER=[[1,'Mensal'],[6,'Semestral'],[12,'Anual']];
+const perDesc=(pl,m)=>m===6?Number(pl.desc_semestral)||0:m===12?Number(pl.desc_anual)||0:0;
+const perValor=(pl,m)=>Math.round(Number(pl.preco_mensal)*m*(1-perDesc(pl,m)/100)*100)/100;
+function blocoPeriodo(pl){
+  if(!pl||!(Number(pl.preco_mensal)>0)||(perDesc(pl,6)<=0&&perDesc(pl,12)<=0))return '';
+  const a=(S.assin&&S.assin.auto)||null;
+  if(a&&a.status==='autorizada')return '';
+  const bt=PER.filter(([m])=>m===1||perDesc(pl,m)>0).map(([m,n])=>{const d=perDesc(pl,m),v=perValor(pl,m);
+    return `<button type="button" class="btn ${m===1?'ghost':''} sm" data-act="periodoPagar" data-id="${m}" style="text-align:left;line-height:1.3"><b>${n}</b>${d>0?` <span class="tag ok">-${String(d).replace('.',',')}%</span>`:''}<br><span class="num">${brl(v)}</span>${m>1?`<span class="muted"> · ${brl(v/m)}/mês</span>`:''}</button>`}).join('');
+  return `<div class="panel" style="margin:14px 0 0"><b>Pagar adiantado com desconto</b><p class="muted" style="margin:4px 0 8px">Pague de uma vez por Pix ou cartão e economize. O vencimento avança pelo período escolhido.</p><div class="row-actions" style="gap:8px;flex-wrap:wrap">${bt}</div></div>`;
+}
+async function periodoPagar(m){
+  const r=await sb.rpc('plano_cobranca_periodo',{p_meses:m});
+  if(r.error){if(r.error.code==='PGRST202'||r.error.code==='42883')throw erroUi('Rode o arquivo 44-planos-periodo.sql (ou o agendio-TUDO.sql) no Supabase.');throw r.error}
+  if(!r.data||r.data.ok!==true)throw erroUi((r.data&&r.data.erro)||'Não foi possível concluir.');
+  await carregarSalao();abrirPagamento(r.data.id);
+}
 function blocoAssinatura(){
   if(S.ctx.role!=='proprietario'||!S.ctx.tenant)return '';
   const tn=S.ctx.tenant,pl=S.ctx.plano,A=S.assin||{planos:[],pags:[]};
   const venc=tn.vencimento?(tn.vencimento<hoje()?'venceu em ':'vence em ')+fd(tn.vencimento):'';
-  const pags=A.pags.length?'<div class="list" style="margin-top:8px">'+A.pags.map(g=>`<div class="item"><div class="grow">${g.tipo==='mensagens'?esc(g.descricao||'Mensagens de WhatsApp')+' · ':''}vence ${esc(fd(g.vencimento))}</div><div class="side"><b>${brl(g.valor)}</b> ${tagSt(g.status,ST_PAG)}${g.status==='pendente'||g.status==='atrasado'?` <button class="btn sm" data-act="pagarMP" data-id="${esc(g.id)}">Pagar agora</button>`:g.status==='pago'?` <button class="btn ghost sm" data-act="reciboPag" data-id="${esc(g.id)}">Recibo</button>`:''}</div></div>`).join('')+'</div>':'<p class="muted" style="margin:6px 0 0">Nenhuma cobrança até agora.</p>';
+  const pags=A.pags.length?'<div class="list" style="margin-top:8px">'+A.pags.map(g=>`<div class="item"><div class="grow">${g.tipo==='mensagens'?esc(g.descricao||'Mensagens de WhatsApp')+' · ':''}vence ${esc(fd(g.vencimento))}${Number(g.meses)>1?` · plano de ${Number(g.meses)} meses`:''}</div><div class="side"><b>${brl(g.valor)}</b> ${tagSt(g.status,ST_PAG)}${g.status==='pendente'||g.status==='atrasado'?` <button class="btn sm" data-act="pagarMP" data-id="${esc(g.id)}">Pagar agora</button>`:g.status==='pago'?` <button class="btn ghost sm" data-act="reciboPag" data-id="${esc(g.id)}">Recibo</button>`:''}</div></div>`).join('')+'</div>':'<p class="muted" style="margin:6px 0 0">Nenhuma cobrança até agora.</p>';
   const outros=A.planos.filter(p=>!pl||p.nome!==pl.nome);
   return `<div class="panel" style="max-width:640px;margin-bottom:16px"><h3 style="margin:0 0 6px;font-size:16px">Plano e assinatura</h3>
   <p style="margin:0">${pl?`<b>${esc(pl.nome)}</b> · `:''}${tagSt(tn.status,ST_SAL)} ${venc?`<span class="muted">${esc(venc)}</span>`:''}</p>
   ${pl?`<p class="muted" style="margin:4px 0 0">${pl.max_usuarios} usuários · ${pl.max_profissionais} profissionais</p>`:''}
-  ${blocoDebito(pl)}
+  ${blocoDebito(pl)}${blocoPeriodo(pl)}
   <h4 style="margin:14px 0 0;font-size:14px">Cobranças</h4>${pags}
   ${A.planos.length>1?`<h4 style="margin:14px 0 6px;font-size:14px">Comparar planos</h4>${tabelaPlanos(A.planos,(A.planos.find(p=>pl&&p.nome===pl.nome)||{}).id)}`:''}
   ${outros.length?`<h4 style="margin:14px 0 6px;font-size:14px">Outros planos</h4><div class="list">${outros.map(p=>`<div class="item"><div class="grow"><div class="t">${esc(p.nome)}</div><div class="muted">${p.max_usuarios} usuários · ${p.max_profissionais} profissionais${recTxt(p)}</div>${p.recursos&&p.recursos.whatsapp_auto===true&&Number(p.preco_mensagem)>0?custoMsg(p.preco_mensagem):''}</div><div class="side"><b>${brl(p.preco_mensal)}</b>/mês <button class="btn ghost sm" data-act="pedePlano" data-id="${esc(p.id)}">Quero este</button></div></div>`).join('')}</div>`:''}</div>`;
@@ -1847,6 +1864,8 @@ function formPlano(id){
   abrir(`<h2>${id?'Editar plano':'Novo plano'}</h2><form data-form="plplano" data-id="${esc(id||'')}">
   <label for="pp-nome">Nome do plano *</label><input id="pp-nome" name="nome" required maxlength="60" value="${esc(p.nome)}">
   <div class="g2"><div><label for="pp-preco">Preço mensal (R$) *</label><input id="pp-preco" name="preco_mensal" type="number" step="0.01" min="0" required value="${esc(p.preco_mensal)}"></div><div><label for="pp-trial">Teste grátis (dias)</label><input id="pp-trial" name="trial_dias" type="number" min="0" max="90" value="${esc(p.trial_dias)}"></div></div>
+  <div class="g2"><div><label for="pp-ds">Desconto no semestral (%)</label><input id="pp-ds" name="desc_semestral" type="number" step="0.01" min="0" max="60" inputmode="decimal" value="${esc(p.desc_semestral||0)}"></div><div><label for="pp-da">Desconto no anual (%)</label><input id="pp-da" name="desc_anual" type="number" step="0.01" min="0" max="60" inputmode="decimal" value="${esc(p.desc_anual||0)}"></div></div>
+  <p class="muted" style="margin:2px 0 8px;font-size:13px">Quando o salão paga 6 ou 12 meses de uma vez. Deixe 0 para não dar desconto.</p>
   <label for="pp-pm">Preço por mensagem de WhatsApp (R$)</label><input id="pp-pm" name="preco_mensagem" type="number" step="0.01" min="0" max="5" inputmode="decimal" placeholder="0,10" value="${esc(p.preco_mensagem||0)}"><p class="muted" style="margin:2px 0 8px;font-size:13px">Só vale se o recurso WhatsApp automático estiver marcado. Cada mensagem enviada é somada e cobrada no mês seguinte. O custo da Meta é de cerca de R$ 0,04.</p>
   <div class="g2"><div><label for="pp-u">Usuários *</label><input id="pp-u" name="max_usuarios" type="number" min="1" required value="${esc(p.max_usuarios)}"></div><div><label for="pp-p">Profissionais *</label><input id="pp-p" name="max_profissionais" type="number" min="0" required value="${esc(p.max_profissionais)}"></div></div>
   <h3 style="margin:14px 0 4px;font-size:15px">Recursos liberados</h3>
@@ -1915,7 +1934,7 @@ async function salvarSite(f){
 }
 async function salvarPlano(id,d){
   const rec={};Object.keys(RECURSOS).forEach(k=>{rec[k]=d['rec_'+k]==='on'});
-  const p={id:id||null,nome:String(d.nome||'').trim(),preco_mensal:Number(d.preco_mensal),max_usuarios:Number(d.max_usuarios),max_profissionais:Number(d.max_profissionais),trial_dias:Number(d.trial_dias||0),preco_mensagem:Number(d.preco_mensagem||0),ativo:d.ativo==='on',recursos:rec};
+  const p={id:id||null,nome:String(d.nome||'').trim(),preco_mensal:Number(d.preco_mensal),max_usuarios:Number(d.max_usuarios),max_profissionais:Number(d.max_profissionais),trial_dias:Number(d.trial_dias||0),preco_mensagem:Number(d.preco_mensagem||0),desc_semestral:Number(d.desc_semestral||0),desc_anual:Number(d.desc_anual||0),ativo:d.ativo==='on',recursos:rec};
   const r=await sb.rpc('plataforma_salvar_plano',{p});if(r.error)throw r.error;
   await carregarPlataforma();toast('Plano salvo.');
 }
@@ -3781,7 +3800,7 @@ document.addEventListener('click',e=>{
     anNova:()=>formAnamnese(id),anLimpa:()=>window.anLimpaSig(),anExcluir:()=>confirmar('Excluir esta ficha?','A ficha de anamnese e a assinatura são apagadas definitivamente.','Excluir',async()=>{const r=await sb.rpc('anamnese_excluir',{p_id:id});if(r.error)throw r.error;if(!r.data||r.data.ok!==true)throw erroUi((r.data&&r.data.erro)||'Não foi possível excluir.');await recarregar();toast('Ficha excluída.')}),
     pvCat:()=>{S.pvCat=id;render()},vdAba:()=>{S.vdAba=id;render()},vdNova:()=>formVenda(),vdMais:()=>{S.vdLim=(S.vdLim||60)+60;render()},vdVer:()=>vdVer(id).catch(x=>toast(falha(x),true)),pvNovo:()=>formProdutoVenda(),pvEdit:()=>formProdutoVenda(id),pvAjusta:()=>formAjustePv(id),
     pvExcluir:()=>{const p=(S.pvs||[]).find(x=>x.id===id);if(p)confirmar('Excluir '+p.nome+'?','O produto sai da lista. As vendas antigas continuam no histórico.','Excluir',async()=>{await vdChama('pv_excluir',{p_id:id});await recarregar();toast('Produto excluído.')})},
-    pmAba:()=>{S.pmAba=id;render()},pmNovo:()=>formPromo(),pmEdit:()=>formPromo(id),pmAlterna:()=>pmAlterna(id).catch(x=>toast(falha(x),true)),pmExcluir:()=>confirmar('Excluir este cupom?','O cupom deixa de existir. As vendas já feitas não mudam.',async()=>{await vdChama('promo_excluir',{p_id:id});await recarregar();toast('Cupom excluído.')}),cbConfig:()=>formCashback(),cbVer:()=>cbVer(id).catch(x=>toast(falha(x),true)),
+    periodoPagar:()=>periodoPagar(Number(id)).catch(x=>toast(falha(x),true)),pmAba:()=>{S.pmAba=id;render()},pmNovo:()=>formPromo(),pmEdit:()=>formPromo(id),pmAlterna:()=>pmAlterna(id).catch(x=>toast(falha(x),true)),pmExcluir:()=>confirmar('Excluir este cupom?','O cupom deixa de existir. As vendas já feitas não mudam.',async()=>{await vdChama('promo_excluir',{p_id:id});await recarregar();toast('Cupom excluído.')}),cbConfig:()=>formCashback(),cbVer:()=>cbVer(id).catch(x=>toast(falha(x),true)),
     vdCancela:()=>confirmar('Cancelar esta venda?','Os produtos voltam para o estoque. Se foi paga com cartão-presente, o saldo volta para o cartão.','Cancelar venda',async()=>{await vdChama('venda_cancelar',{p_venda:id});await recarregar();toast('Venda cancelada.')}),
     cpVender:()=>formCartao(),cpUsar:()=>formUsarCartao(id),cpWpp:()=>cpWpp(id),cpImp:()=>cpImprimir(id),
     cpCancela:()=>{const c=(S.cartoes||[]).find(x=>x.id===id);if(c)confirmar('Cancelar o cartão '+c.codigo+'?','O saldo de '+brl(c.saldo)+' é devolvido e sai do caixa de hoje. O cartão deixa de poder ser usado.','Cancelar cartão',async()=>{const j=await cpChama('cartao_cancelar',{p_cartao:id});await recarregar();toast('Cartão cancelado.')})},

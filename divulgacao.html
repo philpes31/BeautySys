@@ -400,9 +400,15 @@ footer{background:var(--foot);color:var(--foot-ink);padding-block:26px;font-size
       if(temRec(p,'whatsapp_auto')&&Number(p.preco_mensagem)>0)li.push(brl(p.preco_mensagem)+' por mensagem enviada, cobrado no mês seguinte');
       var lis=li.map(function(x){return x.indexOf('<li')===0?x:'<li>'+esc(x)+'</li>'}).join('');
       var d=i===iDest;
-      return '<article class="plano'+(d?' dest':'')+'"><span class="tag'+(d?'':' vz')+'">'+(d?'Lembretes automáticos':'.')+'</span><h3>'+esc(p.nome)+'</h3><div class="preco">'+brl(p.preco_mensal)+'<small> /mês</small></div><ul>'+lis+'</ul><a class="btn'+(d?'':' ghost')+'" data-cta href="'+esc(ENTRAR)+'">Testar grátis</a></article>';
+      return '<article class="plano'+(d?' dest':'')+'"><span class="tag'+(d?'':' vz')+'">'+(d?'Lembretes automáticos':'.')+'</span><h3>'+esc(p.nome)+'</h3><div class="preco">'+brl(p.preco_mensal)+'<small> /mês</small></div>'+anual(p)+'<ul>'+lis+'</ul><a class="btn'+(d?'':' ghost')+'" data-cta href="'+esc(ENTRAR)+'">Testar grátis</a></article>';
     }).join('');
     ligaCta();
+  }
+  function anual(p){
+    var da=Number(p.desc_anual)||0,ds=Number(p.desc_semestral)||0,pm=Number(p.preco_mensal)||0;
+    if(!(pm>0)||(da<=0&&ds<=0))return '';
+    var t=da>0?'No plano anual: '+brl(pm*(1-da/100))+' /mês (-'+String(da).replace('.',',')+'%)':'No semestral: '+brl(pm*(1-ds/100))+' /mês (-'+String(ds).replace('.',',')+'%)';
+    return '<p class="muted" style="margin:-6px 0 12px;font-size:14px">'+esc(t)+'</p>';
   }
   function faq(L){
     var f=(L&&L.length)?L:FAQ_PADRAO;
