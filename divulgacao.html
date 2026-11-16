@@ -5,243 +5,253 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Agendio | Agenda e gestão para beleza e estética</title>
 <meta name="description" content="Sua cliente agenda sozinha pelo celular, paga o sinal por Pix e recebe lembrete. Você controla comissão, caixa e estoque. Teste grátis.">
-<meta name="theme-color" content="#1d1530">
+<meta name="theme-color" content="#10382f">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Hanken+Grotesk:wght@400..800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..600&family=DM+Sans:opsz,wght@9..40,400..700&display=swap">
 <style>
-/* Identidade: a página parece a própria agenda do salão.
-   Régua de horas (traços de 12 em 12 px) como assinatura, blocos de horário coloridos para os recursos,
-   violeta-noite + orquídea + champanhe. Títulos em grotesca condensada (Bricolage), texto em Hanken Grotesk. */
+/* Identidade "papelaria de salão": blocos de cor pastel (blush, sálvia, manteiga, lilás) sobre branco,
+   verde-floresta profundo como cor de marca, títulos em serifa macia (Fraunces), cantos bem arredondados.
+   Nada de colunas iguais: tudo é bloco, linha ou etiqueta de tamanhos diferentes. */
 :root{
-  --bg:#f5f3f8;--surface:#ffffff;--ink:#1d1530;--muted:#5d5671;--line:#e1dcea;
-  --accent:#a3246f;--accent-hover:#861c5a;--accent-ink:#ffffff;--accent-soft:#f7e5f0;
-  --band:#1d1530;--band-ink:#f3effa;--band-muted:#b8aed0;--champ:#dcc59c;
-  --c1:#a3246f;--c2:#5a46c8;--c3:#14806a;--mint:#c7eedd;--mint-ink:#12573d;--ok:#1d7a52;
-  --font-display:"Bricolage Grotesque","Arial Narrow",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --font-body:"Hanken Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  --shadow:0 30px 70px -34px rgba(29,21,48,.55);
+  --page:#ffffff;--ink:#10231d;--muted:#51625b;--line:#dfe6e1;
+  --forest:#10382f;--forest-ink:#f3f7f4;--forest-muted:#a9c2b8;
+  --blush:#f9dcd6;--sage:#d9e6d3;--butter:#f6e9a8;--lilac:#e4dcf5;
+  --btn:#10382f;--btn-ink:#ffffff;--btn-hover:#0a261f;
+  --pop:#f6e9a8;--surface:#ffffff;
+  --font-display:"Fraunces",Georgia,"Times New Roman",serif;
+  --font-body:"DM Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#120d1d;--surface:#1b1429;--ink:#f2eefb;--muted:#a79ebd;--line:#312849;
-  --accent:#ea72b8;--accent-hover:#f08cc6;--accent-ink:#1a0b14;--accent-soft:#3b1d33;
-  --band:#0a0712;--band-ink:#f3effa;--band-muted:#b0a6c8;--champ:#dcc59c;
-  --c1:#ea72b8;--c2:#9c8cff;--c3:#52d0ae;--mint:#183a2f;--mint-ink:#8fe6c3;--ok:#6fd9ad;--shadow:0 30px 70px -34px rgba(0,0,0,.85);color-scheme:dark}}
+  --page:#0d1512;--ink:#eaf1ed;--muted:#9db1a8;--line:#24342d;
+  --forest:#0a1f19;--forest-ink:#f3f7f4;--forest-muted:#9db8ad;
+  --blush:#3a2523;--sage:#22342b;--butter:#3b3516;--lilac:#2a2540;
+  --btn:#f6e9a8;--btn-ink:#10231d;--btn-hover:#fff3bd;--pop:#f6e9a8;--surface:#16211c;color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#120d1d;--surface:#1b1429;--ink:#f2eefb;--muted:#a79ebd;--line:#312849;
-  --accent:#ea72b8;--accent-hover:#f08cc6;--accent-ink:#1a0b14;--accent-soft:#3b1d33;
-  --band:#0a0712;--band-ink:#f3effa;--band-muted:#b0a6c8;--champ:#dcc59c;
-  --c1:#ea72b8;--c2:#9c8cff;--c3:#52d0ae;--mint:#183a2f;--mint-ink:#8fe6c3;--ok:#6fd9ad;--shadow:0 30px 70px -34px rgba(0,0,0,.85);color-scheme:dark}
+  --page:#0d1512;--ink:#eaf1ed;--muted:#9db1a8;--line:#24342d;
+  --forest:#0a1f19;--forest-ink:#f3f7f4;--forest-muted:#9db8ad;
+  --blush:#3a2523;--sage:#22342b;--butter:#3b3516;--lilac:#2a2540;
+  --btn:#f6e9a8;--btn-ink:#10231d;--btn-hover:#fff3bd;--pop:#f6e9a8;--surface:#16211c;color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
-h1,h2,h3{font-family:var(--font-display);font-weight:700;margin:0;text-wrap:balance;letter-spacing:-.025em;line-height:1;font-variation-settings:"wdth" 82}
-h1{font-size:clamp(46px,8.4vw,92px);letter-spacing:-.035em;line-height:.94}
-h2{font-size:clamp(34px,5.4vw,58px)}
-h3{font-size:25px;line-height:1.05}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--font-body);font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--font-display);font-weight:500;margin:0;text-wrap:balance;letter-spacing:-.02em;line-height:1.02;font-variation-settings:"opsz" 144,"SOFT" 100}
+h1{font-size:clamp(46px,7.4vw,96px);font-weight:450;letter-spacing:-.035em;line-height:.98}
+h2{font-size:clamp(34px,5vw,60px);letter-spacing:-.03em}
+h3{font-size:clamp(24px,2.6vw,32px);line-height:1.08}
 p{margin:0}
 a{color:inherit}
-:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:6px}
-.wrap{max-width:1160px;margin:0 auto;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px))}
-section{padding-block:clamp(60px,9vw,112px)}
-.btn{display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 26px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:16px;text-decoration:none;border:2px solid var(--accent);transition:background .15s,border-color .15s,transform .15s}
-.btn:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
+:focus-visible{outline:3px solid var(--pop);outline-offset:3px;border-radius:8px;box-shadow:0 0 0 6px var(--forest)}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:54px;padding:0 30px;border-radius:999px;background:var(--btn);color:var(--btn-ink);font-weight:700;font-size:16px;text-decoration:none;border:2px solid var(--btn);transition:background .15s,border-color .15s,transform .15s}
+.btn:hover{background:var(--btn-hover);border-color:var(--btn-hover)}
 .btn:active{transform:translateY(1px)}
-.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
-.btn.ghost:hover{border-color:var(--ink);background:transparent}
-.btn.sm{min-height:40px;padding:0 18px;font-size:14px}
+.btn.ghost{background:transparent;color:inherit;border-color:currentColor}
+.btn.ghost:hover{background:transparent;opacity:.75}
+.btn.sm{min-height:42px;padding:0 20px;font-size:14.5px}
 
-/* régua de horas: a assinatura visual da página */
-.regua{height:14px;width:100%;max-width:260px;background:
-  repeating-linear-gradient(90deg,var(--ink) 0 1.5px,transparent 1.5px 12px) bottom/100% 8px no-repeat,
-  repeating-linear-gradient(90deg,var(--accent) 0 2px,transparent 2px 60px) bottom/100% 14px no-repeat;opacity:.85;margin-bottom:22px}
-.band .regua{background:
-  repeating-linear-gradient(90deg,var(--band-muted) 0 1.5px,transparent 1.5px 12px) bottom/100% 8px no-repeat,
-  repeating-linear-gradient(90deg,var(--champ) 0 2px,transparent 2px 60px) bottom/100% 14px no-repeat}
+/* faixa de aviso */
+.faixa{background:var(--butter);color:var(--ink);text-align:center;padding:10px max(16px,env(safe-area-inset-left,0px));font-weight:600;font-size:15px}
+.faixa a{font-weight:800}
 
-/* cabeçalho */
-.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:18px}
-.brand{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:800;font-size:26px;letter-spacing:-.03em;text-decoration:none;font-variation-settings:"wdth" 85}
-.logo{width:34px;height:34px;flex:none}
-.nav{display:flex;align-items:center;gap:22px}
-.nav a:not(.btn){text-decoration:none;font-weight:600;font-size:15px;color:var(--muted)}
-.nav a:not(.btn):hover{color:var(--ink)}
-
-/* abertura */
-.hero{padding-top:clamp(18px,4vw,40px);padding-bottom:clamp(48px,7vw,88px)}
-.hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:clamp(32px,5vw,64px);align-items:center}
+/* topo: ilha arredondada sobre o verde */
+.hero{background:var(--forest);color:var(--forest-ink);border-radius:0 0 clamp(32px,6vw,72px) clamp(32px,6vw,72px);padding-bottom:clamp(64px,9vw,120px)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:22px;padding-bottom:22px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-size:28px;font-weight:600;letter-spacing:-.03em;text-decoration:none}
+.logo{width:36px;height:36px;flex:none}
+.nav{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);border-radius:999px;padding:6px}
+.nav a:not(.btn){text-decoration:none;font-weight:600;font-size:15px;padding:8px 16px;border-radius:999px;color:var(--forest-muted)}
+.nav a:not(.btn):hover{color:var(--forest-ink);background:rgba(255,255,255,.08)}
+.hero .btn{background:var(--pop);border-color:var(--pop);color:#10231d}
+.hero .btn:hover{background:#fff3bd;border-color:#fff3bd}
+.hero .btn.ghost{background:transparent;color:var(--forest-ink);border-color:rgba(255,255,255,.35)}
+.hero .btn.ghost:hover{border-color:var(--pop);background:transparent;opacity:1}
+.hero-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:clamp(36px,5vw,72px);align-items:center;padding-top:clamp(28px,5vw,64px)}
 .hero-grid>*{min-width:0}
-.lead{font-size:clamp(18px,2.1vw,21px);color:var(--muted);margin-top:24px;max-width:33em}
-.cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:32px}
-.small{font-size:14px;color:var(--muted);margin-top:16px}
+.lead{font-size:clamp(18px,2vw,21px);color:var(--forest-muted);margin-top:26px;max-width:32em}
+.cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:34px}
+.small{font-size:14.5px;color:var(--forest-muted);margin-top:18px}
+.small a{color:var(--forest-ink)}
 
-/* tela de exemplo da cliente + aviso de novo pedido */
-.demo{display:flex;flex-direction:column;align-items:center;gap:14px}
-.demo-stage{position:relative;width:min(100%,350px);margin-bottom:72px}
-.phone{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:34px;padding:22px 18px 18px;box-shadow:var(--shadow)}
-.ph-h{font-family:var(--font-display);font-weight:700;font-size:25px;line-height:1.1;letter-spacing:-.02em;font-variation-settings:"wdth" 88}
-.ph-s{font-size:13.5px;color:var(--muted);margin:2px 0 14px}
-.cal{border:1.5px solid var(--line);border-radius:18px;padding:10px 10px 12px}
-.cal-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;font-weight:700;font-size:15px}
-.cal-top span{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);color:var(--muted);font-weight:400}
+/* exemplo da cliente: cartão inclinado + etiqueta colada */
+.demo{display:flex;flex-direction:column;align-items:center;gap:56px}
+.demo-stage{position:relative;width:min(100%,340px)}
+.phone{width:100%;background:var(--surface);color:var(--ink);border-radius:30px;padding:22px 18px 18px;transform:rotate(2.5deg);box-shadow:0 40px 70px -30px rgba(0,0,0,.55)}
+.ph-h{font-family:var(--font-display);font-weight:600;font-size:26px;line-height:1.1;letter-spacing:-.02em;font-variation-settings:"opsz" 72,"SOFT" 100}
+.ph-s{font-size:14px;color:var(--muted);margin:2px 0 14px}
+.cal{background:var(--sage);border-radius:20px;padding:12px 10px 12px}
+.cal-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;font-weight:700;font-size:15px;color:#10231d}
+.cal-top span{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.55);font-weight:500}
 .cal-sem,.cal-mes{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.cal-sem i{font-style:normal;text-align:center;font-size:11px;font-weight:700;color:var(--muted)}
-.cal-mes button,.cal-mes b{aspect-ratio:1;display:grid;place-items:center;border-radius:50%;font:inherit;font-size:14px;font-weight:500;border:1.5px solid transparent;background:transparent;color:var(--ink);padding:0;font-variant-numeric:tabular-nums}
-.cal-mes b{color:var(--muted);opacity:.38;font-weight:500}
+.cal-sem i{font-style:normal;text-align:center;font-size:11px;font-weight:700;color:#3e5a4e}
+.cal-mes button,.cal-mes b{aspect-ratio:1;display:grid;place-items:center;border-radius:50%;font:inherit;font-size:14px;font-weight:500;border:0;background:transparent;color:#10231d;padding:0;font-variant-numeric:tabular-nums}
+.cal-mes b{opacity:.35}
 .cal-mes button{cursor:pointer}
-.cal-mes button:hover{border-color:var(--accent)}
-.cal-mes button.hoje{border-color:var(--accent);color:var(--accent);font-weight:800}
-.cal-mes button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.ph-d{font-size:13.5px;font-weight:700;margin:12px 0 8px}
+.cal-mes button:hover{background:rgba(255,255,255,.6)}
+.cal-mes button.hoje{box-shadow:inset 0 0 0 2px #10382f;font-weight:800}
+.cal-mes button[aria-pressed=true]{background:#10382f;color:#fff}
+.ph-d{font-size:14px;font-weight:700;margin:14px 0 8px}
 .chips{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.chips button{min-height:38px;border-radius:999px;border:1.5px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-size:14px;font-weight:600;cursor:pointer;font-variant-numeric:tabular-nums}
-.chips button:hover{border-color:var(--accent)}
-.chips button[aria-pressed=true]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
-.ph-ok{margin-top:12px;min-height:46px;border-radius:999px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;font-size:15px}
-.notif{position:absolute;left:-44px;bottom:-62px;width:238px;background:var(--band);color:var(--band-ink);border-radius:18px;padding:13px 15px 14px;box-shadow:var(--shadow);border-left:5px solid var(--champ)}
-.notif b{display:block;font-size:13.5px}
-.notif span{display:block;font-size:13px;color:var(--band-muted);font-variant-numeric:tabular-nums}
-.notif .pago{display:inline-block;margin-top:7px;font-size:12px;font-weight:700;color:var(--mint-ink);background:var(--mint);border-radius:999px;padding:2px 10px}
-.cap{font-size:13px;color:var(--muted);text-align:center;max-width:300px}
+.chips button{min-height:38px;border-radius:12px;border:1.5px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-size:14px;font-weight:600;cursor:pointer;font-variant-numeric:tabular-nums}
+.chips button:hover{border-color:var(--ink)}
+.chips button[aria-pressed=true]{background:var(--blush);border-color:var(--blush);color:#10231d}
+.ph-ok{margin-top:12px;min-height:48px;border-radius:999px;background:#10382f;color:#fff;display:grid;place-items:center;font-weight:700;font-size:15px}
+.notif{position:absolute;left:-46px;bottom:-34px;width:206px;background:var(--pop);color:#10231d;border-radius:18px 18px 18px 4px;padding:12px 14px 13px;box-shadow:0 18px 32px -16px rgba(0,0,0,.6);transform:rotate(-4deg)}
+.notif b{display:block;font-size:13.5px;line-height:1.3}
+.notif span{display:block;font-size:13px;opacity:.8;font-variant-numeric:tabular-nums}
+.notif .pago{display:inline-block;margin-top:7px;font-size:12px;font-weight:700;background:#10382f;color:#fff;opacity:1;border-radius:999px;padding:2px 10px}
+.cap{font-size:13.5px;color:var(--forest-muted);text-align:center;max-width:290px}
 
-/* para quem é */
-.setores{background:var(--surface);border-block:1px solid var(--line)}
-.setores ul{list-style:none;margin:0;padding:22px 0;display:flex;flex-wrap:wrap;gap:8px 0;justify-content:center}
-.setores li{font-family:var(--font-display);font-weight:600;font-size:clamp(18px,2.4vw,24px);letter-spacing:-.015em;padding:0 22px;font-variation-settings:"wdth" 85}
-.setores li+li{border-left:1.5px solid var(--line)}
+/* tipos de negócio, em uma frase corrida */
+.tipos{padding-block:clamp(40px,6vw,72px);text-align:center}
+.tipos p{font-family:var(--font-display);font-size:clamp(24px,3.4vw,42px);line-height:1.25;letter-spacing:-.02em;max-width:22em;margin:0 auto;font-variation-settings:"opsz" 96,"SOFT" 100}
+.tipos span{color:var(--muted)}
 
-/* resultados */
-.res{padding-block:clamp(56px,8vw,96px)}
-.res-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(28px,4.5vw,56px)}
-.res-grid>*{min-width:0;border-top:3px solid var(--ink);padding-top:18px}
-.res-grid>*:nth-child(1){border-color:var(--c1)}
-.res-grid>*:nth-child(2){border-color:var(--c2)}
-.res-grid>*:nth-child(3){border-color:var(--c3)}
-.res h3{margin-bottom:10px;font-size:30px}
-.res p{color:var(--muted);font-size:17px}
+/* resultados: três linhas grandes */
+.res{padding-block:0 clamp(60px,9vw,110px)}
+.res-lista{border-top:1.5px solid var(--ink)}
+.res-lista>div{display:grid;grid-template-columns:1.1fr 1fr;gap:12px clamp(24px,5vw,72px);align-items:baseline;padding-block:clamp(22px,3.4vw,38px);border-bottom:1.5px solid var(--ink)}
+.res-lista>div>*{min-width:0}
+.res h3{font-size:clamp(32px,5vw,60px);letter-spacing:-.035em}
+.res p{color:var(--muted);font-size:18px}
 
-/* recursos: a agenda do dia, uma coluna por momento */
-.sec-h{max-width:680px;margin-bottom:clamp(30px,5vw,52px)}
-.sec-h p{color:var(--muted);margin-top:16px;font-size:18px}
-.dia{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(18px,2.4vw,28px)}
-.dia>*{min-width:0}
-.col{--cc:var(--c1);position:relative;padding-left:20px}
-.col:nth-child(2){--cc:var(--c2)}
-.col:nth-child(3){--cc:var(--c3)}
-.col::before{content:"";position:absolute;left:0;top:0;bottom:0;width:10px;background:
-  repeating-linear-gradient(180deg,var(--cc) 0 2px,transparent 2px 60px) left/10px 100% no-repeat,
-  repeating-linear-gradient(180deg,var(--line) 0 1.5px,transparent 1.5px 12px) left/6px 100% no-repeat}
-.col-h{margin-bottom:16px}
-.col-h h3{color:var(--cc)}
-.col-h p{color:var(--muted);font-size:15px;margin-top:4px}
-.col ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
-.bl{background:color-mix(in srgb,var(--cc) 9%,var(--surface));border:1px solid color-mix(in srgb,var(--cc) 22%,var(--line));border-left:5px solid var(--cc);border-radius:14px;padding:13px 15px 14px}
-.bl b{display:block;font-size:15.5px;line-height:1.3}
-.bl span{display:block;font-size:14.5px;color:var(--muted);margin-top:3px}
+/* recursos em blocos de cores e tamanhos diferentes */
+.recursos{padding-block:0 clamp(60px,9vw,110px)}
+.sec-h{max-width:720px;margin-bottom:clamp(28px,4.5vw,48px)}
+.sec-h p{color:var(--muted);margin-top:16px;font-size:19px}
+.bloco-g{display:grid;grid-template-columns:repeat(6,1fr);gap:16px}
+.bloco-g>*{min-width:0}
+.bloco{border-radius:clamp(24px,3vw,40px);padding:clamp(24px,3.2vw,40px);color:#10231d}
+.bloco.b1{grid-column:span 3;background:var(--blush)}
+.bloco.b2{grid-column:span 3;background:var(--sage)}
+.bloco.b3{grid-column:span 6;background:var(--lilac)}
+.dark-t .bloco{color:var(--ink)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .bloco{color:var(--ink)}}
+:root[data-theme="dark"] .bloco{color:var(--ink)}
+.bloco h3{margin-bottom:6px}
+.bloco .sub{opacity:.75;font-size:16px;margin-bottom:22px}
+.bloco ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:18px}
+.b3 ul{display:grid;grid-template-columns:repeat(2,1fr);gap:18px 48px}
+.bloco li b{display:block;font-size:17px;line-height:1.3}
+.bloco li span{display:block;font-size:15.5px;opacity:.78;margin-top:3px}
 
-/* passos (sequência real) */
-.band{background:var(--band);color:var(--band-ink)}
-.band .sec-h p{color:var(--band-muted)}
-.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(24px,3.5vw,48px);list-style:none;margin:0;padding:0;counter-reset:p}
-.steps li{counter-increment:p;min-width:0}
-.steps li::before{content:counter(p);display:block;font-family:var(--font-display);font-weight:800;font-size:96px;line-height:.9;color:var(--champ);margin-bottom:12px;letter-spacing:-.04em;font-variation-settings:"wdth" 80}
-.steps b{display:block;font-size:20px;margin-bottom:6px}
-.steps span{color:var(--band-muted)}
-.band .cta{margin-top:40px}
-.band .btn{background:var(--champ);border-color:var(--champ);color:#1d1530}
-.band .btn:hover{background:#ecd9b6;border-color:#ecd9b6}
-.band .btn.ghost{background:transparent;color:var(--band-ink);border-color:rgba(255,255,255,.28)}
-.band .btn.ghost:hover{border-color:var(--champ)}
+/* passos: uma linha do tempo */
+.passos{padding-block:clamp(64px,9vw,112px);background:var(--butter);color:#10231d;border-radius:clamp(32px,6vw,72px)}
+.dark-keep{color:#10231d}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .passos{color:var(--ink)}}
+:root[data-theme="dark"] .passos{color:var(--ink)}
+.passos .sec-h p{color:inherit;opacity:.78}
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(24px,3.5vw,52px);position:relative;counter-reset:p}
+.steps li{counter-increment:p;min-width:0;position:relative;padding-top:64px}
+.steps li::before{content:counter(p);position:absolute;top:0;left:0;width:46px;height:46px;border-radius:50%;background:#10382f;color:#fff;display:grid;place-items:center;font-family:var(--font-display);font-weight:600;font-size:22px;z-index:1}
+.steps li::after{content:"";position:absolute;top:22px;left:56px;right:-8px;border-top:2px dashed currentColor;opacity:.35}
+.steps li:last-child::after{display:none}
+.steps b{display:block;font-family:var(--font-display);font-size:26px;font-weight:500;line-height:1.1;margin-bottom:8px;letter-spacing:-.02em}
+.steps span{opacity:.8}
+.passos .cta{margin-top:44px}
+.passos .btn{background:#10382f;border-color:#10382f;color:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .passos .btn{background:#f6e9a8;border-color:#f6e9a8;color:#10231d}}
+:root[data-theme="dark"] .passos .btn{background:#f6e9a8;border-color:#f6e9a8;color:#10231d}
+.passos .btn:hover{opacity:.9}
 
-/* planos (montados pelo script) */
-.planos{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
-.planos>*{min-width:0}
-.plano{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:26px 22px 22px;display:flex;flex-direction:column}
-.plano.dest{background:var(--band);color:var(--band-ink);border-color:var(--band)}
-.plano .tag{align-self:flex-start;font-size:12.5px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:3px 11px;margin-bottom:12px}
-.plano.dest .tag{color:#1d1530;background:var(--champ)}
-.plano .tag.vz{visibility:hidden}
-.plano h3{font-size:30px}
-.preco{margin:12px 0 18px;font-family:var(--font-display);font-size:40px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;font-variation-settings:"wdth" 85}
+/* planos como linhas */
+.planos-s{padding-block:clamp(64px,9vw,112px)}
+.planos{display:flex;flex-direction:column;gap:14px}
+.plano{display:grid;grid-template-columns:minmax(0,230px) minmax(0,1fr) auto;grid-template-areas:"tag ul btn" "nome ul btn" "preco ul btn";column-gap:clamp(20px,4vw,56px);align-content:start;align-items:start;border:1.5px solid var(--line);border-radius:clamp(22px,3vw,34px);padding:clamp(22px,3vw,34px)}
+.plano.dest{background:var(--forest);color:var(--forest-ink);border-color:var(--forest)}
+.plano .tag{grid-area:tag;justify-self:start;font-size:13px;font-weight:700;background:var(--pop);color:#10231d;border-radius:999px;padding:3px 12px;margin-bottom:10px}
+.plano .tag.vz{display:none}
+.plano h3{grid-area:nome;font-size:clamp(30px,3.4vw,40px)}
+.preco{grid-area:preco;margin-top:8px;font-family:var(--font-display);font-size:40px;font-weight:500;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .preco small{font-family:var(--font-body);font-size:15px;font-weight:600;color:var(--muted);letter-spacing:0}
-.plano.dest .preco small{color:var(--band-muted)}
-.plano ul{list-style:none;margin:0 0 22px;padding:0;display:flex;flex-direction:column;gap:9px;font-size:14.5px;flex:1}
+.plano.dest .preco small{color:var(--forest-muted)}
+.plano ul{grid-area:ul;list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 28px;font-size:15px;align-content:start}
 .plano li{display:flex;gap:9px;align-items:baseline}
-.plano li::before{content:"✓";color:var(--ok);font-weight:800;flex:none}
-.plano.dest li::before{color:var(--champ)}
+.plano li::before{content:"✓";font-weight:800;flex:none;color:var(--forest)}
+.plano.dest li::before{color:var(--pop)}
 .plano li.mais{font-weight:700}
-.plano .btn{width:100%}
-.plano.dest .btn{background:var(--champ);border-color:var(--champ);color:#1d1530}
-.nota{margin-top:24px;padding:16px 20px;border-radius:16px;background:var(--mint);color:var(--mint-ink);font-size:15px;font-weight:500}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .plano li::before{color:var(--pop)}}
+:root[data-theme="dark"] .plano li::before{color:var(--pop)}
+.plano .btn{grid-area:btn;align-self:center}
+.plano.dest .btn{background:var(--pop);border-color:var(--pop);color:#10231d}
+.nota{margin-top:22px;padding:18px 24px;border-radius:22px;background:var(--sage);color:#10231d;font-size:15.5px;font-weight:500}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .nota{color:var(--ink)}}
+:root[data-theme="dark"] .nota{color:var(--ink)}
 
-/* perguntas */
-.faq{max-width:780px}
-details{border-bottom:1px solid var(--line);padding:19px 0}
-summary{cursor:pointer;font-weight:700;font-size:17.5px;list-style:none;display:flex;justify-content:space-between;gap:16px;align-items:center}
+/* perguntas: título fixo à esquerda, respostas à direita */
+.perg{padding-block:0 clamp(64px,9vw,112px)}
+.faq-g{display:grid;grid-template-columns:.8fr 1.4fr;gap:clamp(28px,6vw,88px);align-items:start}
+.faq-g>*{min-width:0}
+.faq-g .sec-h{position:sticky;top:24px;margin:0}
+details{border-top:1.5px solid var(--ink);padding:20px 0}
+details:last-child{border-bottom:1.5px solid var(--ink)}
+summary{cursor:pointer;font-family:var(--font-display);font-weight:500;font-size:clamp(21px,2.2vw,26px);line-height:1.2;letter-spacing:-.015em;list-style:none;display:flex;justify-content:space-between;gap:16px;align-items:center}
 summary::-webkit-details-marker{display:none}
-summary::after{content:"+";font-size:26px;font-weight:400;color:var(--accent);flex:none;line-height:1}
+summary::after{content:"+";display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--blush);color:#10231d;font-family:var(--font-body);font-size:22px;font-weight:500;flex:none;line-height:1}
 details[open] summary::after{content:"–"}
-details p{margin-top:10px;color:var(--muted);max-width:60ch}
+details p{margin-top:12px;color:var(--muted);max-width:56ch}
 
 /* final */
-.fim{text-align:center}
-.fim .regua{margin-inline:auto}
-.fim h2{max-width:15em;margin:0 auto}
-.fim .cta{justify-content:center}
-footer{border-top:1px solid var(--line);padding-block:28px;color:var(--muted);font-size:14px}
+.fim-b{background:var(--blush);color:#10231d;border-radius:clamp(32px,6vw,72px) clamp(32px,6vw,72px) 0 0;padding-block:clamp(72px,10vw,132px);text-align:center}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .fim-b{color:var(--ink)}}
+:root[data-theme="dark"] .fim-b{color:var(--ink)}
+.fim-b h2{font-size:clamp(40px,7vw,92px);max-width:11em;margin:0 auto;letter-spacing:-.04em}
+.fim-b .cta{justify-content:center}
+.fim-b .btn.ghost{color:inherit}
+.contato{display:flex;flex-wrap:wrap;gap:10px 28px;justify-content:center;margin-top:26px;font-size:15.5px}
+.contato b{font-weight:700}
+.vazio{border:1.5px dashed var(--line);border-radius:22px;padding:24px;color:var(--muted)}
+footer{background:var(--forest);color:var(--forest-muted);padding-block:26px;font-size:14.5px}
 .foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
+.foot a{color:var(--forest-ink)}
 
-@media (max-width:960px){
-  .planos{grid-template-columns:repeat(2,1fr)}
+@media (max-width:920px){
+  .hero-grid{grid-template-columns:1fr}
+  .demo{margin-top:12px;padding-top:20px}
+  .res-lista>div{grid-template-columns:1fr}
+  .bloco.b1,.bloco.b2{grid-column:span 6}
+  .b3 ul{grid-template-columns:1fr}
+  .steps{grid-template-columns:1fr}
+  .steps li{padding-top:0;padding-left:66px;padding-bottom:6px}
+  .steps li::after{top:52px;bottom:-22px;left:22px;right:auto;border-top:0;border-left:2px dashed currentColor}
+  .faq-g{grid-template-columns:1fr}
+  .faq-g .sec-h{position:static}
+  .plano{grid-template-columns:1fr;grid-template-areas:"tag" "nome" "preco" "ul" "btn";row-gap:0}
+  .plano ul{margin:18px 0 22px}
+  .plano .btn{width:100%}
 }
-@media (max-width:820px){
-  .hero-grid,.res-grid,.dia,.steps{grid-template-columns:1fr}
+@media (max-width:620px){
   .nav a:not(.btn){display:none}
-  .notif{left:auto;right:-6px;bottom:-62px}
-  .setores li{padding:0 14px}
-  .steps li::before{font-size:72px}
-}
-@media (max-width:520px){
-  .planos{grid-template-columns:1fr}
-  .top .btn{padding:0 14px;white-space:nowrap}
-  .nav{gap:8px}
+  .nav{padding:0;background:none;gap:8px}
+  .top .btn{padding:0 16px;white-space:nowrap}
   .cta .btn{width:100%}
-  .setores ul{justify-content:flex-start;padding-inline:18px}
-  .setores li{padding:0 12px 0 0;margin-right:12px}
+  .plano ul{grid-template-columns:1fr}
+  .notif{left:-8px}
 }
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.btn{transition:none}}
-.faixa{background:var(--accent);color:var(--accent-ink);text-align:center;padding:10px max(16px,env(safe-area-inset-left,0px));font-weight:600;font-size:15px}
-.faixa a{color:inherit;font-weight:800}
-.faixa[hidden]{display:none}
-.contato{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:center;margin-top:22px;color:var(--muted);font-size:15px}
-.contato[hidden]{display:none}
-.contato b{color:var(--ink)}
-.vazio{background:var(--surface);border:1px dashed var(--line);border-radius:18px;padding:24px;color:var(--muted)}
 </style>
 </head>
 <body>
 
 <div class="faixa" id="faixa" hidden></div>
-<header class="wrap top">
-  <a class="brand" href="#topo" id="topo" aria-label="Agendio, início">
-    <svg class="logo" viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="10" fill="#a3246f"/><rect x="7" y="8" width="20" height="5" rx="2.5" fill="#fff"/><rect x="7" y="15" width="13" height="5" rx="2.5" fill="#dcc59c"/><rect x="7" y="22" width="17" height="5" rx="2.5" fill="#fff" opacity=".7"/></svg>
-    Agendio
-  </a>
-  <nav class="nav" aria-label="Seções">
-    <a href="#recursos">Recursos</a><a href="#planos">Planos</a><a href="#perguntas">Perguntas</a>
-    <a class="btn ghost sm" href="/saas">Entrar</a>
-    <a class="btn sm" data-cta data-curto href="/saas">Testar grátis</a>
-  </nav>
-</header>
 
-<main>
-<section class="hero" aria-labelledby="t-hero">
-  <div class="wrap hero-grid">
+<div class="hero" id="topo">
+  <header class="wrap top">
+    <a class="brand" href="#topo" aria-label="Agendio, início">
+      <svg class="logo" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="18" fill="#f6e9a8"/><path d="M11 24c0-6 3-12 7-12s7 6 7 12" fill="none" stroke="#10382f" stroke-width="3" stroke-linecap="round"/><circle cx="18" cy="24" r="2.4" fill="#10382f"/></svg>
+      Agendio
+    </a>
+    <nav class="nav" aria-label="Seções">
+      <a href="#recursos">Recursos</a><a href="#planos">Planos</a><a href="#perguntas">Perguntas</a>
+      <a class="btn ghost sm" href="/saas">Entrar</a>
+      <a class="btn sm" data-cta data-curto href="/saas">Testar grátis</a>
+    </nav>
+  </header>
+  <section class="wrap hero-grid" aria-labelledby="t-hero">
     <div>
-      <div class="regua" aria-hidden="true"></div>
       <h1 id="t-hero" data-k="titulo">Sua cliente agenda sozinha. Você só atende.</h1>
       <p class="lead" data-k="subtitulo">O Agendio é o sistema de agenda e gestão para todo o setor de beleza e estética: salões, barbearias, clínicas e estúdios. Ele recebe os pedidos de horário a qualquer hora, cobra o sinal, lembra a cliente no dia anterior e mostra quanto cada profissional ganhou.</p>
       <div class="cta">
@@ -268,66 +278,65 @@ footer{border-top:1px solid var(--line);padding-block:28px;color:var(--muted);fo
       </div>
       <p class="cap">Exemplo da página que sua cliente abre. Toque nos dias e nos horários.</p>
     </div>
-  </div>
-</section>
-
-<div class="setores" aria-label="Para quem é o Agendio">
-  <div class="wrap"><ul><li>Salões de beleza</li><li>Barbearias</li><li>Clínicas de estética</li><li>Esmalterias</li><li>Sobrancelhas e cílios</li><li>Spas e massagem</li></ul></div>
+  </section>
 </div>
 
+<main>
+<section class="tipos wrap" aria-label="Para quem é o Agendio">
+  <p>Feito para salões de beleza, barbearias, clínicas de estética, esmalterias, studios de sobrancelha e cílios, <span>spas e todo negócio que vive de horário marcado.</span></p>
+</section>
+
 <section class="res" aria-label="O que muda no dia a dia">
-  <div class="wrap res-grid">
+  <div class="wrap res-lista">
     <div><h3>Agenda cheia sem esforço</h3><p>Cada negócio tem um link próprio. A cliente escolhe o serviço, o dia e o horário livre pelo celular, sem esperar você responder.</p></div>
     <div><h3>Menos faltas</h3><p>O lembrete chega no dia anterior e a cliente confirma presença com um toque. Quem não puder vir remarca sozinha e libera o horário.</p></div>
     <div><h3>Contas em dia</h3><p>Comissão, vales, caixa do dia e despesas ficam no mesmo lugar. No fim do mês você sabe quanto entrou e quanto pagar a cada profissional.</p></div>
   </div>
 </section>
 
-<section id="recursos" aria-labelledby="t-rec" style="padding-top:0">
+<section id="recursos" class="recursos" aria-labelledby="t-rec">
   <div class="wrap">
     <div class="sec-h">
-      <div class="regua" aria-hidden="true"></div>
       <h2 id="t-rec">Ajuda em todas as etapas do atendimento</h2>
       <p>Do primeiro contato até o fechamento do mês, tudo o que você faz no dia a dia.</p>
     </div>
-    <div class="dia">
-      <div class="col">
-        <div class="col-h"><h3>Antes do horário</h3><p>Atrair e garantir a cliente.</p></div>
+    <div class="bloco-g">
+      <div class="bloco b1">
+        <h3>Antes do horário</h3><p class="sub">Atrair e garantir a cliente.</p>
         <ul>
-          <li class="bl"><b>Agendamento online com link próprio</b><span>Calendário do mês inteiro, horários livres por profissional e respeito ao almoço e às folgas.</span></li>
-          <li class="bl"><b>Sinal por Pix com QR code</b><span>A cliente vê o QR e o Pix copia e cola com o valor já preenchido. Você liga ou desliga quando quiser.</span></li>
-          <li class="bl"><b>Lista de espera</b><span>Se o horário que ela queria está cheio, ela entra na fila e você chama quando abrir uma vaga.</span></li>
-          <li class="bl"><b>Lembrete e confirmação</b><span>Aviso por WhatsApp no dia anterior, com confirmação de presença, remarcação e cancelamento pelo link.</span></li>
+          <li><b>Agendamento online com link próprio</b><span>Calendário do mês inteiro, horários livres por profissional e respeito ao almoço e às folgas.</span></li>
+          <li><b>Sinal por Pix com QR code</b><span>A cliente vê o QR e o Pix copia e cola com o valor já preenchido. Você liga ou desliga quando quiser.</span></li>
+          <li><b>Lista de espera</b><span>Se o horário que ela queria está cheio, ela entra na fila e você chama quando abrir uma vaga.</span></li>
+          <li><b>Lembrete e confirmação</b><span>Aviso por WhatsApp no dia anterior, com confirmação de presença, remarcação e cancelamento pelo link.</span></li>
         </ul>
       </div>
-      <div class="col">
-        <div class="col-h"><h3>No atendimento</h3><p>Organizar o dia da equipe.</p></div>
+      <div class="bloco b2">
+        <h3>No atendimento</h3><p class="sub">Organizar o dia da equipe.</p>
         <ul>
-          <li class="bl"><b>Agenda por semana, mês ou lista</b><span>Dois procedimentos no mesmo horário, duração de cada serviço e bloqueio de horários.</span></li>
-          <li class="bl"><b>Ficha de cada cliente</b><span>Histórico, anotações, aniversário e telefone. Cadastros repetidos podem ser juntados.</span></li>
-          <li class="bl"><b>Pacotes, fidelidade e cartão-presente</b><span>Venda pacotes de sessões, acompanhe o saldo de cada cliente e venda vales-presente.</span></li>
-          <li class="bl"><b>Estoque e fichas técnicas</b><span>Controle os produtos e quanto cada serviço consome.</span></li>
-          <li class="bl"><b>Equipe com permissões</b><span>Cada pessoa vê só o que o seu perfil permite.</span></li>
+          <li><b>Agenda por semana, mês ou lista</b><span>Dois procedimentos no mesmo horário, duração de cada serviço e bloqueio de horários.</span></li>
+          <li><b>Ficha de cada cliente</b><span>Histórico, anotações, aniversário e telefone. Cadastros repetidos podem ser juntados.</span></li>
+          <li><b>Pacotes, fidelidade e cartão-presente</b><span>Venda pacotes de sessões, acompanhe o saldo de cada cliente e venda vales-presente.</span></li>
+          <li><b>Estoque, fichas técnicas e equipe</b><span>Controle os produtos, quanto cada serviço consome e o que cada pessoa pode ver.</span></li>
         </ul>
       </div>
-      <div class="col">
-        <div class="col-h"><h3>Depois do atendimento</h3><p>Receber, pagar e fazer a cliente voltar.</p></div>
+      <div class="bloco b3">
+        <h3>Depois do atendimento</h3><p class="sub">Receber, pagar e fazer a cliente voltar.</p>
         <ul>
-          <li class="bl"><b>Comissão e vales</b><span>O sistema calcula quanto cada profissional ganhou e desconta os adiantamentos.</span></li>
-          <li class="bl"><b>Caixa do dia e despesas</b><span>Entradas por forma de pagamento, fechamento diário e relatórios do mês.</span></li>
-          <li class="bl"><b>Retornos e aniversariantes</b><span>Veja quem não volta há semanas e quem faz aniversário para chamar de novo.</span></li>
-          <li class="bl"><b>Pedido de avaliação e indicação</b><span>Agradeça e peça avaliação em um toque. Clientes indicadas por amigas ficam registradas.</span></li>
-          <li class="bl"><b>Lista de compras</b><span>Os produtos que estão acabando viram uma lista pronta para enviar.</span></li>
+          <li><b>Comissão e vales</b><span>O sistema calcula quanto cada profissional ganhou e desconta os adiantamentos.</span></li>
+          <li><b>Caixa do dia e despesas</b><span>Entradas por forma de pagamento, fechamento diário e relatórios do mês.</span></li>
+          <li><b>Retornos e aniversariantes</b><span>Veja quem não volta há semanas e quem faz aniversário para chamar de novo.</span></li>
+          <li><b>Pedido de avaliação e indicação</b><span>Agradeça e peça avaliação em um toque. Clientes indicadas por amigas ficam registradas.</span></li>
+          <li><b>Lista de compras</b><span>Os produtos que estão acabando viram uma lista pronta para enviar.</span></li>
         </ul>
       </div>
     </div>
   </div>
 </section>
 
-<section class="band" aria-labelledby="t-passos">
+<div class="wrap" style="max-width:1260px;padding-inline:max(8px,env(safe-area-inset-left,0px))">
+<section class="passos" aria-labelledby="t-passos">
   <div class="wrap">
     <div class="sec-h">
-      <div class="regua" aria-hidden="true"></div>
       <h2 id="t-passos">Comece a receber pedidos hoje</h2>
       <p>Não precisa instalar nada nem ter conhecimento de tecnologia.</p>
     </div>
@@ -336,16 +345,14 @@ footer{border-top:1px solid var(--line);padding-block:28px;color:var(--muted);fo
       <li><b>Cadastre serviços e horários</b><span>Coloque os serviços com preço e duração, e os dias e horários de cada profissional.</span></li>
       <li><b>Compartilhe o seu link</b><span>Cole no perfil do Instagram e no WhatsApp. Os pedidos aparecem na sua agenda.</span></li>
     </ol>
-    <div class="cta">
-      <a class="btn" data-cta href="/saas">Criar a minha conta</a>
-    </div>
+    <div class="cta"><a class="btn" data-cta href="/saas">Criar a minha conta</a></div>
   </div>
 </section>
+</div>
 
-<section id="planos" aria-labelledby="t-planos">
+<section id="planos" class="planos-s" aria-labelledby="t-planos">
   <div class="wrap">
     <div class="sec-h">
-      <div class="regua" aria-hidden="true"></div>
       <h2 id="t-planos">Um plano para o tamanho do seu negócio</h2>
       <p id="planos-sub">Cada plano inclui tudo o que o anterior tem.</p>
     </div>
@@ -354,16 +361,15 @@ footer{border-top:1px solid var(--line);padding-block:28px;color:var(--muted);fo
   </div>
 </section>
 
-<section id="perguntas" aria-labelledby="t-faq" style="padding-top:0">
-  <div class="wrap faq">
+<section id="perguntas" class="perg" aria-labelledby="t-faq">
+  <div class="wrap faq-g">
     <div class="sec-h"><h2 id="t-faq">Perguntas frequentes</h2></div>
     <div id="faq-lista"></div>
   </div>
 </section>
 
-<section class="fim" aria-labelledby="t-fim" style="padding-top:0">
+<section class="fim-b" aria-labelledby="t-fim">
   <div class="wrap">
-    <div class="regua" aria-hidden="true"></div>
     <h2 id="t-fim">Sua agenda organizada ainda esta semana</h2>
     <div class="cta">
       <a class="btn" data-cta href="/saas">Testar grátis</a>
