@@ -548,7 +548,7 @@ async function recarregar(){
       S.legado?Promise.resolve([]):todos('vendas',q=>q.gte('data',new Date(Date.now()-400*864e5).toISOString().slice(0,10))).catch(ignV),
       S.legado?Promise.resolve([]):todos('anamneses').catch(()=>{semAn=true;return []}),
       S.legado?Promise.resolve([]):todos('promocoes').catch(()=>{semPm=true;return []}),
-      S.legado?Promise.resolve([]):todos('cashback_config').catch(()=>{semPm=true;return []})]);
+      S.legado?Promise.resolve([]):sb.from('cashback_config').select('*').limit(1).then(r=>{if(r.error){semPm=true;return []}return r.data||[]},()=>{semPm=true;return []})]);
     S.semAnam=semAn;S.semPromo=semPm;S.semVendas=semV;S.semCartao=semC;S.semDesp=semD;S.semEst=semE;S.semBloq=S.legado||semB;
     const sig=JSON.stringify([c,a,g,pr,fi,mv,bq,pd,es,pk,rs,ag,vl,cp,cmv,pvd,vnd,anm,prm,cbc]);
     const mudou=sig!==S.sig||tinhaErro||!S.got;
