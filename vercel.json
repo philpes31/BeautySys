@@ -49,6 +49,18 @@
       "destination": "/api/x?a=mp-conectar"
     },
     {
+      "source": "/api/push-teste",
+      "destination": "/api/x?a=push-teste"
+    },
+    {
+      "source": "/api/push-enviar",
+      "destination": "/api/x?a=push-enviar"
+    },
+    {
+      "source": "/api/push-chave",
+      "destination": "/api/x?a=push-chave"
+    },
+    {
       "source": "/",
       "destination": "/divulgacao.html"
     },
@@ -117,6 +129,23 @@
         {
           "key": "Content-Security-Policy",
           "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://sdk.mercadopago.com https://*.mlstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.mercadopago.com https://*.mercadolibre.com https://*.mlstatic.com; base-uri 'self'; object-src 'none'; form-action 'self'; frame-src 'self' https://*.mercadopago.com https://*.mercadolibre.com https://*.mlstatic.com"
+        }
+      ]
+    },
+    {
+      "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/"
+        },
+        {
+          "key": "Content-Type",
+          "value": "text/javascript; charset=utf-8"
         }
       ]
     }

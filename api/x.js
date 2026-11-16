@@ -6,7 +6,10 @@ const H = {
   'wa-signup': require('./_wa-signup'),
   'email-teste': require('./_email-teste'),
   'mp-config': require('./_mp-config'),
-  'mp-conectar': require('./_mp-conectar')
+  'mp-conectar': require('./_mp-conectar'),
+  'push-chave': require('./_push-api'),
+  'push-enviar': require('./_push-api'),
+  'push-teste': require('./_push-api')
 };
 module.exports = async (req, res) => {
   let a = '';

@@ -524,8 +524,8 @@ async function recarregar(){
     let semD=false,semE=false;
     const desde=new Date(Date.now()-120*864e5).toISOString().slice(0,10),ignE=()=>{semE=true;return []};
     let semB=false;const ignB=()=>{semB=true;return []};let semC=false;
-    let semV=false;const ignV=()=>{semV=true;return []};let semAn=false;let semPm=false;
-    const [c,a,g,pr,fi,mv,bq,pd,es,pk,rs,ag,vl,cp,cmv,pvd,vnd,anm,prm,cbc]=await Promise.all([todos('clientes'),todos('atendimentos'),todos('despesas').catch(()=>{semD=true;return []}),
+    let semV=false;const ignV=()=>{semV=true;return []};let semAn=false;let semPm=false;let semCp=false;
+    const [c,a,g,pr,fi,mv,bq,pd,es,pk,rs,ag,vl,cp,cmv,pvd,vnd,anm,prm,cpg,cbc]=await Promise.all([todos('clientes'),todos('atendimentos'),todos('despesas').catch(()=>{semD=true;return []}),
       todos('produtos').catch(ignE),todos('ficha_procedimento').catch(ignE),todos('movimentacoes_estoque',q=>q.gte('data',desde)).catch(ignE),
       S.legado?Promise.resolve([]):todos('bloqueios',q=>q.gte('data',desde)).catch(ignB),
       S.legado?Promise.resolve([]):todos('pedidos_agenda',q=>q.gte('data',desde)).catch(()=>[]),
@@ -548,12 +548,13 @@ async function recarregar(){
       S.legado?Promise.resolve([]):todos('vendas',q=>q.gte('data',new Date(Date.now()-400*864e5).toISOString().slice(0,10))).catch(ignV),
       S.legado?Promise.resolve([]):todos('anamneses').catch(()=>{semAn=true;return []}),
       S.legado?Promise.resolve([]):todos('promocoes').catch(()=>{semPm=true;return []}),
+      S.legado?Promise.resolve([]):todos('contas_pagar').catch(()=>{semCp=true;return []}),
       S.legado?Promise.resolve([]):sb.from('cashback_config').select('*').limit(1).then(r=>{if(r.error){semPm=true;return []}return r.data||[]},()=>{semPm=true;return []})]);
-    S.semAnam=semAn;S.semPromo=semPm;S.semVendas=semV;S.semCartao=semC;S.semDesp=semD;S.semEst=semE;S.semBloq=S.legado||semB;
-    const sig=JSON.stringify([c,a,g,pr,fi,mv,bq,pd,es,pk,rs,ag,vl,cp,cmv,pvd,vnd,anm,prm,cbc]);
+    S.semAnam=semAn;S.semPromo=semPm;S.semContas=semCp;S.semVendas=semV;S.semCartao=semC;S.semDesp=semD;S.semEst=semE;S.semBloq=S.legado||semB;
+    const sig=JSON.stringify([c,a,g,pr,fi,mv,bq,pd,es,pk,rs,ag,vl,cp,cmv,pvd,vnd,anm,prm,cpg,cbc]);
     const mudou=sig!==S.sig||tinhaErro||!S.got;
     S.sig=sig;S.erro='';
-    if(mudou){S.promos=(prm||[]).map(pmRow);S.cb=cbc&&cbc[0]?{ativo:!!cbc[0].ativo,pct:Number(cbc[0].percentual)||0,desde:cbc[0].ativado_em||''}:{ativo:false,pct:5,desde:''};S.anams=(anm||[]).map(anRow);S.pvs=(pvd||[]).map(pvRow);S.vendas=(vnd||[]).map(vdRow);S.cartoes=(cp||[]).map(cpRow);S.cmovs=(cmv||[]).map(cpMov);S.vales=(vl||[]).map(r=>({id:r.id,prof:r.profissional||'',data:r.data,valor:Number(r.valor)||0,obs:r.obs||''}));S.clientes=c.map(rowC);S.atendTodos=a.map(rowA);S.atend=S.atendTodos.filter(x=>!inativo(x));S.gastos=g.map(rowD);S.produtos=pr.map(rowP);S.fichas=fi.map(rowF);S.movs=mv.map(rowM);S.bloq=bq.map(b=>({id:b.id,profissional:b.profissional||'',data:b.data,inicio:b.inicio?String(b.inicio).slice(0,5):'',fim:b.fim?String(b.fim).slice(0,5):'',motivo:b.motivo||''}));S.pedidos=pd.filter(x=>x.status==='pendente'||(x.status==='recusado'&&x.sinal_status==='pago')).map(x=>({id:x.id,nome:x.nome,telefone:x.telefone,servico:x.servico,profissional:x.profissional,data:x.data,hora:String(x.hora||'').slice(0,5),obs:x.obs||'',duracao:x.duracao,status:x.status,sinalValor:Number(x.sinal_valor)||0,sinalStatus:x.sinal_status||'nenhum'})).sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora));S.pacotes=pk.map(x=>({id:x.id,clienteId:x.cliente_id,nome:x.nome,servico:x.servico||'',total:Number(x.total_sessoes)||0,usadas:Number(x.usadas)||0,preco:Number(x.preco)||0,validade:x.validade||'',status:x.status||'ativo',criado:x.criado_em||''}));S.resgates=rs.map(x=>({id:x.id,clienteId:x.cliente_id,premio:x.premio||'',criado:x.criado_em||''}));S.espera=es.filter(x=>x.status==='aguardando'||x.status==='avisada').map(x=>({id:x.id,nome:x.nome,telefone:x.telefone,servico:x.servico,profissional:x.profissional||'',data:x.data,periodo:x.periodo||'qualquer',obs:x.obs||'',status:x.status,origem:x.origem||'salao',avisadaEm:x.avisada_em||''})).sort((a,b)=>(a.data+a.status).localeCompare(b.data+b.status));S.agCfg=(ag&&ag.agenda_config)||{};S.onl=ag?{slug:ag.slug||'',on:!!ag.online_ativo,wa:ag._wa,mp:ag._mp,uso:ag._uso||null,wp:ag._wp||null}:{slug:'',on:false,wa:null,mp:null,uso:null,wp:null};S.got=true;render()}
+    if(mudou){S.contas=(cpg||[]).map(cpRow2);S.promos=(prm||[]).map(pmRow);S.cb=cbc&&cbc[0]?{ativo:!!cbc[0].ativo,pct:Number(cbc[0].percentual)||0,desde:cbc[0].ativado_em||''}:{ativo:false,pct:5,desde:''};S.anams=(anm||[]).map(anRow);S.pvs=(pvd||[]).map(pvRow);S.vendas=(vnd||[]).map(vdRow);S.cartoes=(cp||[]).map(cpRow);S.cmovs=(cmv||[]).map(cpMov);S.vales=(vl||[]).map(r=>({id:r.id,prof:r.profissional||'',data:r.data,valor:Number(r.valor)||0,obs:r.obs||''}));S.clientes=c.map(rowC);S.atendTodos=a.map(rowA);S.atend=S.atendTodos.filter(x=>!inativo(x));S.gastos=g.map(rowD);S.produtos=pr.map(rowP);S.fichas=fi.map(rowF);S.movs=mv.map(rowM);S.bloq=bq.map(b=>({id:b.id,profissional:b.profissional||'',data:b.data,inicio:b.inicio?String(b.inicio).slice(0,5):'',fim:b.fim?String(b.fim).slice(0,5):'',motivo:b.motivo||''}));S.pedidos=pd.filter(x=>x.status==='pendente'||(x.status==='recusado'&&x.sinal_status==='pago')).map(x=>({id:x.id,nome:x.nome,telefone:x.telefone,servico:x.servico,profissional:x.profissional,data:x.data,hora:String(x.hora||'').slice(0,5),obs:x.obs||'',duracao:x.duracao,status:x.status,sinalValor:Number(x.sinal_valor)||0,sinalStatus:x.sinal_status||'nenhum'})).sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora));S.pacotes=pk.map(x=>({id:x.id,clienteId:x.cliente_id,nome:x.nome,servico:x.servico||'',total:Number(x.total_sessoes)||0,usadas:Number(x.usadas)||0,preco:Number(x.preco)||0,validade:x.validade||'',status:x.status||'ativo',criado:x.criado_em||''}));S.resgates=rs.map(x=>({id:x.id,clienteId:x.cliente_id,premio:x.premio||'',criado:x.criado_em||''}));S.espera=es.filter(x=>x.status==='aguardando'||x.status==='avisada').map(x=>({id:x.id,nome:x.nome,telefone:x.telefone,servico:x.servico,profissional:x.profissional||'',data:x.data,periodo:x.periodo||'qualquer',obs:x.obs||'',status:x.status,origem:x.origem||'salao',avisadaEm:x.avisada_em||''})).sort((a,b)=>(a.data+a.status).localeCompare(b.data+b.status));S.agCfg=(ag&&ag.agenda_config)||{};S.onl=ag?{slug:ag.slug||'',on:!!ag.online_ativo,wa:ag._wa,mp:ag._mp,uso:ag._uso||null,wp:ag._wp||null}:{slug:'',on:false,wa:null,mp:null,uso:null,wp:null};S.got=true;render()}
   }catch(e){S.erro=(e&&(e.code||e.message))||'erro';render()}
 }
 let tmr;
@@ -571,7 +572,7 @@ async function iniciar(){
   try{S.canal=sb.channel('salao-mudancas').on('postgres_changes',{event:'*',schema:'public'},agendar).subscribe()}catch(_){}
 }
 function parar(){
-  S.iniciado=false;S.got=false;S.anams=[];S.promos=[];S.cb={ativo:false,pct:5,desde:''};S.pvs=[];S.vendas=[];S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
+  S.iniciado=false;S.got=false;S.push=null;S.anams=[];S.contas=[];S.promos=[];S.cb={ativo:false,pct:5,desde:''};S.pvs=[];S.vendas=[];S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
   if(S.canal&&sb){try{sb.removeChannel(S.canal)}catch(_){}}
   S.canal=null;
 }
@@ -1493,7 +1494,7 @@ function telaSalao(){
   const t=S.salao,ro=NV('config')!=='escrita'?'disabled':'';
   const f=(id,rot,extra,v)=>`<div><label for="cf-${id}">${rot}</label><input id="cf-${id}" name="${id}" value="${esc(v!==undefined?v:(t[id]||''))}" ${ro} ${extra||''}></div>`;
   const logo=S.logoNovo!==undefined?S.logoNovo:t.logo_url;
-  return blocoAssinatura()+blocoLgpd()+`<form data-form="config" class="panel" style="max-width:640px">
+  return blocoApp()+blocoAssinatura()+blocoLgpd()+`<form data-form="config" class="panel" style="max-width:640px">
   <h3 style="margin:0 0 10px;font-size:16px">Marca</h3>
   <div class="logo-linha"><div class="logo-prev" id="cf-prev">${logo?`<img src="${esc(logo)}" alt="Logotipo">`:'<span class="muted">Sem logotipo</span>'}</div>
   <div><input id="cf-logo" type="file" accept="image/png,image/jpeg,image/webp" ${ro}> ${logo&&!ro?'<button type="button" class="btn ghost sm" data-act="tiraLogo">Remover logotipo</button>':''}<p class="muted" style="font-size:12.5px;margin:6px 0 0">A imagem é reduzida automaticamente.</p></div></div>
@@ -2687,7 +2688,7 @@ function itemDesp(g){
   <div class="side num"><b>${brl(g.valor)}</b></div>
   <div class="item-acts"><button class="btn ghost sm" data-act="editDesp" data-id="${esc(g.id)}">Editar</button><button class="btn danger sm" data-act="delDesp" data-id="${esc(g.id)}">Excluir</button></div></div>`;
 }
-function telaDesp(){
+function telaDespLista(){
   const atual=hoje().slice(0,7),m=S.mesDesp;
   const meses=[...new Set([atual,...mesesGastos()])].sort().reverse();
   const L=[...gastosDoMes(m)].sort((a,b)=>String(b.data).localeCompare(String(a.data)));
@@ -2699,6 +2700,147 @@ function telaDesp(){
   bloco('Por categoria',LL,'categoria')+
   '<h3>Lançamentos</h3>'+(L.length?'<div class="list">'+L.slice(0,S.lim.gasto).map(itemDesp).join('')+'</div>'+maisBtn('gasto',L.length):'<div class="empty"><p>Nenhuma despesa lançada neste período.</p></div>');
 }
+
+
+/* ---------- Aplicativo e avisos no celular ---------- */
+const pushOk=()=>'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
+if('serviceWorker' in navigator)window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{})});
+const b64Bytes=t=>{const p='='.repeat((4-t.length%4)%4),b=atob((t+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from([...b].map(c=>c.charCodeAt(0)))};
+async function pushAtual(){try{if(!pushOk())return null;const r=await navigator.serviceWorker.getRegistration();return r?await r.pushManager.getSubscription():null}catch(_){return null}}
+async function pushCarrega(){
+  const sub=await pushAtual();let prefs=null;
+  if(sub){try{const r=await sb.from('push_inscricoes').select('prefs').eq('endpoint',sub.endpoint).maybeSingle();if(!r.error&&r.data)prefs=r.data.prefs}catch(_){}}
+  const antes=JSON.stringify(S.push||null);S.push={ligado:!!sub&&!!prefs,endpoint:sub?sub.endpoint:'',prefs:prefs||{agendamento:true,cancelamento:true,aniversario:true},perm:pushOk()?Notification.permission:'indisponivel'};
+  if(antes!==JSON.stringify(S.push))render();
+}
+function blocoApp(){
+  if(S.legado)return '';
+  const P=S.push,inst=jaInstalado();
+  if(!P){pushCarrega();return ''}
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  let av;
+  if(!pushOk())av=`<p class="muted">Este navegador não permite avisos.${ios&&!inst?' No iPhone, primeiro instale o Agendio (Compartilhar > Adicionar à Tela de Início) e abra pelo ícone dele.':''}</p>`;
+  else if(P.perm==='denied')av='<p class="muted">Os avisos estão bloqueados neste navegador. Libere nas configurações do site (ícone do cadeado ao lado do endereço) e volte aqui.</p>';
+  else if(!P.ligado)av=`<p class="muted" style="max-width:640px">Receba no celular um aviso quando uma cliente pedir horário, cancelar ou fizer aniversário, mesmo com o sistema fechado.${ios&&!inst?' <b>No iPhone, instale o Agendio na tela inicial antes de ligar.</b>':''}</p><div class="bar"><button type="button" class="btn" data-act="pushLigar">Ligar avisos neste aparelho</button></div>`;
+  else av=`<p class="muted">Avisos ligados neste aparelho. Escolha o que quer receber:</p>
+    <div class="list" style="max-width:520px">${[['agendamento','Novo pedido de agendamento online'],['cancelamento','Cliente cancelou um horário'],['aniversario','Aniversariantes do dia']].map(([k,t])=>`<label class="chk" style="padding:6px 0"><input type="checkbox" data-pushpref="${k}" ${P.prefs[k]?'checked':''}> ${t}</label>`).join('')}</div>
+    <div class="row-actions" style="margin-top:8px"><button type="button" class="btn ghost sm" data-act="pushTeste">Enviar aviso de teste</button><button type="button" class="btn ghost sm" data-act="pushDesliga">Desligar neste aparelho</button></div>`;
+  return `<div class="panel" style="max-width:640px;margin-bottom:16px"><h3 style="margin:0 0 6px;font-size:16px">Aplicativo e avisos no celular</h3>
+  ${inst?'<p class="muted" style="margin:0 0 10px">O Agendio já está instalado neste aparelho.</p>':'<div class="bar" style="margin-top:0"><button type="button" class="btn ghost" data-act="instalarApp">Instalar o Agendio no celular</button></div>'}${av}</div>`;
+}
+async function pushLigar(){
+  if(!pushOk())return toast('Este navegador não permite avisos.',true);
+  const perm=await Notification.requestPermission();
+  if(perm!=='granted'){await pushCarrega();return toast('Sem permissão, os avisos não funcionam. Libere nas configurações do site.',true)}
+  const kr=await fetch('/api/push-chave');let kj=null;try{kj=await kr.json()}catch(_){}
+  if(!kr.ok||!kj||!kj.chave)throw erroUi(kr.status===404?'As funções de aviso não estão publicadas no site. Avise o suporte. [404]':((kj&&kj.erro)||'Os avisos ainda não foram configurados no servidor.'));
+  let reg=await navigator.serviceWorker.getRegistration();if(!reg)reg=await navigator.serviceWorker.register('/sw.js');
+  reg=await navigator.serviceWorker.ready;
+  let sub=await reg.pushManager.getSubscription();
+  if(sub){try{const k=sub.options&&sub.options.applicationServerKey;if(k&&btoa(String.fromCharCode(...new Uint8Array(k))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')!==kj.chave){await sub.unsubscribe();sub=null}}catch(_){}}
+  if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64Bytes(kj.chave)});
+  const j=sub.toJSON(),r=await sb.rpc('push_inscrever',{p_endpoint:j.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth,p_prefs:null});
+  if(r.error){if(r.error.code==='PGRST202'||r.error.code==='42883')throw erroUi('Rode o arquivo 47-push.sql (ou o agendio-TUDO.sql) no Supabase.');throw r.error}
+  if(!r.data||r.data.ok!==true)throw erroUi((r.data&&r.data.erro)||'Não foi possível ligar os avisos.');
+  S.push=null;await pushCarrega();toast('Avisos ligados neste aparelho.');
+}
+async function pushDesliga(){
+  const sub=await pushAtual();if(sub){try{await sb.rpc('push_desligar',{p_endpoint:sub.endpoint})}catch(_){}try{await sub.unsubscribe()}catch(_){}}
+  S.push=null;await pushCarrega();toast('Avisos desligados neste aparelho.');
+}
+async function pushTeste(){
+  const ses=await sb.auth.getSession(),tk=ses&&ses.data&&ses.data.session&&ses.data.session.access_token;if(!tk)throw erroUi('Entre de novo para testar.');
+  const r=await fetch('/api/push-teste',{method:'POST',headers:{Authorization:'Bearer '+tk}});let j=null;try{j=await r.json()}catch(_){}
+  if(!r.ok)throw erroUi((j&&j.erro)||(r.status===404?'As funções de aviso não estão publicadas no site. Avise o suporte. [404]':'Não foi possível enviar o teste.'));
+  toast('Aviso de teste enviado. Ele deve aparecer em instantes.');
+}
+document.addEventListener('change',async e=>{const k=e.target&&e.target.dataset&&e.target.dataset.pushpref;if(!k||!S.push)return;
+  S.push.prefs[k]=e.target.checked;
+  try{const r=await sb.rpc('push_prefs',{p_endpoint:S.push.endpoint,p_prefs:S.push.prefs});if(r.error)throw r.error;toast('Preferência salva.')}catch(x){toast(falha(x),true)}});
+
+/* ---------- Contas a pagar e fluxo de caixa ---------- */
+const cpRow2=r=>({id:r.id,descricao:r.descricao||'',categoria:r.categoria||'Outros',valor:Number(r.valor)||0,vencimento:r.vencimento,pagoEm:r.pago_em||'',repete:r.repete==='mensal'?'mensal':'nao'});
+const cpPode=()=>!S.legado&&NV('financeiro')==='escrita';
+async function cpChama(nome,args){
+  const r=await sb.rpc(nome,args);
+  if(r.error){if(r.error.code==='PGRST202'||r.error.code==='42883')throw erroUi('Rode o arquivo 46-contas-pagar.sql (ou o agendio-TUDO.sql) no Supabase.');throw r.error}
+  if(!r.data||r.data.ok!==true)throw erroUi((r.data&&r.data.erro)||'Não foi possível concluir.');
+  return r.data;
+}
+const difDias=(a,b)=>Math.round((new Date(a+'T12:00:00')-new Date(b+'T12:00:00'))/864e5);
+const cpAlerta=()=>(S.contas||[]).filter(c=>!c.pagoEm&&c.vencimento<=addDia(hoje(),3)).length;
+function telaDesp(){
+  const ab=['contas','fluxo'].includes(S.dpAba)?S.dpAba:'desp',na=cpAlerta();
+  const bt=(k,t)=>`<button type="button" class="btn sm ${ab===k?'':'ghost'}" data-act="dpAba" data-id="${k}" aria-pressed="${ab===k}">${t}</button>`;
+  const seg=`<div class="seg" role="group" aria-label="Despesas">${bt('desp','Despesas')}${bt('contas','Contas a pagar'+(na?' <span class="tag late">'+na+'</span>':''))}${bt('fluxo','Fluxo de caixa')}</div>`;
+  if(ab==='contas')return seg+telaContas();
+  if(ab==='fluxo')return seg+telaFluxo();
+  return seg+telaDespLista();
+}
+function telaContas(){
+  if(S.semContas)return aviso('Falta ativar as Contas a pagar','Rode o arquivo 46-contas-pagar.sql (ou o agendio-TUDO.sql) no Supabase e atualize a página.');
+  const pode=cpPode(),h=hoje(),mes=h.slice(0,7),L=(S.contas||[]).filter(c=>!c.pagoEm).sort((a,b)=>a.vencimento.localeCompare(b.vencimento)||a.descricao.localeCompare(b.descricao));
+  const atras=L.filter(c=>c.vencimento<h),noMesL=L.filter(c=>c.vencimento.slice(0,7)===mes);
+  const pagas=(S.contas||[]).filter(c=>c.pagoEm).sort((a,b)=>b.pagoEm.localeCompare(a.pagoEm)).slice(0,8);
+  const tag=c=>{const d=difDias(c.vencimento,h);return d<0?`<span class="tag late">Atrasada ${-d} ${-d===1?'dia':'dias'}</span>`:d===0?'<span class="tag late">Vence hoje</span>':d<=3?`<span class="tag late">Vence em ${d} ${d===1?'dia':'dias'}</span>`:`<span class="tag">Vence em ${d} dias</span>`};
+  const item=c=>`<div class="item" style="align-items:flex-start"><div class="grow"><div class="t">${esc(c.descricao)} ${tag(c)}${c.repete==='mensal'?' <span class="tag">Todo mês</span>':''}</div><div class="muted num">${esc(c.categoria)} · vence ${fd(c.vencimento)}</div>
+    ${pode?`<div class="row-actions" style="margin-top:8px"><button type="button" class="btn sm" data-act="cpPagar" data-id="${esc(c.id)}">Marcar como paga</button><button type="button" class="btn ghost sm" data-act="cpEdit" data-id="${esc(c.id)}">Editar</button><button type="button" class="btn ghost sm" data-act="cpExcluir" data-id="${esc(c.id)}">Excluir</button></div>`:''}</div><div class="side-val">${brl(c.valor)}</div></div>`;
+  return `<div class="stats"><div class="stat"><b class="${atras.length?'neg':''}">${brl(soma(atras))}</b><span>atrasadas (${atras.length})</span></div><div class="stat"><b>${brl(soma(noMesL))}</b><span>a pagar em ${esc(mesNome(mes))}</span></div><div class="stat"><b>${brl(soma(L))}</b><span>total em aberto</span></div></div>
+  <div class="bar">${pode?'<button type="button" class="btn" data-act="cpNova">Nova conta</button>':''}</div>
+  <p class="muted" style="max-width:640px">Cadastre aluguel, luz, fornecedores e o que mais vence. Ao marcar como paga, vira uma despesa do dia e entra nos relatórios. Contas marcadas como “todo mês” criam a próxima sozinhas.</p>`+
+  (L.length?`<div class="list">${L.map(item).join('')}</div>`:'<div class="empty"><h2>Nenhuma conta em aberto</h2><p>Cadastre as contas que vencem para não esquecer e ver o fluxo de caixa.</p></div>')+
+  (pagas.length?`<h3>Pagas recentemente</h3><div class="list">${pagas.map(c=>`<div class="item" style="opacity:.75"><div class="grow"><div class="t">${esc(c.descricao)} <span class="tag ok">Paga em ${fd(c.pagoEm)}</span></div><div class="muted">${esc(c.categoria)}</div></div><div class="side-val">${brl(c.valor)}</div></div>`).join('')}</div>`:'');
+}
+function formConta(id){
+  const c=id?(S.contas||[]).find(x=>x.id===id&&!x.pagoEm):{descricao:'',categoria:'',valor:'',vencimento:hoje(),repete:'nao'};if(id&&!c)return;
+  const cats=[...CATS];if(c.categoria&&!cats.includes(c.categoria))cats.push(c.categoria);
+  abrir(`<h2>${id?'Editar':'Nova'} conta a pagar</h2><form data-form="conta" data-id="${esc(id||'')}">
+  <label for="cp-d">Descrição *</label><input id="cp-d" name="descricao" required maxlength="120" value="${esc(c.descricao)}" placeholder="Ex.: Aluguel da sala, fornecedor de tintas">
+  <div class="grid2"><div><label for="cp-c">Categoria</label><select id="cp-c" name="categoria">${cats.map(x=>`<option ${x===(c.categoria||'Outros')?'selected':''}>${esc(x)}</option>`).join('')}</select></div>
+  <div><label for="cp-v">Valor (R$) *</label><input id="cp-v" name="valor" type="number" step="0.01" min="0.01" required inputmode="decimal" value="${esc(c.valor)}"></div>
+  <div><label for="cp-dt">Vence em *</label><input id="cp-dt" name="vencimento" type="date" required value="${esc(c.vencimento)}"></div></div>
+  <label class="chk"><input type="checkbox" name="repete" ${c.repete==='mensal'?'checked':''}> Repete todo mês (cria a próxima conta quando esta for paga)</label>
+  <p class="erro" id="a-erro" role="alert"></p><div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Salvar</button></div></form>`);
+}
+async function salvarConta(id,d){
+  const v=Number(d.valor);if(!(v>0))throw erroUi('Informe um valor maior que zero.');
+  if(!d.vencimento)throw erroUi('Informe quando a conta vence.');
+  await cpChama('conta_salvar',{p_id:id||null,p_descricao:String(d.descricao||'').trim(),p_categoria:String(d.categoria||'Outros'),p_valor:v,p_vencimento:d.vencimento,p_repete:d.repete==='on'?'mensal':'nao'});
+  await recarregar();toast('Conta salva.');
+}
+function formContaPaga(id){
+  const c=(S.contas||[]).find(x=>x.id===id&&!x.pagoEm);if(!c)return;
+  abrir(`<h2>Marcar como paga</h2><p class="muted">${esc(c.descricao)} · ${brl(c.valor)}</p><form data-form="contapaga" data-id="${esc(id)}">
+  <label for="cpp-d">Data do pagamento</label><input id="cpp-d" name="data" type="date" required value="${esc(hoje())}" max="${esc(hoje())}">
+  <p class="muted" style="margin:6px 0 0">Vira uma despesa nesta data${c.repete==='mensal'?' e a conta do próximo mês é criada':''}.</p>
+  <p class="erro" id="a-erro" role="alert"></p><div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Confirmar pagamento</button></div></form>`);
+}
+async function salvarContaPaga(id,d){await cpChama('conta_pagar',{p_id:id,p_data:d.data||null});await recarregar();toast('Conta paga e lançada nas despesas.')}
+// Previsão por semana: entradas = atendimentos futuros ainda não pagos; saídas = contas a pagar em aberto (as atrasadas entram na 1ª semana)
+function fluxoSemanas(n){
+  const h=hoje(),sem=[];
+  for(let i=0;i<n;i++)sem.push({ini:addDia(h,i*7),fim:addDia(h,i*7+6),ent:0,sai:0});
+  const idx=d=>Math.max(0,Math.floor(difDias(d,h)/7));
+  (S.atend||[]).filter(a=>!inativo(a)&&a.data>=h&&a.pago===false&&!isFiado(a)).forEach(a=>{const k=idx(a.data);if(k<n)sem[k].ent+=Number(a.valor)||0});
+  (S.contas||[]).filter(c=>!c.pagoEm).forEach(c=>{const k=idx(c.vencimento);if(k<n)sem[k].sai+=c.valor});
+  let acc=0;sem.forEach(x=>{x.saldo=x.ent-x.sai;acc+=x.saldo;x.acc=acc});
+  return sem;
+}
+function telaFluxo(){
+  if(S.semContas)return aviso('Falta ativar as Contas a pagar','Rode o arquivo 46-contas-pagar.sql (ou o agendio-TUDO.sql) no Supabase e atualize a página.');
+  const n=[4,8,12].includes(S.fxSem)?S.fxSem:8,sem=fluxoSemanas(n),h=hoje();
+  const totS=sem.reduce((t,x)=>t+x.sai,0),totEnt=sem.reduce((t,x)=>t+x.ent,0),neg=sem.find(x=>x.acc<0);
+  const ini=addDia(h,-28),rec=(S.atend||[]).filter(a=>!inativo(a)&&a.pago!==false&&a.data>=ini&&a.data<=h).reduce((t,a)=>t+(Number(a.valor)||0),0),des=(S.gastos||[]).filter(g=>g.data>=ini&&g.data<=h).reduce((t,g)=>t+g.valor,0);
+  const fiado=(S.atend||[]).filter(a=>aberto(a)&&a.data<=h);
+  const seg=`<div class="seg" role="group" aria-label="Período da previsão">${[4,8,12].map(k=>`<button type="button" class="btn sm ${k===n?'':'ghost'}" data-act="fxSem" data-id="${k}" aria-pressed="${k===n}">${k} semanas</button>`).join('')}</div>`;
+  const lin=x=>`<tr><td>${fd(x.ini)} a ${fd(x.fim)}</td><td class="num" style="text-align:right">${brl(x.ent)}</td><td class="num" style="text-align:right">${x.sai?'−'+brl(x.sai):brl(0)}</td><td class="num ${x.saldo<0?'neg':''}" style="text-align:right">${brl(x.saldo)}</td><td class="num ${x.acc<0?'neg':''}" style="text-align:right"><b>${brl(x.acc)}</b></td></tr>`;
+  return `<div class="stats"><div class="stat"><b>${brl(totEnt)}</b><span>a receber da agenda</span></div><div class="stat"><b>${brl(totS)}</b><span>contas a pagar</span></div><div class="stat"><b class="${totEnt-totS<0?'neg':''}">${brl(totEnt-totS)}</b><span>sobra prevista em ${n} semanas</span></div></div>
+  ${neg?`<div class="panel" role="alert" style="border-color:var(--late,#c0392b);margin:0 0 12px"><b>Atenção:</b> a previsão fica negativa na semana de ${fd(neg.ini)} (${brl(neg.acc)}). Veja se dá para adiantar recebimentos ou combinar o vencimento de alguma conta.</div>`:''}
+  ${seg}<div class="cmp-wrap" style="margin-top:10px" role="region" aria-label="Previsão por semana" tabindex="0"><table class="cmp"><thead><tr><th scope="col" style="text-align:left">Semana</th><th scope="col" style="text-align:right">A receber</th><th scope="col" style="text-align:right">A pagar</th><th scope="col" style="text-align:right">Saldo da semana</th><th scope="col" style="text-align:right">Acumulado</th></tr></thead><tbody>${sem.map(lin).join('')}</tbody></table></div>
+  <p class="muted" style="max-width:680px;margin-top:12px">“A receber” soma os atendimentos marcados na agenda que ainda não foram pagos. “A pagar” soma as contas em aberto; as atrasadas entram na primeira semana. Não é o saldo do banco: é só o que o Agendio sabe.</p>
+  <p class="muted num" style="max-width:680px">Para comparar, nas últimas 4 semanas o salão recebeu em média <b>${brl(rec/4)}</b> e gastou <b>${brl(des/4)}</b> por semana${fiado.length?`. Há também <b>${brl(soma(fiado))}</b> em fiado a receber (não entra na previsão)`:''}.</p>`;
+}
+
 function formDesp(id){
   const g=id?S.gastos.find(x=>x.id===id):{data:hoje(),categoria:'',descricao:'',valor:''};if(id&&!g)return;
   const cats=[...CATS];if(g.categoria&&!cats.includes(g.categoria))cats.push(g.categoria);
@@ -2811,6 +2953,18 @@ function linhaAg(a){
   return `<div class="item"${inativo(a)?' style="opacity:.62"':''}><div class="side-val" style="min-width:56px">${esc(a.hora||'—')}</div>${avatar(c.nome)}<div class="grow"><div class="t">${esc(c.nome)}${tag}</div><div class="muted">${esc(procTxt(a))}${a.profissional?' · '+esc(a.profissional):''}</div></div>
   <div class="item-acts">${inativo(a)?'':btnLembrete(a)+btnTaxa(a)+btnAvalia(a)}${btnStatus(a)}<button class="btn ghost sm" data-act="editAtend" data-id="${esc(a.id)}">Editar</button></div></div>`;
 }
+
+function cartaoSumidas(){
+  if(S.legado||NV('clientes')==='nenhum')return '';
+  const l=sumidas(60),ct=retContatos(),h=addDia(hoje(),-14),pend=l.filter(x=>!(ct[x.c.id]&&String(ct[x.c.id])>=h));
+  if(!pend.length)return '';
+  return `<div class="panel" style="margin:0 0 12px"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><div class="grow" style="min-width:220px"><b>${pend.length} ${pend.length===1?'cliente não volta':'clientes não voltam'} há mais de 60 dias</b><div class="muted" style="font-size:13.5px">Uma mensagem de saudade traz de volta quem sumiu.</div></div><button type="button" class="btn sm" data-go="retornos">Ver e chamar no WhatsApp</button></div></div>`;
+}
+function cartaoInstalar(){
+  if(jaInstalado()||LS.get('salao_inst_ok','')==='1')return '';
+  if(!(window.matchMedia&&matchMedia('(max-width:820px)').matches))return '';
+  return `<div class="panel" style="margin:0 0 12px"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><div class="grow" style="min-width:220px"><b>Instale o Agendio no celular</b><div class="muted" style="font-size:13.5px">Abre em tela cheia, com ícone na tela inicial e avisos de novos agendamentos.</div></div><div class="row-actions"><button type="button" class="btn sm" data-act="instalarApp">Instalar</button><button type="button" class="btn ghost sm" data-act="instalarNao">Agora não</button></div></div></div>`;
+}
 function telaInicio(){
   const h=hoje(),mes=h.slice(0,7),mm=h.slice(5,7);
   const vm=vdMes(mes),rec=S.atend.reduce((s,a)=>s+noMes(a,mes),0)+vm.t,feitos=S.atend.filter(a=>String(a.data).startsWith(mes));
@@ -2847,7 +3001,8 @@ function telaInicio(){
   const sm=sumidas().length;if(sm)al.push([`${sm} ${sm===1?'cliente sem voltar':'clientes sem voltar'} há mais de 60 dias.`,'retornos','Ver quem']);
   const atras=S.atend.filter(a=>a.retorno&&String(a.retorno)<h&&cli(a.clienteId)&&!S.atend.some(b=>b.clienteId===a.clienteId&&String(b.data)>String(a.data))).length;
   if(atras)al.push([`${atras} ${atras===1?'retorno atrasado':'retornos atrasados'}.`,'retornos','Ver retornos']);
-  return `<div class="stats"><div class="stat"><b>${brl(rec)}</b><span>recebido em ${esc(mesNome(mes))}${vm.t>0?` (inclui ${brl(vm.t)} de produtos)`:''}${rPas>0?` · mês passado: ${brl(rPas)}`:''}</span></div><div class="stat"><b class="${res<0?'neg':''}">${brl(res)}</b><span>resultado do mês (recebido − despesas)</span></div><div class="stat"><b>${dia.length}</b><span>${dia.length===1?'atendimento hoje':'atendimentos hoje'}</span></div><div class="stat"><b>${brl(totFiado)}</b><span>a receber (fiado)</span></div></div>
+  const topo=cartaoInstalar()+cartaoSumidas();
+  return topo+`<div class="stats"><div class="stat"><b>${brl(rec)}</b><span>recebido em ${esc(mesNome(mes))}${vm.t>0?` (inclui ${brl(vm.t)} de produtos)`:''}${rPas>0?` · mês passado: ${brl(rPas)}`:''}</span></div><div class="stat"><b class="${res<0?'neg':''}">${brl(res)}</b><span>resultado do mês (recebido − despesas)</span></div><div class="stat"><b>${dia.length}</b><span>${dia.length===1?'atendimento hoje':'atendimentos hoje'}</span></div><div class="stat"><b>${brl(totFiado)}</b><span>a receber (fiado)</span></div></div>
   <div class="panel"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><div><b>Meta do mês</b><div class="muted num">${meta>0?`${brl(rec)} de ${brl(meta)} (${pct}%)`:'Defina quanto você quer faturar neste mês.'}</div></div><button class="btn ghost sm" data-act="meta">${meta>0?'Alterar meta':'Definir meta'}</button></div>${meta>0?`<div class="barv" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></div>`:''}</div>`+
   (faltam?`<div class="panel" style="margin:0 0 12px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><b>Primeiros passos (${passos.length-faltam} de ${passos.length})</b><button class="btn ghost sm" data-act="ocultaPassos">Ocultar</button></div><div class="list" style="margin-top:8px">${passos.map(x=>`<div class="item"><div class="grow" ${x[1]?'style="text-decoration:line-through;opacity:.6"':''}>${x[1]?'✓ ':''}${esc(x[0])}</div>${x[1]?'':`<button class="btn ghost sm" data-go="${x[2]}">${esc(x[3])}</button>`}</div>`).join('')}</div></div>`:'')+
   ((dono||(S.ctx&&S.ctx.role==='gerente'))&&!S.legado&&S.onl&&!S.semOnline&&!S.semAg?(()=>{
@@ -3800,7 +3955,7 @@ document.addEventListener('click',e=>{
     anNova:()=>formAnamnese(id),anLimpa:()=>window.anLimpaSig(),anExcluir:()=>confirmar('Excluir esta ficha?','A ficha de anamnese e a assinatura são apagadas definitivamente.','Excluir',async()=>{const r=await sb.rpc('anamnese_excluir',{p_id:id});if(r.error)throw r.error;if(!r.data||r.data.ok!==true)throw erroUi((r.data&&r.data.erro)||'Não foi possível excluir.');await recarregar();toast('Ficha excluída.')}),
     pvCat:()=>{S.pvCat=id;render()},vdAba:()=>{S.vdAba=id;render()},vdNova:()=>formVenda(),vdMais:()=>{S.vdLim=(S.vdLim||60)+60;render()},vdVer:()=>vdVer(id).catch(x=>toast(falha(x),true)),pvNovo:()=>formProdutoVenda(),pvEdit:()=>formProdutoVenda(id),pvAjusta:()=>formAjustePv(id),
     pvExcluir:()=>{const p=(S.pvs||[]).find(x=>x.id===id);if(p)confirmar('Excluir '+p.nome+'?','O produto sai da lista. As vendas antigas continuam no histórico.','Excluir',async()=>{await vdChama('pv_excluir',{p_id:id});await recarregar();toast('Produto excluído.')})},
-    periodoPagar:()=>periodoPagar(Number(id)).catch(x=>toast(falha(x),true)),pmAba:()=>{S.pmAba=id;render()},pmNovo:()=>formPromo(),pmEdit:()=>formPromo(id),pmAlterna:()=>pmAlterna(id).catch(x=>toast(falha(x),true)),pmExcluir:()=>confirmar('Excluir este cupom?','O cupom deixa de existir. As vendas já feitas não mudam.',async()=>{await vdChama('promo_excluir',{p_id:id});await recarregar();toast('Cupom excluído.')}),cbConfig:()=>formCashback(),cbVer:()=>cbVer(id).catch(x=>toast(falha(x),true)),
+    periodoPagar:()=>periodoPagar(Number(id)).catch(x=>toast(falha(x),true)),dpAba:()=>{S.dpAba=id;render()},fxSem:()=>{S.fxSem=Number(id);render()},cpNova:()=>formConta(),cpEdit:()=>formConta(id),cpPagar:()=>formContaPaga(id),cpExcluir:()=>confirmar('Excluir esta conta?','Ela deixa de aparecer nas contas a pagar.',async()=>{await cpChama('conta_excluir',{p_id:id});await recarregar();toast('Conta excluída.')}),instalarNao:()=>{LS.set('salao_inst_ok','1');render()},pushLigar:()=>pushLigar().catch(x=>toast(falha(x),true)),pushDesliga:()=>pushDesliga().catch(x=>toast(falha(x),true)),pushTeste:()=>pushTeste().catch(x=>toast(falha(x),true)),pmAba:()=>{S.pmAba=id;render()},pmNovo:()=>formPromo(),pmEdit:()=>formPromo(id),pmAlterna:()=>pmAlterna(id).catch(x=>toast(falha(x),true)),pmExcluir:()=>confirmar('Excluir este cupom?','O cupom deixa de existir. As vendas já feitas não mudam.',async()=>{await vdChama('promo_excluir',{p_id:id});await recarregar();toast('Cupom excluído.')}),cbConfig:()=>formCashback(),cbVer:()=>cbVer(id).catch(x=>toast(falha(x),true)),
     vdCancela:()=>confirmar('Cancelar esta venda?','Os produtos voltam para o estoque. Se foi paga com cartão-presente, o saldo volta para o cartão.','Cancelar venda',async()=>{await vdChama('venda_cancelar',{p_venda:id});await recarregar();toast('Venda cancelada.')}),
     cpVender:()=>formCartao(),cpUsar:()=>formUsarCartao(id),cpWpp:()=>cpWpp(id),cpImp:()=>cpImprimir(id),
     cpCancela:()=>{const c=(S.cartoes||[]).find(x=>x.id===id);if(c)confirmar('Cancelar o cartão '+c.codigo+'?','O saldo de '+brl(c.saldo)+' é devolvido e sai do caixa de hoje. O cartão deixa de poder ser usado.','Cancelar cartão',async()=>{const j=await cpChama('cartao_cancelar',{p_cartao:id});await recarregar();toast('Cartão cancelado.')})},
@@ -3913,6 +4068,8 @@ $('dlg').addEventListener('submit',async e=>{
     else if(k==='fidelidade')await salvarFid(dados);
     else if(k==='vale')await salvarVale(dados);
     else if(k==='anamnese')await salvarAnamnese(id,dados);
+    else if(k==='conta')await salvarConta(id,dados);
+    else if(k==='contapaga')await salvarContaPaga(id,dados);
     else if(k==='promo')await salvarPromo(id,dados);
     else if(k==='cashbackcfg')await salvarCashback(dados);
     else if(k==='cbusar')await salvarCbUsar(id,dados);

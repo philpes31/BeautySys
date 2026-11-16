@@ -93,6 +93,7 @@ var S={salao:null,serv:null,prof:'',dia:'',hora:'',horas:[],enviando:false,carre
 var SLUG=(function(){var m=/\/a\/([^\/?#]+)/.exec(location.pathname);if(m)return decodeURIComponent(m[1]);return new URLSearchParams(location.search).get('s')||''})().toLowerCase();
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function brl(v){return Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
+function avisaSalao(){try{fetch('/api/push-enviar',{method:'POST',keepalive:true}).catch(function(){})}catch(_){}}
 async function rpc(nome,args){
   var r=await fetch(C.url+'/rest/v1/rpc/'+nome,{method:'POST',headers:{'Content-Type':'application/json',apikey:C.anonKey,Authorization:'Bearer '+C.anonKey},body:JSON.stringify(args)});
   var j=null;try{j=await r.json()}catch(_){}
@@ -238,7 +239,7 @@ document.addEventListener('submit',async function(e){
   S.enviando=true;$('env').disabled=true;
   try{
     var r=await rpc('publico_agendar',{p_slug:SLUG,p:{nome:nome,telefone:tel,servico:S.salao.servicos[S.serv].nome,profissional:S.prof,data:S.dia,hora:S.hora,obs:$('obs').value.trim()}});
-    S.res=r||{};
+    S.res=r||{};avisaSalao();
     if(S.res.sinal_modo==='mp'&&S.res.pedido_id){
       er.textContent='';$('env').textContent='Abrindo o pagamento…';
       try{var u=await pagarSinal(S.res.pedido_id);location.href=u;return}
@@ -336,7 +337,7 @@ async function gerenciar(tk){
     $('g-area').innerHTML='<div class="dica"><b>Cancelar este horário?</b><br>O horário fica livre para outras pessoas.</div><button type="button" class="btn1" id="g-can-ok">Sim, cancelar</button> <button type="button" class="btn2" id="g-can-nao">Voltar</button><p class="erro" id="g-erro" role="alert"></p>';
     $('g-can-nao').onclick=function(){$('g-area').innerHTML=''};
     $('g-can-ok').onclick=async function(){var b=this;b.disabled=true;
-      try{await rpc('publico_cancelar',{p_slug:SLUG,p_token:tk});A.innerHTML='<div class="fim"><h2>Horário cancelado</h2><p class="sub">Quando quiser, é só marcar outro.</p><p>'+waG(a,'Olá! Cancelei o meu horário e gostaria de marcar outro.')+'</p></div>'}
+      try{await rpc('publico_cancelar',{p_slug:SLUG,p_token:tk});avisaSalao();A.innerHTML='<div class="fim"><h2>Horário cancelado</h2><p class="sub">Quando quiser, é só marcar outro.</p><p>'+waG(a,'Olá! Cancelei o meu horário e gostaria de marcar outro.')+'</p></div>'}
       catch(e){b.disabled=false;$('g-erro').textContent=e.message}};
   };
   $('g-rem').onclick=function(){
