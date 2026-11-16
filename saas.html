@@ -540,8 +540,8 @@ async function recarregar(){
   try{
     let semD=false,semE=false;
     const desde=new Date(Date.now()-120*864e5).toISOString().slice(0,10),ignE=()=>{semE=true;return []};
-    let semB=false;const ignB=()=>{semB=true;return []};
-    const [c,a,g,pr,fi,mv,bq,pd,es,pk,rs,ag,vl]=await Promise.all([todos('clientes'),todos('atendimentos'),todos('despesas').catch(()=>{semD=true;return []}),
+    let semB=false;const ignB=()=>{semB=true;return []};let semC=false;
+    const [c,a,g,pr,fi,mv,bq,pd,es,pk,rs,ag,vl,cp,cmv]=await Promise.all([todos('clientes'),todos('atendimentos'),todos('despesas').catch(()=>{semD=true;return []}),
       todos('produtos').catch(ignE),todos('ficha_procedimento').catch(ignE),todos('movimentacoes_estoque',q=>q.gte('data',desde)).catch(ignE),
       S.legado?Promise.resolve([]):todos('bloqueios',q=>q.gte('data',desde)).catch(ignB),
       S.legado?Promise.resolve([]):todos('pedidos_agenda',q=>q.gte('data',desde)).catch(()=>[]),
@@ -557,12 +557,14 @@ async function recarregar(){
         let uso=null;try{const r4=await sb.rpc('whatsapp_uso');if(!r4.error&&r4.data)uso=r4.data}catch(_){}
         let wp=null;try{const r5=await sb.rpc('meu_whatsapp');if(!r5.error&&r5.data)wp=r5.data}catch(_){}
         return Object.assign({},x,{agenda_config:x.agenda_config||{},_wa:wa,_mp:mpc,_uso:uso,_wp:wp})}catch(_){S.semAg=true;return null}})(),
-      S.legado?Promise.resolve([]):todos('vales').catch(()=>[])]);
-    S.semDesp=semD;S.semEst=semE;S.semBloq=S.legado||semB;
-    const sig=JSON.stringify([c,a,g,pr,fi,mv,bq,pd,es,pk,rs,ag,vl]);
+      S.legado?Promise.resolve([]):todos('vales').catch(()=>[]),
+      S.legado?Promise.resolve([]):todos('cartoes_presente').catch(()=>{semC=true;return []}),
+      S.legado?Promise.resolve([]):todos('cartao_movs').catch(()=>{semC=true;return []})]);
+    S.semCartao=semC;S.semDesp=semD;S.semEst=semE;S.semBloq=S.legado||semB;
+    const sig=JSON.stringify([c,a,g,pr,fi,mv,bq,pd,es,pk,rs,ag,vl,cp,cmv]);
     const mudou=sig!==S.sig||tinhaErro||!S.got;
     S.sig=sig;S.erro='';
-    if(mudou){S.vales=(vl||[]).map(r=>({id:r.id,prof:r.profissional||'',data:r.data,valor:Number(r.valor)||0,obs:r.obs||''}));S.clientes=c.map(rowC);S.atendTodos=a.map(rowA);S.atend=S.atendTodos.filter(x=>!inativo(x));S.gastos=g.map(rowD);S.produtos=pr.map(rowP);S.fichas=fi.map(rowF);S.movs=mv.map(rowM);S.bloq=bq.map(b=>({id:b.id,profissional:b.profissional||'',data:b.data,inicio:b.inicio?String(b.inicio).slice(0,5):'',fim:b.fim?String(b.fim).slice(0,5):'',motivo:b.motivo||''}));S.pedidos=pd.filter(x=>x.status==='pendente'||(x.status==='recusado'&&x.sinal_status==='pago')).map(x=>({id:x.id,nome:x.nome,telefone:x.telefone,servico:x.servico,profissional:x.profissional,data:x.data,hora:String(x.hora||'').slice(0,5),obs:x.obs||'',duracao:x.duracao,status:x.status,sinalValor:Number(x.sinal_valor)||0,sinalStatus:x.sinal_status||'nenhum'})).sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora));S.pacotes=pk.map(x=>({id:x.id,clienteId:x.cliente_id,nome:x.nome,servico:x.servico||'',total:Number(x.total_sessoes)||0,usadas:Number(x.usadas)||0,preco:Number(x.preco)||0,validade:x.validade||'',status:x.status||'ativo',criado:x.criado_em||''}));S.resgates=rs.map(x=>({id:x.id,clienteId:x.cliente_id,premio:x.premio||'',criado:x.criado_em||''}));S.espera=es.filter(x=>x.status==='aguardando'||x.status==='avisada').map(x=>({id:x.id,nome:x.nome,telefone:x.telefone,servico:x.servico,profissional:x.profissional||'',data:x.data,periodo:x.periodo||'qualquer',obs:x.obs||'',status:x.status,origem:x.origem||'salao',avisadaEm:x.avisada_em||''})).sort((a,b)=>(a.data+a.status).localeCompare(b.data+b.status));S.agCfg=(ag&&ag.agenda_config)||{};S.onl=ag?{slug:ag.slug||'',on:!!ag.online_ativo,wa:ag._wa,mp:ag._mp,uso:ag._uso||null,wp:ag._wp||null}:{slug:'',on:false,wa:null,mp:null,uso:null,wp:null};S.got=true;render()}
+    if(mudou){S.cartoes=(cp||[]).map(cpRow);S.cmovs=(cmv||[]).map(cpMov);S.vales=(vl||[]).map(r=>({id:r.id,prof:r.profissional||'',data:r.data,valor:Number(r.valor)||0,obs:r.obs||''}));S.clientes=c.map(rowC);S.atendTodos=a.map(rowA);S.atend=S.atendTodos.filter(x=>!inativo(x));S.gastos=g.map(rowD);S.produtos=pr.map(rowP);S.fichas=fi.map(rowF);S.movs=mv.map(rowM);S.bloq=bq.map(b=>({id:b.id,profissional:b.profissional||'',data:b.data,inicio:b.inicio?String(b.inicio).slice(0,5):'',fim:b.fim?String(b.fim).slice(0,5):'',motivo:b.motivo||''}));S.pedidos=pd.filter(x=>x.status==='pendente'||(x.status==='recusado'&&x.sinal_status==='pago')).map(x=>({id:x.id,nome:x.nome,telefone:x.telefone,servico:x.servico,profissional:x.profissional,data:x.data,hora:String(x.hora||'').slice(0,5),obs:x.obs||'',duracao:x.duracao,status:x.status,sinalValor:Number(x.sinal_valor)||0,sinalStatus:x.sinal_status||'nenhum'})).sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora));S.pacotes=pk.map(x=>({id:x.id,clienteId:x.cliente_id,nome:x.nome,servico:x.servico||'',total:Number(x.total_sessoes)||0,usadas:Number(x.usadas)||0,preco:Number(x.preco)||0,validade:x.validade||'',status:x.status||'ativo',criado:x.criado_em||''}));S.resgates=rs.map(x=>({id:x.id,clienteId:x.cliente_id,premio:x.premio||'',criado:x.criado_em||''}));S.espera=es.filter(x=>x.status==='aguardando'||x.status==='avisada').map(x=>({id:x.id,nome:x.nome,telefone:x.telefone,servico:x.servico,profissional:x.profissional||'',data:x.data,periodo:x.periodo||'qualquer',obs:x.obs||'',status:x.status,origem:x.origem||'salao',avisadaEm:x.avisada_em||''})).sort((a,b)=>(a.data+a.status).localeCompare(b.data+b.status));S.agCfg=(ag&&ag.agenda_config)||{};S.onl=ag?{slug:ag.slug||'',on:!!ag.online_ativo,wa:ag._wa,mp:ag._mp,uso:ag._uso||null,wp:ag._wp||null}:{slug:'',on:false,wa:null,mp:null,uso:null,wp:null};S.got=true;render()}
   }catch(e){S.erro=(e&&(e.code||e.message))||'erro';render()}
 }
 let tmr;
@@ -820,6 +822,88 @@ function formVale(){
   <label for="v-obs">Observação</label><input id="v-obs" name="obs" maxlength="200" placeholder="Ex.: adiantamento do dia 15">
   <p class="muted" style="margin:6px 0 0">O valor é descontado da comissão a pagar no mês da data escolhida.</p>
   <p class="erro" id="a-erro" role="alert"></p><div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Salvar</button></div></form>`);
+}
+/* ---------- Cartão-presente ---------- */
+const CP_PAG='Cartão-presente';
+const cpRow=r=>({id:r.id,codigo:r.codigo,inicial:Number(r.valor_inicial)||0,saldo:Number(r.saldo)||0,comprador:r.comprador||'',presenteado:r.presenteado||'',forma:r.forma_venda||'',validade:r.validade||'',status:r.status,obs:r.obs||'',criado:String(r.criado_em||'').slice(0,10)});
+const cpMov=r=>({id:r.id,cartao:r.cartao_id,tipo:r.tipo,valor:Number(r.valor)||0,data:r.data,atend:r.atendimento_id||'',desfeito:!!r.desfeito});
+const cpVencido=c=>!!c.validade&&c.validade<hoje();
+const cpEstado=c=>c.status==='cancelado'?'Cancelado':c.status==='usado'?'Usado':cpVencido(c)?'Vencido':'Ativo';
+const cpUsavel=c=>c.status==='ativo'&&!cpVencido(c)&&c.saldo>0;
+function cpDia(d){
+  const r={t:0,porForma:{},itens:[]};
+  (S.cmovs||[]).filter(m=>m.data===d&&(m.tipo==='venda'||m.tipo==='cancelamento')).forEach(m=>{
+    const c=(S.cartoes||[]).find(x=>x.id===m.cartao)||{},v=m.tipo==='venda'?m.valor:-m.valor,k=c.forma||'Sem forma informada';
+    r.t+=v;r.porForma[k]=(r.porForma[k]||0)+v;r.itens.push({m,c,v})});
+  return r;
+}
+function cpTexto(c){
+  const slug=S.onl&&S.onl.on&&S.onl.slug;
+  return `🎁 Cartão-presente ${salaoNome()}\n${c.presenteado?'Para: '+c.presenteado+'\n':''}Valor: ${brl(c.inicial)}\nCódigo: ${c.codigo}${c.validade?'\nVálido até '+fd(c.validade):''}\nApresente o código no salão para usar.${slug?'\nAgende seu horário: '+linkPub(S.onl.slug):''}`;
+}
+function telaCartoes(){
+  if(S.semCartao)return aviso('Falta ativar os cartões-presente','Rode o arquivo 39-cartao-presente.sql (ou o agendio-TUDO.sql) no Supabase e atualize a página.');
+  const pode=!S.legado&&NV('financeiro')==='escrita',L=[...(S.cartoes||[])].sort((a,b)=>String(b.criado).localeCompare(String(a.criado))||a.codigo.localeCompare(b.codigo));
+  const abertos=L.filter(cpUsavel),emAberto=abertos.reduce((t,c)=>t+c.saldo,0);
+  const k=(v,l)=>`<div class="stat"><b>${v}</b><span>${l}</span></div>`;
+  const hist=c=>{const m=(S.cmovs||[]).filter(x=>x.cartao===c.id&&x.tipo==='uso'&&!x.desfeito).sort((a,b)=>String(b.data).localeCompare(String(a.data)));
+    if(!m.length)return '';
+    return `<details style="margin-top:6px"><summary class="muted" style="cursor:pointer">Usos (${m.length})</summary>${m.map(x=>{const a=x.atend&&S.atendTodos.find(y=>y.id===x.atend),cl=a&&cli(a.clienteId);
+      return `<div class="muted num" style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin:4px 0"><span>${fd(x.data)} · ${brl(x.valor)}${a?' · '+esc((cl&&cl.nome)||'')+' · '+esc(procTxt(a)):''}</span>${pode&&c.status!=='cancelado'?`<button type="button" class="btn ghost sm" data-act="cpDesfaz" data-id="${esc(x.id)}">Desfazer</button>`:''}</div>`}).join('')}</details>`};
+  const item=c=>`<div class="item" style="align-items:flex-start"><div class="grow"><div class="t"><span class="num" style="letter-spacing:1px">${esc(c.codigo)}</span> · ${esc(cpEstado(c))}</div>
+    <div class="muted">${c.presenteado?'Para '+esc(c.presenteado):'Sem nome de quem ganhou'}${c.comprador?' · comprado por '+esc(c.comprador):''}</div>
+    <div class="muted num">Vendido em ${fd(c.criado)}${c.forma?' ('+esc(c.forma)+')':''}${c.validade?' · válido até '+fd(c.validade):' · sem validade'}</div>${hist(c)}
+    <div class="row-actions" style="margin-top:8px">${pode&&cpUsavel(c)?`<button type="button" class="btn sm" data-act="cpUsar" data-id="${esc(c.id)}">Usar saldo</button>`:''}<button type="button" class="btn ghost sm" data-act="cpWpp" data-id="${esc(c.id)}">Enviar pelo WhatsApp</button><button type="button" class="btn ghost sm" data-act="cpImp" data-id="${esc(c.id)}">Imprimir</button>${pode&&c.status!=='cancelado'?`<button type="button" class="btn ghost sm" data-act="cpCancela" data-id="${esc(c.id)}">Cancelar</button>`:''}</div></div>
+    <div class="side-val">${brl(c.saldo)}<div class="muted num" style="font-size:12px">de ${brl(c.inicial)}</div></div></div>`;
+  return `<div class="stats">${k(brl(emAberto),'saldo a usar')}${k(abertos.length,'cartões ativos')}${k(L.length,'cartões vendidos')}</div>
+  <div class="bar">${pode?'<button type="button" class="btn" data-act="cpVender">Vender cartão-presente</button>':''}</div>
+  <p class="muted" style="max-width:640px">O dinheiro da venda entra no caixa no dia em que o cartão é vendido. Depois, quando a cliente usa o saldo, o atendimento é pago com “Cartão-presente” e não entra no caixa de novo.</p>`
+  +(L.length?`<div class="list">${L.map(item).join('')}</div>`:`<div class="empty"><h2>Nenhum cartão-presente ainda</h2><p>Venda um cartão com um valor e entregue o código para quem vai ganhar o presente.</p></div>`);
+}
+function formCartao(){
+  abrir(`<h2>Vender cartão-presente</h2><form data-form="cpvender"><div class="grid2">
+  <div><label for="cp-v">Valor (R$) *</label><input id="cp-v" name="valor" type="number" step="0.01" min="1" max="100000" required inputmode="decimal"></div>
+  <div><label for="cp-f">Forma de pagamento *</label><select id="cp-f" name="forma">${['Pix','Dinheiro','Cartão de débito','Cartão de crédito','Outro'].map(x=>`<option>${x}</option>`).join('')}</select></div>
+  <div><label for="cp-c">Quem comprou</label><input id="cp-c" name="comprador" maxlength="80"></div>
+  <div><label for="cp-p">Quem vai ganhar</label><input id="cp-p" name="presenteado" maxlength="80"></div>
+  <div><label for="cp-d">Válido até (opcional)</label><input id="cp-d" name="validade" type="date" min="${esc(hoje())}"></div></div>
+  <label for="cp-o">Observação</label><input id="cp-o" name="obs" maxlength="200">
+  <p class="erro" id="a-erro" role="alert"></p><div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Vender</button></div></form>`);
+}
+async function cpChama(nome,args){
+  const r=await sb.rpc(nome,args);
+  if(r.error){if(r.error.code==='PGRST202'||r.error.code==='42883'||/Could not find the function/.test(String(r.error.message||'')))throw erroUi('Rode o arquivo 39-cartao-presente.sql (ou o agendio-TUDO.sql) no Supabase.');throw r.error}
+  if(!r.data||r.data.ok!==true)throw erroUi((r.data&&r.data.erro)||'Não foi possível concluir.');
+  return r.data;
+}
+async function salvarCartao(d){
+  const v=din(d.valor);if(!(v>0))throw erroUi('Informe um valor maior que zero.');
+  const j=await cpChama('cartao_vender',{p_valor:v,p_comprador:String(d.comprador||'').trim(),p_presenteado:String(d.presenteado||'').trim(),p_forma:String(d.forma||''),p_validade:d.validade||null,p_obs:String(d.obs||'').trim()});
+  await recarregar();toast('Cartão vendido. Código: '+j.codigo);
+  const c=(S.cartoes||[]).find(x=>x.id===j.id);if(c)setTimeout(()=>cpWpp(c.id),50);
+}
+function formUsarCartao(id){
+  const c=(S.cartoes||[]).find(x=>x.id===id);if(!c)return;
+  const ab=S.atend.filter(a=>aberto(a)&&a.pagamento!==CP_PAG&&(Number(a.valor)||0)>0&&(Number(a.valor)||0)<=c.saldo+1e-9).sort((a,b)=>String(b.data).localeCompare(String(a.data)));
+  abrir(`<h2>Usar cartão ${esc(c.codigo)}</h2><p class="muted">Saldo: <b>${brl(c.saldo)}</b>${c.presenteado?' · '+esc(c.presenteado):''}</p><form data-form="cpusar" data-id="${esc(c.id)}">
+  <label for="cu-a">Pagar um atendimento ainda não pago</label><select id="cu-a" name="atend"><option value="">Não, usar um valor livre</option>${ab.map(a=>{const cl=cli(a.clienteId);return `<option value="${esc(a.id)}">${esc((cl&&cl.nome)||'?')} · ${esc(procTxt(a))} · ${fd(a.data)} · ${brl(a.valor)}</option>`}).join('')}</select>
+  <p class="muted" style="margin:4px 0 0">Só aparecem atendimentos que cabem no saldo. O atendimento é pago por inteiro.</p>
+  <div id="cu-v-wrap"><label for="cu-v">Valor a usar (R$)</label><input id="cu-v" name="valor" type="number" step="0.01" min="0.01" max="${c.saldo}" inputmode="decimal"></div>
+  <label for="cu-o">Observação</label><input id="cu-o" name="obs" maxlength="200" placeholder="Ex.: compra de produto">
+  <p class="erro" id="a-erro" role="alert"></p><div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Usar</button></div></form>`);
+}
+async function usarCartao(id,d){
+  const at=String(d.atend||''),v=din(d.valor);
+  if(!at&&!(v>0))throw erroUi('Escolha um atendimento ou informe o valor a usar.');
+  const j=await cpChama('cartao_usar',{p_cartao:id,p_valor:at?null:v,p_atend:at||null,p_obs:String(d.obs||'').trim()});
+  await recarregar();toast('Saldo usado: '+brl(j.usado)+'. Saldo restante: '+brl(j.saldo)+'.');
+}
+function cpWpp(id){const c=(S.cartoes||[]).find(x=>x.id===id);if(!c)return;window.open('https://wa.me/?text='+encodeURIComponent(cpTexto(c)),'_blank','noopener')}
+function cpImprimir(id){
+  const c=(S.cartoes||[]).find(x=>x.id===id);if(!c)return;
+  const f=document.createElement('iframe');f.setAttribute('aria-hidden','true');f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';document.body.appendChild(f);
+  const d=f.contentWindow.document;d.open();d.write('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Cartão-presente</title><style>body{font-family:Arial,sans-serif;margin:40px;color:#222}.c{border:3px solid #222;border-radius:18px;padding:34px;max-width:560px;margin:auto;text-align:center}h1{font-size:30px;margin:0 0 4px}h2{font-size:18px;margin:0 0 22px;font-weight:400}.v{font-size:52px;font-weight:700;margin:10px 0}.cod{font-size:34px;letter-spacing:6px;font-family:monospace;margin:18px 0;padding:12px;border:2px dashed #222}p{font-size:16px;margin:6px 0}</style></head><body><div class="c"><h2>'+esc(salaoNome())+'</h2><h1>Cartão-presente</h1>'+(c.presenteado?'<p>Para <b>'+esc(c.presenteado)+'</b></p>':'')+(c.comprador?'<p>De '+esc(c.comprador)+'</p>':'')+'<div class="v">'+brl(c.inicial)+'</div><div class="cod">'+esc(c.codigo)+'</div><p>'+(c.validade?'Válido até '+fd(c.validade):'Sem data de validade')+'</p><p>Apresente este código no salão para usar.</p></div></body></html>');d.close();
+  setTimeout(()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(_){toast('Não foi possível abrir a impressão neste aparelho.',true)}setTimeout(()=>f.remove(),60000)},250);
 }
 async function salvarVale(d){
   const o={profissional:String(d.prof||'').trim(),data:d.data,valor:din(d.valor),obs:String(d.obs||'').trim().slice(0,200)};
@@ -2056,7 +2140,7 @@ function formAtend(id,clienteId,data){
   const cat=servicosCat(),procs=cat.length?cat.map(x=>x.nome):[...PROCS];if(a.procedimento&&!procs.includes(a.procedimento))procs.push(a.procedimento);const procs2=[...procs];if(a.procedimento2&&!procs2.includes(a.procedimento2))procs2.push(a.procedimento2);
   const profs=listaProfs();if(a.profissional&&!profs.includes(a.profissional))profs.push(a.profissional);
   const profSel=a.profissional||profPadrao(),parcSel=PARC(a.parcelas),credito=a.pagamento==='Cartão de crédito',cartao=credito||a.pagamento==='Cartão de débito';
-  const pags=['Pix','Dinheiro','Cartão de débito','Cartão de crédito','Outro'];if(a.pagamento===FIADO)pags.push(FIADO);
+  const pags=['Pix','Dinheiro','Cartão de débito','Cartão de crédito','Outro'];if(a.pagamento===FIADO)pags.push(FIADO);if(a.pagamento===CP_PAG)pags.push(CP_PAG);
   const tem2=!!a.procedimento2,v2=Number(a.valor2)||0,v1=a.valor===undefined||a.valor===''?'':Math.max(0,(Number(a.valor)||0)-v2),pagoSel=id?(a.pago!==false&&!isFiado(a)):String(a.data||hoje())<=hoje();
   const cls=[...S.clientes].sort((x,y)=>(x.nome||'').localeCompare(y.nome||'','pt-BR'));
   abrir(`<h2>${id?'Editar atendimento':'Novo atendimento'}</h2><form data-form="atend" data-id="${esc(id||'')}">
@@ -2951,7 +3035,7 @@ const desp=a=>din(a.gastoProdutos)+din(a.taxaMaquina);
 const despTxt=a=>{const p=din(a.gastoProdutos),t=din(a.taxaMaquina);return p>0||t>0?`<div class="muted num">${p>0?'Produtos '+brl(p):''}${p>0&&t>0?' · ':''}${t>0?'Taxa da máquina '+brl(t):''}</div>`:''};
 function segRel(){
   const ab=S.relAba||'fat';
-  return `<div class="seg" role="group" aria-label="Tipo de relatório"><button class="btn sm ${ab==='fat'?'':'ghost'}" data-act="relAba" data-id="fat" aria-pressed="${ab==='fat'}">Faturamento</button><button class="btn sm ${ab==='desp'?'':'ghost'}" data-act="relAba" data-id="desp" aria-pressed="${ab==='desp'}">Despesas</button><button class="btn sm ${ab==='custos'?'':'ghost'}" data-act="relAba" data-id="custos" aria-pressed="${ab==='custos'}">Custos e margem</button><button class="btn sm ${ab==='dia'?'':'ghost'}" data-act="relAba" data-id="dia" aria-pressed="${ab==='dia'}">Fechamento do dia</button></div>`;
+  return `<div class="seg" role="group" aria-label="Tipo de relatório"><button class="btn sm ${ab==='fat'?'':'ghost'}" data-act="relAba" data-id="fat" aria-pressed="${ab==='fat'}">Faturamento</button><button class="btn sm ${ab==='desp'?'':'ghost'}" data-act="relAba" data-id="desp" aria-pressed="${ab==='desp'}">Despesas</button><button class="btn sm ${ab==='custos'?'':'ghost'}" data-act="relAba" data-id="custos" aria-pressed="${ab==='custos'}">Custos e margem</button><button class="btn sm ${ab==='dia'?'':'ghost'}" data-act="relAba" data-id="dia" aria-pressed="${ab==='dia'}">Fechamento do dia</button><button class="btn sm ${ab==='cartao'?'':'ghost'}" data-act="relAba" data-id="cartao" aria-pressed="${ab==='cartao'}">Cartões-presente</button></div>`;
 }
 function relCustos(m,F){
   const mp=new Map();
@@ -3051,10 +3135,11 @@ document.addEventListener('scroll',tipEsconde,true);
 const diaCaixa=x=>{const p=String(x.pagoEm||''),d=String(x.data||'');return p&&p>d?p:d};
 function relDia(){
   const d=S.diaRel||hoje(),f=x=>diaCaixa(x)===d;
-  const feitos=S.atend.filter(a=>a.data===d),caixa=S.atend.filter(a=>!aberto(a)&&f(a)),pend=feitos.filter(aberto),
+  const feitos=S.atend.filter(a=>a.data===d),caixa=S.atend.filter(a=>!aberto(a)&&f(a)&&a.pagamento!==CP_PAG),pend=feitos.filter(aberto),
     contas=S.gastos.filter(g=>g.data===d),custos=feitos.reduce((x,a)=>x+desp(a),0),
-    rec=soma(caixa),dContas=soma(contas),saldo=rec-dContas-custos;
+    cpd=cpDia(d),rec=soma(caixa)+cpd.t,dContas=soma(contas),saldo=rec-dContas-custos;
   const porForma={};caixa.forEach(a=>{const k=a.pagamento||'Sem forma informada';porForma[k]=(porForma[k]||0)+(Number(a.valor)||0)});
+  Object.entries(cpd.porForma).forEach(([k,v])=>{porForma[k]=(porForma[k]||0)+v});
   const formas=Object.entries(porForma).sort((x,y)=>y[1]-x[1]);
   const nav=`<div class="bar"><button class="btn ghost" data-act="diaRel" data-id="-1" aria-label="Dia anterior">‹</button><input type="date" id="diaRelData" value="${d}" aria-label="Dia do fechamento"><button class="btn ghost" data-act="diaRel" data-id="1" aria-label="Próximo dia">›</button><button class="btn ghost" data-act="diaRel" data-id="0">Hoje</button><button class="btn ghost" data-act="imprimir">Imprimir / salvar em PDF</button></div>`;
   const k=(v,l,c)=>`<div class="stat"><b class="${c||''}">${v}</b><span>${l}</span></div>`;
@@ -3062,12 +3147,14 @@ function relDia(){
   return `<p class="so-print">${esc(S.nomeSalao||salaoNome())} — fechamento de ${fd(d)}</p>`+segRel()+nav+
   `<div class="stats">${k(brl(rec),'entrou no caixa')}${k(brl(dContas+custos),'despesas do dia')}${k(brl(saldo),'saldo do dia',saldo<0?'neg':'')}${k(brl(soma(pend)),'a receber ('+pend.length+')')}</div>
   <h3>Entrou no caixa, por forma de pagamento</h3>`+(formas.length?'<div class="list">'+formas.map(([n,v])=>`<div class="item"><div class="grow t">${esc(n)}</div><div class="side-val">${brl(v)}</div></div>`).join('')+'</div>':'<p class="muted">Nada recebido neste dia.</p>')+
+  (cpd.itens.length?`<h3>Cartões-presente do dia</h3><div class="list">${cpd.itens.map(x=>`<div class="item"><div class="grow"><div class="t">${x.m.tipo==='venda'?'Venda':'Cancelamento'} · ${esc(x.c.codigo||'')}</div><div class="muted">${esc(x.c.presenteado||x.c.comprador||'')}${x.c.forma?' · '+esc(x.c.forma):''}</div></div><div class="side-val">${brl(x.v)}</div></div>`).join('')}</div><p class="muted" style="font-size:13px">Vender um cartão entra no caixa do dia. Quando a cliente usa o saldo, o atendimento fica pago com “Cartão-presente” e não entra no caixa de novo.</p>`:'')+
   `<h3>Atendimentos do dia (${feitos.length})</h3>`+(feitos.length?'<div class="list">'+feitos.sort(byHora).map(item).join('')+'</div>':'<p class="muted">Nenhum atendimento neste dia.</p>')+
   (caixa.some(a=>a.data!==d)?`<h3>Recebido hoje de atendimentos de outros dias</h3><div class="list">${caixa.filter(a=>a.data!==d).map(item).join('')}</div>`:'')+
   `<h3>Despesas</h3>`+(contas.length||custos>0?'<div class="list">'+contas.map(g=>`<div class="item"><div class="grow"><div class="t">${esc(g.descricao||g.categoria)}</div><div class="muted">${esc(g.categoria)}</div></div><div class="side-val">${brl(g.valor)}</div></div>`).join('')+(custos>0?`<div class="item"><div class="grow"><div class="t">Produtos e taxa da máquina dos atendimentos</div></div><div class="side-val">${brl(custos)}</div></div>`:'')+'</div>':'<p class="muted">Nenhuma despesa neste dia.</p>');
 }
 function telaRel(){
   if(S.relAba==='dia')return relDia();
+  if(S.relAba==='cartao')return segRel()+telaCartoes();
   const atual=hoje().slice(0,7),m=S.mesRel;
   const meses=[...new Set([atual,...mesesDe(),...mesesGastos()])].filter(Boolean).sort().reverse();
   const L=(m?S.atend.filter(a=>plano(a).some(p=>p.mes===m)):S.atend).map(a=>({a,v:m?noMes(a,m):(Number(a.valor)||0)}));
@@ -3457,6 +3544,9 @@ document.addEventListener('click',e=>{
     pubHora:()=>{S.pb.hora=a.dataset.hora;S.pb.prof=a.dataset.prof;render()},pubNovo:()=>{S.pb={sv:'',pf:'',dt:'',slots:null,hora:'',prof:'',nome:'',tel:'',obs:'',ok:null};render()},pubRecarrega:()=>carregarPublico(),linkWpp:()=>linkWpp(),linkQr:()=>linkQr(),qrImprime:()=>imprimeQr(),copiaLink:()=>{try{navigator.clipboard.writeText(a.dataset.link).then(()=>toast('Link copiado.'),()=>toast('Copie o link manualmente.',true))}catch(_){toast('Copie o link manualmente.',true)}},
     aceitaPedido:()=>responderPedido(id,true).catch(x=>toast(falha(x),true)),recusaPedido:()=>{const go=()=>responderPedido(id,false).catch(x=>toast(falha(x),true));if(a.dataset.sinal)confirmar('Recusar pedido com sinal pago?','A cliente já pagou o sinal. Você precisa devolver pelo app do Mercado Pago.','Recusar',go);else go()},
     waFb:()=>conectarFb(),
+    cpVender:()=>formCartao(),cpUsar:()=>formUsarCartao(id),cpWpp:()=>cpWpp(id),cpImp:()=>cpImprimir(id),
+    cpCancela:()=>{const c=(S.cartoes||[]).find(x=>x.id===id);if(c)confirmar('Cancelar o cartão '+c.codigo+'?','O saldo de '+brl(c.saldo)+' é devolvido e sai do caixa de hoje. O cartão deixa de poder ser usado.','Cancelar cartão',async()=>{const j=await cpChama('cartao_cancelar',{p_cartao:id});await recarregar();toast('Cartão cancelado.')})},
+    cpDesfaz:()=>confirmar('Desfazer este uso?','O saldo volta para o cartão e, se foi o pagamento de um atendimento, ele volta para “não pago”.','Desfazer',async()=>{await cpChama('cartao_desfazer_uso',{p_mov:id});await recarregar();toast('Uso desfeito.')}),
     waDesconectar:()=>confirmar('Desconectar o WhatsApp do salão?','Os lembretes voltam a sair do número do Agendio (com a cobrança por mensagem do seu plano). As mensagens já na fila seguem por ele.','Desconectar',async()=>{await chamaApi('wa-conectar',{remover:true});S.onl.wp={conectado:false};S.sig='';render();toast('WhatsApp do salão desconectado.')}),
     mpDesconectar:()=>confirmar('Desconectar o Mercado Pago?','O sinal automático deixa de funcionar. Pedidos com sinal pendente continuam, mas a cliente não conseguirá pagar.','Desconectar',async()=>{await chamaApi('mp-conectar',{remover:true});S.onl.mp=false;if(S.agCfg&&S.agCfg.online&&S.agCfg.online.sinal&&S.agCfg.online.sinal.modo==='mp'){const c=Object.assign({},S.agCfg);c.online=Object.assign({},c.online,{sinal:Object.assign({},c.online.sinal,{modo:'nenhum'})});await salvarAgCfg(c)}render();toast('Mercado Pago desconectado.')}),
     ocultaPassos:()=>{LS.set('salao_passos_off','1');render();toast('Primeiros passos ocultados. Para ver de novo, use o botão no cartão Agendamento online.')},
@@ -3536,6 +3626,7 @@ document.addEventListener('change',e=>{
   else if(t.id==='pb-t'){S.pb.tel=t.value}
   else if(t.id==='pb-o'){S.pb.obs=t.value}
   else if(t.id==='estCat'){S.estCat=t.value;render()}
+  else if(t.id==='cu-a'){const w=$('cu-v-wrap');if(w)w.hidden=!!t.value}
   else if(t.id==='p-un')previaProd();
   else if(t.id==='f-prod')previaFicha(true);
   else if(t.id==='m-tipo'){$('m-qtd-l').textContent=t.value==='ajuste'?'Quantidade real em estoque agora (embalagens) *':'Quantidade (embalagens) *'}
@@ -3559,6 +3650,8 @@ $('dlg').addEventListener('submit',async e=>{
     else if(k==='pacote')await salvarPacote(id,dados);
     else if(k==='fidelidade')await salvarFid(dados);
     else if(k==='vale')await salvarVale(dados);
+    else if(k==='cpvender')await salvarCartao(dados);
+    else if(k==='cpusar')await usarCartao(id,dados);
     else if(k==='desp')await salvarDesp(id,dados);
     else if(k==='prod')await salvarProd(id,dados);
     else if(k==='mov')await salvarMov(id,dados);
