@@ -25,6 +25,30 @@
   ],
   "rewrites": [
     {
+      "source": "/api/wa-conectar",
+      "destination": "/api/x?a=wa-conectar"
+    },
+    {
+      "source": "/api/wa-config",
+      "destination": "/api/x?a=wa-config"
+    },
+    {
+      "source": "/api/wa-signup",
+      "destination": "/api/x?a=wa-signup"
+    },
+    {
+      "source": "/api/email-teste",
+      "destination": "/api/x?a=email-teste"
+    },
+    {
+      "source": "/api/mp-config",
+      "destination": "/api/x?a=mp-config"
+    },
+    {
+      "source": "/api/mp-conectar",
+      "destination": "/api/x?a=mp-conectar"
+    },
+    {
       "source": "/",
       "destination": "/divulgacao.html"
     },
