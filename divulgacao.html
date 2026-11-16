@@ -147,22 +147,33 @@ a{color:inherit}
 
 /* planos como linhas */
 .planos-s{padding-block:clamp(64px,9vw,112px)}
-.planos{display:flex;flex-direction:column;gap:14px}
-.plano{display:grid;grid-template-columns:minmax(0,230px) minmax(0,1fr) auto;grid-template-areas:"tag ul btn" "nome ul btn" "preco ul btn";column-gap:clamp(20px,4vw,56px);align-content:start;align-items:start;border:1.5px solid var(--line);border-radius:clamp(22px,3vw,34px);padding:clamp(22px,3vw,34px)}
+.planos{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:16px;align-items:stretch}
+.plano{display:flex;flex-direction:column;border:1.5px solid var(--line);border-radius:clamp(22px,3vw,30px);padding:clamp(22px,2.6vw,30px)}
 .plano.dest{background:var(--forest);color:var(--forest-ink);border-color:var(--forest)}
-.plano .tag{grid-area:tag;justify-self:start;font-size:13px;font-weight:700;background:var(--pop);color:#10231d;border-radius:999px;padding:3px 12px;margin-bottom:10px}
-.plano .tag.vz{display:none}
-.plano h3{grid-area:nome;font-size:clamp(30px,3.4vw,40px)}
-.preco{grid-area:preco;margin-top:8px;font-family:var(--font-display);font-size:40px;font-weight:500;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.plano .tag{align-self:flex-start;font-size:13px;font-weight:700;background:var(--pop);color:#10231d;border-radius:999px;padding:3px 12px;margin-bottom:10px}
+.plano .tag.vz{visibility:hidden}
+.plano h3{font-size:clamp(28px,3vw,36px)}
+.preco{margin-top:8px;font-family:var(--font-display);font-size:clamp(34px,3.4vw,42px);font-weight:500;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .preco small{font-family:var(--font-body);font-size:15px;font-weight:600;color:var(--muted);letter-spacing:0}
 .plano.dest .preco small{color:var(--forest-muted)}
-.plano ul{grid-area:ul;list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 28px;font-size:15px;align-content:start}
+.preco-obs{min-height:44px;margin:4px 0 14px;font-size:14px;color:var(--muted)}
+.preco-obs s{opacity:.8}
+.plano.dest .preco-obs{color:var(--forest-muted)}
+.plano ul{list-style:none;margin:0 0 22px;padding:14px 0 0;border-top:1.5px solid var(--line);display:grid;gap:9px;font-size:15px;align-content:start;flex:1}
+.plano.dest ul{border-color:rgba(255,255,255,.22)}
 .plano li{display:flex;gap:9px;align-items:baseline}
 .plano li::before{content:"✓";font-weight:800;flex:none;color:var(--forest)}
 .plano.dest li::before{color:var(--pop)}
 .plano li.mais{font-weight:700}
-.plano .btn{grid-area:btn;align-self:center}
+.plano .btn{display:flex;width:100%;justify-content:center;text-align:center}
 .plano.dest .btn{background:var(--pop);border-color:var(--pop);color:#10231d}
+.per{display:flex;justify-content:center;margin:0 0 26px}
+.per-in{display:inline-flex;gap:4px;padding:5px;border:1.5px solid var(--line);border-radius:999px;background:#fff}
+.per button{position:relative;border:0;background:transparent;font:inherit;font-weight:700;font-size:15px;color:var(--ink);padding:10px 22px;border-radius:999px;cursor:pointer}
+.per button[aria-pressed=true]{background:var(--forest);color:var(--forest-ink)}
+.per button:focus-visible{outline:3px solid var(--forest);outline-offset:2px}
+.per .off{display:inline-block;margin-left:8px;font-size:12px;font-weight:800;background:var(--pop);color:#10231d;border-radius:999px;padding:2px 8px}
+@media(max-width:520px){.per button{padding:10px 14px;font-size:14px}.per .off{margin-left:4px;padding:2px 6px}}
 .nota{margin-top:22px;padding:18px 24px;border-radius:22px;background:var(--sage);color:#10231d;font-size:15.5px;font-weight:500}
 
 /* perguntas: título fixo à esquerda, respostas à direita */
@@ -338,6 +349,7 @@ footer{background:var(--foot);color:var(--foot-ink);padding-block:26px;font-size
       <h2 id="t-planos">Um plano para o tamanho do seu negócio</h2>
       <p id="planos-sub">Cada plano inclui tudo o que o anterior tem.</p>
     </div>
+    <div class="per" id="per" hidden><div class="per-in" role="group" aria-label="Período de pagamento"></div></div>
     <div class="planos" id="planos-lista" aria-live="polite"><p class="vazio">Carregando os planos…</p></div>
     <p class="nota">Enviar o lembrete ou o agradecimento pelo botão, na hora, não custa nada em nenhum plano. Só o envio automático, nos planos que o incluem, é cobrado por mensagem.</p>
   </div>
@@ -386,7 +398,7 @@ footer{background:var(--foot);color:var(--foot-ink);padding-block:26px;font-size
   var temRec=function(p,k){var r=p.recursos||{};return k==='whatsapp_auto'?r[k]===true:r[k]!==false};
   var linkOk=function(u){return /^(https:\/\/|#|\/)[^\s<>"']*$/.test(u||'')};
   function planos(L){
-    var box=$('planos-lista');
+    var box=$('planos-lista');LISTA=L||[];if(L&&L.length)barraPeriodo(L);
     if(!L||!L.length){box.innerHTML='<p class="vazio">Entre no sistema para ver os planos disponíveis.</p>';return}
     var trials=L.map(function(p){return Number(p.trial_dias)||0}),mn=Math.min.apply(null,trials),mx=Math.max.apply(null,trials);
     $('planos-sub').textContent=(mx>0?(mn===mx?'Todos começam com '+mn+' dias grátis. ':'Teste grátis de '+mn+' a '+mx+' dias, conforme o plano. '):'')+'Cada plano inclui tudo o que o anterior tem.';
@@ -400,16 +412,29 @@ footer{background:var(--foot);color:var(--foot-ink);padding-block:26px;font-size
       if(temRec(p,'whatsapp_auto')&&Number(p.preco_mensagem)>0)li.push(brl(p.preco_mensagem)+' por mensagem enviada, cobrado no mês seguinte');
       var lis=li.map(function(x){return x.indexOf('<li')===0?x:'<li>'+esc(x)+'</li>'}).join('');
       var d=i===iDest;
-      return '<article class="plano'+(d?' dest':'')+'"><span class="tag'+(d?'':' vz')+'">'+(d?'Lembretes automáticos':'.')+'</span><h3>'+esc(p.nome)+'</h3><div class="preco">'+brl(p.preco_mensal)+'<small> /mês</small></div>'+anual(p)+'<ul>'+lis+'</ul><a class="btn'+(d?'':' ghost')+'" data-cta href="'+esc(ENTRAR)+'">Testar grátis</a></article>';
+      return '<article class="plano'+(d?' dest':'')+'"><span class="tag'+(d?'':' vz')+'">'+(d?'Lembretes automáticos':'.')+'</span><h3>'+esc(p.nome)+'</h3><div class="preco">'+precoPer(p)+'<ul>'+lis+'</ul><a class="btn'+(d?'':' ghost')+'" data-cta href="'+esc(ENTRAR)+'">Testar grátis</a></article>';
     }).join('');
     ligaCta();
   }
-  function anual(p){
-    var da=Number(p.desc_anual)||0,ds=Number(p.desc_semestral)||0,pm=Number(p.preco_mensal)||0;
-    if(!(pm>0)||(da<=0&&ds<=0))return '';
-    var t=da>0?'No plano anual: '+brl(pm*(1-da/100))+' /mês (-'+String(da).replace('.',',')+'%)':'No semestral: '+brl(pm*(1-ds/100))+' /mês (-'+String(ds).replace('.',',')+'%)';
-    return '<p class="muted" style="margin:-6px 0 12px;font-size:14px">'+esc(t)+'</p>';
+  var PERIODO=1,LISTA=[];
+  function descDe(p,m){return m===6?(Number(p.desc_semestral)||0):m===12?(Number(p.desc_anual)||0):0}
+  function precoPer(p){
+    var pm=Number(p.preco_mensal)||0,d=descDe(p,PERIODO);
+    if(PERIODO===1||!(pm>0)||d<=0)return '<div class="preco">'+brl(pm)+'<small> /mês</small></div><p class="preco-obs">&nbsp;</p>';
+    var tot=pm*PERIODO*(1-d/100);
+    return '<div class="preco">'+brl(tot/PERIODO)+'<small> /mês</small></div><p class="preco-obs"><s>'+brl(pm)+'</s> · '+brl(tot)+' a cada '+(PERIODO===6?'6 meses':'12 meses')+' (economiza '+String(d).replace('.',',')+'%)</p>';
   }
+  function barraPeriodo(L){
+    var tem6=L.some(function(p){return descDe(p,6)>0&&Number(p.preco_mensal)>0}),tem12=L.some(function(p){return descDe(p,12)>0&&Number(p.preco_mensal)>0});
+    var box=$('per'),inn=box.firstElementChild;
+    if(!tem6&&!tem12){box.hidden=true;PERIODO=1;return}
+    function maior(m){return Math.max.apply(null,L.map(function(p){return Number(p.preco_mensal)>0?descDe(p,m):0}))}
+    var op=[[1,'Mensal',0]];if(tem6)op.push([6,'Semestral',maior(6)]);if(tem12)op.push([12,'Anual',maior(12)]);
+    if(!op.some(function(o){return o[0]===PERIODO}))PERIODO=1;
+    inn.innerHTML=op.map(function(o){return '<button type="button" data-per="'+o[0]+'" aria-pressed="'+(o[0]===PERIODO)+'">'+o[1]+(o[2]>0?'<span class="off">-'+String(o[2]).replace('.',',')+'%</span>':'')+'</button>'}).join('');
+    box.hidden=false;
+  }
+  document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-per]');if(!b)return;PERIODO=Number(b.getAttribute('data-per'))||1;if(LISTA.length){barraPeriodo(LISTA);planos(LISTA)}});
   function faq(L){
     var f=(L&&L.length)?L:FAQ_PADRAO;
     $('faq-lista').innerHTML=f.map(function(x){return '<details><summary>'+esc(x.p)+'</summary><p>'+esc(x.r)+'</p></details>'}).join('');
