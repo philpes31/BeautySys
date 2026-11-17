@@ -216,12 +216,20 @@ footer{background:var(--foot);color:var(--foot-ink);padding-block:26px;font-size
   .plano .btn{width:100%}
 }
 @media (max-width:620px){
+  html,body{max-width:100%;overflow-x:clip}
+  .top{gap:8px}
+  .brand{font-size:24px;gap:8px;min-width:0}
+  .logo{width:32px;height:32px}
   .nav a:not(.btn){display:none}
-  .nav{padding:0;background:none;gap:8px}
-  .top .btn{padding:0 16px;white-space:nowrap}
+  .nav{padding:0;background:none;gap:6px;flex:none}
+  .top .btn{padding:0 14px;min-height:42px;font-size:15px;white-space:nowrap}
   .cta .btn{width:100%}
   .plano ul{grid-template-columns:1fr}
   .notif{left:-8px}
+}
+@media (max-width:440px){
+  /* a tela já tem o link "Já tenho conta" logo abaixo do título */
+  .nav a.ghost{display:none}
 }
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.btn{transition:none}}
 </style>
