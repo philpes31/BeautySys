@@ -691,7 +691,7 @@ async function iniciar(){
   try{S.canal=sb.channel('salao-mudancas').on('postgres_changes',{event:'*',schema:'public'},agendar).subscribe()}catch(_){}
 }
 function parar(){
-  S.iniciado=false;S.got=false;S.push=null;S.anams=[];S.fotos=null;S.fotosUrl=null;S.fotosTs=null;S.semFotos=false;S.emCfg=undefined;S.contas=[];S.promos=[];S.cb={ativo:false,pct:5,desde:''};S.pvs=[];S.vendas=[];S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
+  S.iniciado=false;S.got=false;S.push=null;S.anams=[];S.fotos=null;S.fotosUrl=null;S.fotosTs=null;S.semFotos=false;S.emCfg=undefined;S.clube=undefined;S.contas=[];S.promos=[];S.cb={ativo:false,pct:5,desde:''};S.pvs=[];S.vendas=[];S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
   if(S.canal&&sb){try{sb.removeChannel(S.canal)}catch(_){}}
   S.canal=null;
 }
@@ -889,7 +889,8 @@ async function salvarComissao(prof,pct){
   toast(S.semCom?'Salvo só neste aparelho. Rode o 09-comissoes.sql no Supabase para valer em todos.':'Comissão salva.');
 }
 const chaveCom=(prof,serv)=>String(prof).replace(/\|/g,'')+'|'+String(serv).replace(/\|/g,'');
-function pctCom(C,prof,serv){const e=C[chaveCom(prof,serv)];return e!=null&&e!==''?(Number(e)||0):(Number(C[prof])||0)}
+const PROD_COM='Venda de produtos';
+function pctCom(C,prof,serv){const e=C[chaveCom(prof,serv)];return e!=null&&e!==''?(Number(e)||0):(serv===PROD_COM?0:(Number(C[prof])||0))}
 /* Divide o valor de um atendimento entre o 1º e o 2º procedimento (valor2) para aplicar a porcentagem de cada serviço. */
 function partesCom(a,v){
   const tot=Number(a.valor)||0,v2=Math.min(tot,Number(a.valor2)||0);
@@ -911,17 +912,18 @@ function blocoComissao(m,L){
   const rec=L.filter(x=>!aberto(x.a)),pend=L.filter(x=>aberto(x.a));
   const by={};rec.forEach(x=>{const n=x.a.profissional||'(sem profissional)';(by[n]=by[n]||{n:0,v:0,p:[]});by[n].n++;by[n].v+=x.v;by[n].p.push(...partesCom(x.a,x.v))});
   const VL=(S.vales||[]).filter(v=>!m||String(v.data).startsWith(m)),vpor={};VL.forEach(v=>{vpor[v.prof]=(vpor[v.prof]||0)+v.valor;if(!by[v.prof])by[v.prof]={n:0,v:0,p:[]}});
-  const nomes=Object.keys(by).sort((a,b)=>by[b].v-by[a].v);if(!nomes.length&&!pend.length&&!VL.length)return '';
+  (S.vendas||[]).filter(v=>v.status==='ativa'&&v.prof&&(!m||String(v.data).startsWith(m))).forEach(v=>{if(!by[v.prof])by[v.prof]={n:0,v:0,p:[]};by[v.prof].p.push([PROD_COM,v.total]);by[v.prof].vp=(by[v.prof].vp||0)+v.total});
+  const nomes=Object.keys(by).sort((a,b)=>(by[b].v+(by[b].vp||0))-(by[a].v+(by[a].vp||0)));if(!nomes.length&&!pend.length&&!VL.length)return '';
   if(!recOk('comissoes'))return `<h3>Comissão por profissional</h3><p class="muted" style="max-width:640px">Este recurso faz parte de um plano superior. Peça a troca em Salão, Plano e assinatura.</p>`;
   const C=comissoes(),pode=NV('config')==='escrita'&&!(S.ctx&&S.ctx.role==='profissional');
-  const servs=[...new Set([...servicosCat().filter(x=>x.ativo!==false).map(x=>x.nome),...PROCS])].filter(Boolean);
+  const servs=[...new Set([...servicosCat().filter(x=>x.ativo!==false).map(x=>x.nome),...PROCS,PROD_COM])].filter(Boolean);
   let tot=0,totV=0;
   const linhas=nomes.map(n=>{const pct=Number(C[n])||0,vl=Math.round((vpor[n]||0)*100)/100;totV+=vl;
     const com=Math.round(by[n].p.reduce((t,[sv,v])=>t+v*pctCom(C,n,sv),0))/100;tot+=com;
     const usados=[...new Set(by[n].p.map(x=>x[0]).filter(Boolean))].sort(),espec=servs.filter(sv=>C[chaveCom(n,sv)]!=null);
     const lista=[...new Set([...usados,...espec])];
     const det=n!=='(sem profissional)'&&lista.length?`<details style="margin-top:6px"${S.comAb===n?' open':''}><summary class="muted" style="cursor:pointer">Porcentagem por serviço${espec.length?` (${espec.length} diferente${espec.length>1?'s':''})`:''}</summary><div style="display:grid;gap:6px;margin-top:6px">${lista.map(sv=>`<div style="display:flex;gap:8px;align-items:center;justify-content:space-between"><label for="cs-${esc(n)}-${esc(sv)}">${esc(sv)}</label><span><input id="cs-${esc(n)}-${esc(sv)}" class="com-srv" data-prof="${esc(n)}" data-srv="${esc(sv)}" type="number" min="0" max="100" step="0.5" inputmode="decimal" style="width:84px" value="${C[chaveCom(n,sv)]!=null?esc(C[chaveCom(n,sv)]):''}" placeholder="${pct||0}" ${pode?'':'disabled'}> %</span></div>`).join('')}<span class="muted">Deixe em branco para usar ${pct||0}%, a porcentagem geral de ${esc(n)}.</span></div></details>`:'';
-    return `<div class="item"><div class="grow"><div class="t">${esc(n)}</div><div class="muted num">${by[n].n} ${by[n].n===1?'atendimento':'atendimentos'} · ${brl(by[n].v)} recebidos</div>${det}</div>
+    return `<div class="item"><div class="grow"><div class="t">${esc(n)}</div><div class="muted num">${by[n].n} ${by[n].n===1?'atendimento':'atendimentos'} · ${brl(by[n].v)} recebidos${by[n].vp?` · ${brl(by[n].vp)} em produtos`:''}</div>${det}</div>
     <div class="side" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end"><label class="sr-only" for="com-${esc(n)}">Comissão de ${esc(n)} em %</label><input id="com-${esc(n)}" class="com-pct" data-prof="${esc(n)}" type="number" min="0" max="100" step="0.5" inputmode="decimal" style="width:84px" value="${pct||''}" placeholder="0" ${pode&&n!=='(sem profissional)'?'':'disabled'}><span class="muted">%</span><b class="num">${brl(com)}</b>${vl?`<span class="muted num" style="flex-basis:100%;text-align:right">Vale −${brl(vl)} · a pagar <b>${brl(Math.max(0,Math.round((com-vl)*100)/100))}</b></span>`:''}</div></div>`}).join('');
   const pv=pend.reduce((t,x)=>t+x.v,0);
   return `<h3>Comissão por profissional</h3><p class="muted" style="margin:0 0 8px;max-width:640px">Calculada só sobre o que já foi pago pela cliente${m?' (valor recebido no mês)':''}. ${pode?'Digite a porcentagem geral de cada pessoa e, se quiser, uma diferente para cada serviço.':'Só quem administra o salão altera os percentuais.'}</p>${pend.length?`<p class="muted" style="margin:0 0 8px;max-width:640px"><b>${pend.length}</b> ${pend.length===1?'atendimento ainda não pago':'atendimentos ainda não pagos'} (${brl(pv)}) não ${pend.length===1?'entra':'entram'} na conta até receber.</p>`:''}<div class="list">${linhas}</div><p class="num" style="margin:8px 0 0"><b>Total de comissões: ${brl(tot)}</b>${totV?` · Vales: ${brl(totV)} · <b>A pagar: ${brl(Math.max(0,Math.round((tot-totV)*100)/100))}</b>`:''}</p>${pode?`<p style="margin:8px 0 0"><button class="btn ghost sm" data-act="novoVale">Registrar vale ou adiantamento</button></p>`:''}${VL.length?`<h4 style="margin:14px 0 4px">Vales${m?' do mês':''}</h4><div class="list">${VL.slice().sort((x,y)=>String(y.data).localeCompare(String(x.data))).map(v=>`<div class="item"><div class="grow"><div class="t">${esc(v.prof)}</div><div class="muted num">${fd(v.data)}${v.obs?' · '+esc(v.obs):''}</div></div><div class="side-val">${brl(v.valor)}</div>${pode?`<div class="item-acts"><button class="btn danger sm" data-act="delVale" data-id="${esc(v.id)}">Excluir</button></div>`:''}</div>`).join('')}</div>`:''}`;
@@ -938,7 +940,7 @@ function formVale(){
 }
 /* ---------- Vendas de produtos (shampoo, perfume, pomada, balm...) ---------- */
 const pvRow=r=>({id:r.id,nome:r.nome||'',categoria:r.categoria||'',preco:Number(r.preco)||0,custo:Number(r.custo)||0,estoque:Number(r.estoque)||0,minimo:Number(r.minimo)||0,ativo:r.ativo!==false});
-const vdRow=r=>({id:r.id,data:r.data,clienteId:r.cliente_id||'',forma:r.forma||'',subtotal:Number(r.subtotal)||0,desconto:Number(r.desconto)||0,total:Number(r.total)||0,custo:Number(r.custo_total)||0,status:r.status==='cancelada'?'cancelada':'ativa',obs:r.obs||'',cartao:r.cartao_id||''});
+const vdRow=r=>({id:r.id,data:r.data,clienteId:r.cliente_id||'',forma:r.forma||'',subtotal:Number(r.subtotal)||0,desconto:Number(r.desconto)||0,total:Number(r.total)||0,custo:Number(r.custo_total)||0,status:r.status==='cancelada'?'cancelada':'ativa',obs:r.obs||'',cartao:r.cartao_id||'',prof:r.profissional||''});
 const PV_CAT=['Cabelo','Barba','Perfume','Unhas','Pele','Maquiagem','Acessório'];
 const FORMAS_PAG=['Pix','Dinheiro','Cartão de débito','Cartão de crédito','Outro'];
 const pvBaixo=p=>p.ativo&&p.estoque<=0||(p.ativo&&p.minimo>0&&p.estoque<=p.minimo);
@@ -1028,7 +1030,8 @@ function formVenda(){
   <div><label for="vd-f">Forma de pagamento</label><select id="vd-f" name="forma">${FORMAS_PAG.map(x=>`<option>${x}</option>`).join('')}${cards.map(c=>`<option value="cartao:${esc(c.id)}">Cartão-presente ${esc(c.codigo)} (saldo ${brl(c.saldo)})</option>`).join('')}</select></div>
   <div><label for="vd-d">Desconto (R$)</label><input id="vd-d" name="desconto" type="number" step="0.01" min="0" inputmode="decimal" placeholder="0,00"></div>
   ${recOk('promocoes')&&!S.semPromo&&(S.promos||[]).some(x=>x.ativo)?`<div><label for="vd-cp">Cupom (opcional)</label><input id="vd-cp" name="cupom" maxlength="20" autocapitalize="characters" placeholder="Ex.: NATAL10" autocomplete="off"></div>`:''}
-  <div><label for="vd-dt">Data</label><input id="vd-dt" name="data" type="date" value="${esc(hoje())}" max="${esc(hoje())}"></div></div>
+  <div><label for="vd-dt">Data</label><input id="vd-dt" name="data" type="date" value="${esc(hoje())}" max="${esc(hoje())}"></div>
+  <div><label for="vd-pf">Vendido por (opcional)</label><select id="vd-pf" name="prof"><option value="">Ninguém</option>${[...new Set([...Object.keys((S.agCfg&&S.agCfg.profissionais)||{}),...(S.atendTodos||[]).map(a=>a.profissional).filter(Boolean)])].sort().map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('')}</select></div></div>
   <label for="vd-o">Observação</label><input id="vd-o" name="obs" maxlength="200">
   <p class="side-val" id="vd-total" style="margin:12px 0 0;font-size:20px">Total: ${brl(0)}</p>
   <p class="erro" id="a-erro" role="alert"></p><div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Registrar venda</button></div></form>`);
@@ -1045,7 +1048,7 @@ async function salvarVenda(d){
     const c=await vdChama('promo_aplicar',{p_codigo:String(d.cupom).trim(),p_base:Math.max(0,sub-desc),p_apenas_ver:false});
     desc+=c.desconto;cup=' (cupom '+c.codigo+')';
   }
-  const j=await vdChama('venda_registrar',{p_itens:itens,p_cliente:d.cliente||'',p_forma:cartao?'Cartão-presente':fm,p_desconto:desc,p_data:d.data||null,p_obs:(String(d.obs||'').trim()+cup).trim().slice(0,200),p_cartao:cartao});
+  const j=await vdChama('venda_registrar',{p_itens:itens,p_cliente:d.cliente||'',p_forma:cartao?'Cartão-presente':fm,p_desconto:desc,p_data:d.data||null,p_obs:(String(d.obs||'').trim()+cup).trim().slice(0,200),p_cartao:cartao,p_profissional:String(d.prof||'')});
   await recarregar();toast('Venda registrada: '+brl(j.total)+'.');
 }
 async function vdVer(id){
@@ -2206,7 +2209,7 @@ function detalhe(){
     <div class="item-acts"><button class="btn ghost sm" data-act="editCliente" data-id="${esc(c.id)}">Editar</button>${!S.legado&&NV('clientes')==='escrita'&&c.nome!=='Cliente removida'?`<button class="btn ghost sm" data-act="anonCliente" data-id="${esc(c.id)}">Apagar dados pessoais</button>`:''}<button class="btn danger sm" data-act="delCliente" data-id="${esc(c.id)}">Excluir</button></div></div>
   <div class="stats"><div class="stat"><b>${a.length}</b><span>atendimentos</span></div><div class="stat"><b>${brl(soma(a))}</b><span>total gasto</span></div>${a.filter(aberto).length?`<div class="stat"><b>${brl(soma(a.filter(aberto)))}</b><span>a receber (${a.filter(aberto).length})</span></div>`:''}</div>
   ${(()=>{const u=a.find(x=>x.obs);return u?`<div class="panel"><b>Última fórmula / observação</b> <span class="muted num">${fd(u.data)} · ${esc(procTxt(u))}</span><p class="obs" style="margin:6px 0 0">${esc(u.obs)}</p></div>`:''})()}
-  ${blocoFidelidade(c)}${blocoPacotes(c)}${blocoCashback(c)}${blocoAnamnese(c)}${blocoAreaCliente(c)}${blocoFotos(c)}
+  ${blocoFidelidade(c)}${blocoPacotes(c)}${blocoClube(c)}${blocoCashback(c)}${blocoAnamnese(c)}${blocoAreaCliente(c)}${blocoFotos(c)}
   <div class="bar"><button class="btn" data-act="novoAtend" data-cliente="${esc(c.id)}">Novo atendimento</button></div>
   <h3>Histórico</h3>`+(a.length?'<div class="list">'+a.map(x=>itemAtend(x,false)).join('')+'</div>':'<p class="muted">Nenhum procedimento registrado para esta cliente.</p>');
 }
@@ -2448,6 +2451,97 @@ async function usarSessao(id){
 async function encerrarPacote(id){
   const r=await sb.from('pacotes_cliente').update({status:'encerrado'}).eq('id',id);
   if(r.error)throw r.error;S.sig='';await recarregar();render();toast('Pacote encerrado.');
+}
+
+/* ---------- Clube de assinatura da cliente ---------- */
+async function clubeCarrega(){
+  if(S.clube!==undefined)return;S.clube=null;
+  try{const [p,a]=await Promise.all([todos('clube_planos'),todos('clube_assinaturas')]);S.clube={planos:p||[],ass:a||[]};render()}
+  catch(e){S.clube=false}
+}
+const clubeRecarrega=async()=>{S.clube=undefined;await clubeCarrega()};
+function clubeSituacao(x){
+  const h=hoje();
+  if(x.status==='cancelada')return ['','Cancelada'];
+  if(x.status==='pausada')return ['','Pausada'];
+  if(!x.ciclo_fim)return ['late','Aguardando 1º pagamento'];
+  if(x.ciclo_fim<h)return ['late','Mensalidade vencida'];
+  return ['ok','Em dia até '+fd(x.ciclo_fim)];
+}
+function blocoClube(c){
+  if(S.legado)return '';
+  if(S.clube===undefined)clubeCarrega();
+  const K=S.clube;if(!K)return '';
+  const pode=NV('clientes')==='escrita';
+  const l=K.ass.filter(x=>x.cliente_id===c.id).sort((a,b)=>(a.status==='cancelada'?1:0)-(b.status==='cancelada'?1:0)||String(b.criado_em).localeCompare(String(a.criado_em)));
+  if(!l.length&&!pode)return '';
+  const it=x=>{const [cls,txt]=clubeSituacao(x),vivo=x.status==='ativa',emDia=vivo&&x.ciclo_fim&&x.ciclo_fim>=hoje();
+    return `<div class="item"><div class="grow"><div class="t">${esc(x.nome)} <span class="tag ${cls}">${esc(txt)}</span></div>
+    <div class="muted num">${brl(Number(x.valor))} por mês · ${x.sessoes_mes} ${x.sessoes_mes===1?'sessão':'sessões'}${x.servico?' de '+esc(x.servico):''}${emDia?` · restam ${x.sessoes_restantes} neste ciclo`:''}</div></div>
+    ${pode&&x.status!=='cancelada'?`<div class="item-acts">${vivo?`<button class="btn sm" data-act="clubePagar" data-id="${esc(x.id)}">Mensalidade paga</button>`:''}${emDia&&x.sessoes_restantes>0?`<button class="btn ghost sm" data-act="clubeUsar" data-id="${esc(x.id)}">Usar 1 sessão</button>`:''}<button class="btn ghost sm" data-act="clubeStatus" data-id="${esc(x.id)}" data-st="${vivo?'pausada':'ativa'}">${vivo?'Pausar':'Reativar'}</button><button class="btn ghost sm" data-act="clubeStatus" data-id="${esc(x.id)}" data-st="cancelada">Cancelar</button></div>`:''}</div>`};
+  return `<div class="panel"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><b>Clube de assinatura</b>${pode?`<span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost sm" data-act="clubeAssinar" data-cliente="${esc(c.id)}">Entrar no clube</button><button class="btn ghost sm" data-act="clubePlanos">Planos do clube</button></span>`:''}</div>`+
+    (l.length?`<div class="list" style="margin-top:12px">${l.map(it).join('')}</div>`:'<p class="muted" style="margin:8px 0 0">Esta cliente ainda não está no clube. Crie um plano (ex.: 4 escovas por mês) e coloque ela nele. A mensalidade é paga no balcão e você registra aqui.</p>')+'</div>';
+}
+function formClubePlanos(editId){
+  const K=S.clube;if(!K)return;
+  const e=editId?K.planos.find(x=>x.id===editId):null,sv=servicosCat().filter(x=>x.ativo!==false);
+  const lista=K.planos.length?`<div class="list" style="margin:8px 0 12px">${K.planos.map(x=>`<div class="item"><div class="grow"><div class="t">${esc(x.nome)}${x.ativo?'':' <span class="tag">Desativado</span>'}</div><div class="muted num">${x.sessoes_mes} ${x.sessoes_mes===1?'sessão':'sessões'}${x.servico?' de '+esc(x.servico):''} · ${brl(Number(x.valor))} por mês</div></div><div class="item-acts"><button type="button" class="btn ghost sm" data-act="clubePlanoEdit" data-id="${esc(x.id)}">Editar</button></div></div>`).join('')}</div>`:'<p class="muted">Nenhum plano ainda. Crie o primeiro abaixo.</p>';
+  abrir(`<h2>Planos do clube</h2>${lista}<h3 style="font-size:15px;margin:8px 0 0">${e?'Editar plano':'Novo plano'}</h3>
+  <form data-form="clubeplano" data-id="${esc(e?e.id:'')}"><label for="cp-n">Nome do plano *</label><input id="cp-n" name="nome" required maxlength="80" value="${esc(e?e.nome:'')}" placeholder="Ex.: Clube Escova">
+  <label for="cp-s">Serviço do plano</label><select id="cp-s" name="servico"><option value="">Qualquer serviço</option>${sv.map(x=>`<option${e&&e.servico===x.nome?' selected':''}>${esc(x.nome)}</option>`).join('')}</select>
+  <div class="grid2"><div><label for="cp-q">Sessões por mês *</label><input id="cp-q" name="sessoes" type="number" min="1" max="60" step="1" inputmode="numeric" required value="${e?e.sessoes_mes:4}"></div>
+  <div><label for="cp-v">Mensalidade (R$) *</label><input id="cp-v" name="valor" type="number" min="0" step="0.01" inputmode="decimal" required value="${e?Number(e.valor):''}"></div></div>
+  <label class="chk"><input type="checkbox" name="ativo" ${!e||e.ativo?'checked':''}> Plano ativo (aparece para novas assinaturas)</label>
+  <p class="muted" style="margin:2px 0 8px">Mudar o valor ou as sessões vale só para quem entrar depois. Quem já está no clube mantém o combinado.</p>
+  <p class="erro" id="a-erro" role="alert"></p><div class="acts"><button type="button" class="btn ghost" data-act="fechar">Fechar</button><button class="btn">${e?'Salvar plano':'Criar plano'}</button></div></form>`);
+}
+async function clubeChama(nome,args){
+  const r=await sb.rpc(nome,args);
+  if(r.error){if(/clube_/i.test(String(r.error.message||''))&&/function|does not exist|schema cache/i.test(String(r.error.message||'')))throw erroUi('Rode o arquivo 54-clube.sql (ou o agendio-TUDO.sql) no Supabase para usar o clube.');throw r.error}
+  return r.data;
+}
+async function salvarClubePlano(id,d){
+  const q=Math.round(Number(d.sessoes)||0),v=din(d.valor);
+  if(String(d.nome||'').trim().length<2)throw erroUi('Dê um nome ao plano.');
+  if(q<1||q>60)throw erroUi('O plano precisa ter de 1 a 60 sessões por mês.');
+  await clubeChama('clube_plano_salvar',{p_id:id||'',p_nome:String(d.nome).trim(),p_servico:d.servico||'',p_sessoes:q,p_valor:v,p_ativo:d.ativo==='on'});
+  await clubeRecarrega();formClubePlanos();toast('Plano salvo.');
+  throw Object.assign(new Error('mantem'),{mantem:true});
+}
+function formClubeAssinar(cid){
+  const c=cli(cid),K=S.clube;if(!c||!K)return;
+  const pl=K.planos.filter(x=>x.ativo);
+  if(!pl.length){abrir(`<h2>Entrar no clube</h2><p>Antes, crie pelo menos um plano do clube.</p><div class="acts"><button type="button" class="btn ghost" data-act="fechar">Fechar</button><button type="button" class="btn" data-act="clubePlanos">Criar plano</button></div>`);return}
+  abrir(`<h2>Entrar no clube</h2><p class="muted" style="margin-top:0">${esc(c.nome)}</p><form data-form="clubeassinar" data-id="${esc(cid)}">
+  <label for="ca-p">Plano *</label><select id="ca-p" name="plano" required>${pl.map(x=>`<option value="${esc(x.id)}">${esc(x.nome)} · ${x.sessoes_mes} ${x.sessoes_mes===1?'sessão':'sessões'} · ${brl(Number(x.valor))}/mês</option>`).join('')}</select>
+  <p class="muted" style="margin:6px 0 8px">As sessões só liberam quando você registrar a primeira mensalidade paga.</p>
+  <p class="erro" id="a-erro" role="alert"></p><div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Entrar no clube</button></div></form>`);
+}
+async function salvarClubeAssinar(cid,d){
+  if(!d.plano)throw erroUi('Escolha um plano.');
+  await clubeChama('clube_assinar',{p_cliente:cid,p_plano:d.plano});
+  $('dlg').close();await clubeRecarrega();render();toast('Cliente no clube. Registre a mensalidade quando ela pagar.');
+}
+function formClubePagar(id){
+  const x=(S.clube&&S.clube.ass||[]).find(a=>a.id===id);if(!x)return;
+  const cedo=x.ciclo_fim&&x.ciclo_fim>=hoje();
+  abrir(`<h2>Mensalidade paga</h2><p class="muted" style="margin-top:0">${esc(x.nome)} · ${brl(Number(x.valor))}</p><form data-form="clubepagar" data-id="${esc(id)}">
+  <label for="cg-f">Forma de pagamento</label><select id="cg-f" name="forma">${FORMAS_PAG.map(f=>`<option>${f}</option>`).join('')}</select>
+  <label class="chk"><input type="checkbox" name="lancar" checked> Somar o valor no faturamento de hoje</label>
+  <p class="muted" style="margin:2px 0 8px">${cedo?'Ela ainda tem ciclo em andamento: as '+x.sessoes_mes+' sessões deste pagamento somam às que sobraram e a validade vai para o mês seguinte.':'Libera '+x.sessoes_mes+(x.sessoes_mes===1?' sessão':' sessões')+' a partir de hoje, por 1 mês.'}</p>
+  <p class="erro" id="a-erro" role="alert"></p><div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Registrar pagamento</button></div></form>`);
+}
+async function salvarClubePagar(id,d){
+  const j=await clubeChama('clube_pagar',{p_ass:id,p_forma:d.forma||'Pix',p_lancar:d.lancar==='on'});
+  $('dlg').close();S.sig='';await recarregar();await clubeRecarrega();render();toast('Mensalidade registrada. Restam '+(j&&j.restantes!=null?j.restantes:'')+' sessões.');
+}
+async function clubeUsar(id){
+  const r=await clubeChama('clube_usar',{p_ass:id,p_prof:(profPadrao()||PROF||'').trim()});
+  S.sig='';await recarregar();await clubeRecarrega();render();toast(Number(r)>0?'Sessão usada. Restam '+r+'.':'Sessão usada. Acabaram as sessões deste mês.');
+}
+async function clubeStatus(id,st){
+  const go=async()=>{await clubeChama('clube_status',{p_ass:id,p_status:st});await clubeRecarrega();render();toast(st==='cancelada'?'Assinatura cancelada.':st==='pausada'?'Assinatura pausada.':'Assinatura reativada.')};
+  if(st==='cancelada')confirmar('Cancelar a assinatura?','A cliente sai do clube e perde as sessões que sobraram. Não dá para desfazer.','Cancelar assinatura',go);else await go();
 }
 const fidCfg=()=>{const f=(S.agCfg&&S.agCfg.fidelidade)||{};return {ativo:!!f.ativo,visitas:Math.min(50,Math.max(2,Math.round(Number(f.visitas)||10))),premio:String(f.premio||'1 atendimento grátis'),desde:String(f.desde||'')}};
 function fidStatus(c){
@@ -4220,7 +4314,7 @@ document.addEventListener('click',e=>{
   const a=e.target.closest('[data-act]');if(!a)return;
   const id=a.dataset.id;
   const f={
-    novaCliente:()=>formCliente(),editCliente:()=>formCliente(id),delCliente:()=>pedirDelCliente(id),maisMenu:menuMais,plSalvaBloqueio:()=>salvarBloqueio(a),plCupomAtivo:async()=>{const r=await sb.rpc('plataforma_cupom_ativo',{p_id:id,p_ativo:a.dataset.v==='1'});if(r.error)return toast(falha(r.error),true);await carregarPlataforma()},pgCupom:()=>aplicarCupom(id,a),instalarApp:()=>instalarApp(),reciboAtend:()=>reciboAtend(id),reciboPag:()=>reciboPag(id),reciboImprime:()=>imprimeRecibo(),pagarMP:()=>abrirPagamento(id),pagarMPantigo:()=>pagarCobranca(id,a),pgAba:()=>pgAba(id),pgPix:()=>gerarPix(id,a),pgCopia:()=>{const i=$('pg-copia');if(i){i.select();try{navigator.clipboard.writeText(i.value)}catch(_){try{document.execCommand('copy')}catch(_){}}toast('Código Pix copiado.')}},pgCartao:()=>enviarCartao('cobranca',id,a),pgDebito:()=>enviarCartao('debito','',a),debitoAtivar:()=>abrirDebito(),debitoAtivarMP:()=>chamaAssinar('criar',a),debitoParar:()=>confirmar('Cancelar o débito automático?','O cartão deixa de ser cobrado todo mês. Você poderá pagar cada mensalidade à mão ou ativar de novo.','Cancelar débito',()=>chamaAssinar('cancelar')),setStatus:()=>mudarStatus(id,a.dataset.st).catch(x=>toast(falha(x))),anonCliente:()=>pedirAnonCliente(id),exportaSalao:()=>exportarSalao().catch(x=>toast(falha(x))),excluiSalao:formExcluirSalao,
+    novaCliente:()=>formCliente(),editCliente:()=>formCliente(id),delCliente:()=>pedirDelCliente(id),maisMenu:menuMais,plSalvaBloqueio:()=>salvarBloqueio(a),plCupomAtivo:async()=>{const r=await sb.rpc('plataforma_cupom_ativo',{p_id:id,p_ativo:a.dataset.v==='1'});if(r.error)return toast(falha(r.error),true);await carregarPlataforma()},pgCupom:()=>aplicarCupom(id,a),instalarApp:()=>instalarApp(),reciboAtend:()=>reciboAtend(id),reciboPag:()=>reciboPag(id),reciboImprime:()=>imprimeRecibo(),pagarMP:()=>abrirPagamento(id),pagarMPantigo:()=>pagarCobranca(id,a),pgAba:()=>pgAba(id),pgPix:()=>gerarPix(id,a),pgCopia:()=>{const i=$('pg-copia');if(i){i.select();try{navigator.clipboard.writeText(i.value)}catch(_){try{document.execCommand('copy')}catch(_){}}toast('Código Pix copiado.')}},pgCartao:()=>enviarCartao('cobranca',id,a),pgDebito:()=>enviarCartao('debito','',a),debitoAtivar:()=>abrirDebito(),debitoAtivarMP:()=>chamaAssinar('criar',a),debitoParar:()=>confirmar('Cancelar o débito automático?','O cartão deixa de ser cobrado todo mês. Você poderá pagar cada mensalidade à mão ou ativar de novo.','Cancelar débito',()=>chamaAssinar('cancelar')),setStatus:()=>mudarStatus(id,a.dataset.st).catch(x=>toast(falha(x))),anonCliente:()=>pedirAnonCliente(id),exportaSalao:()=>exportarSalao().catch(x=>toast(falha(x))),clubePlanos:()=>formClubePlanos(),clubePlanoEdit:()=>formClubePlanos(id),clubeAssinar:()=>formClubeAssinar(a.dataset.cliente),clubePagar:()=>formClubePagar(id),clubeUsar:()=>clubeUsar(id).catch(x=>toast(falha(x),true)),clubeStatus:()=>clubeStatus(id,a.dataset.st).catch(x=>toast(falha(x),true)),excluiSalao:formExcluirSalao,
     pubHora:()=>{S.pb.hora=a.dataset.hora;S.pb.prof=a.dataset.prof;render()},pubNovo:()=>{S.pb={sv:'',pf:'',dt:'',slots:null,hora:'',prof:'',nome:'',tel:'',obs:'',ok:null};render()},pubRecarrega:()=>carregarPublico(),linkWpp:()=>linkWpp(),linkQr:()=>linkQr(),qrImprime:()=>imprimeQr(),copiaLink:()=>{try{navigator.clipboard.writeText(a.dataset.link).then(()=>toast('Link copiado.'),()=>toast('Copie o link manualmente.',true))}catch(_){toast('Copie o link manualmente.',true)}},
     sinalOk:()=>sb.rpc('pedido_sinal_confirmar',{p_id:id}).then(async r=>{if(r.error)throw r.error;S.sig='';await recarregar();toast('Sinal marcado como recebido.')}).catch(x=>toast(falha(x),true)),aceitaPedido:()=>responderPedido(id,true).catch(x=>toast(falha(x),true)),recusaPedido:()=>{const go=()=>responderPedido(id,false).catch(x=>toast(falha(x),true));if(a.dataset.sinal)confirmar('Recusar pedido com sinal pago?','A cliente já pagou o sinal. Você precisa devolver o valor a ela (pelo Pix ou pelo app do Mercado Pago).','Recusar',go);else go()},
     waFb:()=>conectarFb(),
@@ -4337,6 +4431,9 @@ $('dlg').addEventListener('submit',async e=>{
     else if(k==='bloq')await salvarBloq(dados);
     else if(k==='espera')await salvarEspera(dados);
     else if(k==='pacote')await salvarPacote(id,dados);
+    else if(k==='clubeplano'){try{await salvarClubePlano(id,dados)}catch(x){if(x&&x.mantem)return;throw x}}
+    else if(k==='clubeassinar')await salvarClubeAssinar(id,dados);
+    else if(k==='clubepagar')await salvarClubePagar(id,dados);
     else if(k==='fidelidade')await salvarFid(dados);
     else if(k==='vale')await salvarVale(dados);
     else if(k==='anamnese')await salvarAnamnese(id,dados);
