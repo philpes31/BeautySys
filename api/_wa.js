@@ -7,7 +7,7 @@
 // Opcional: WHATSAPP_MODELO_LEMBRETE_LINK = nome de um modelo de lembrete com as mesmas 5 variáveis e um botão
 //   "Visitar site" com URL https://SEU-SITE/a/{{1}} (o {{1}} do botão recebe "endereco?m=codigo"). Se não existir, usa o lembrete sem botão.
 const L = require('./_lib');
-const GRAPH = 'https://graph.facebook.com/v21.0';
+const GRAPH = 'https://graph.facebook.com/v25.0';
 
 const limpa = v => String(v == null ? '' : v).replace(/[\r\n\t]+/g, ' ').replace(/ {2,}/g, ' ').trim().slice(0, 120) || '-';
 

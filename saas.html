@@ -3431,7 +3431,7 @@ function blocoOnline(pode){
 }
 function carregaFb(cfg){return new Promise((ok,err)=>{
   if(window.FB){ok();return}
-  window.fbAsyncInit=function(){try{FB.init({appId:cfg.app_id,autoLogAppEvents:false,xfbml:false,version:'v21.0'});ok()}catch(e){err(e)}};
+  window.fbAsyncInit=function(){try{FB.init({appId:cfg.app_id,autoLogAppEvents:false,xfbml:false,version:'v25.0'});ok()}catch(e){err(e)}};
   const sc=document.createElement('script');sc.src='https://connect.facebook.net/pt_BR/sdk.js';sc.async=true;sc.onerror=()=>err(new Error('Não foi possível carregar o Facebook. Desative bloqueadores de anúncios e tente de novo.'));document.head.appendChild(sc);
 })}
 async function conectarFb(){
@@ -3447,7 +3447,7 @@ async function conectarFb(){
   const volta=()=>{window.removeEventListener('message',onMsg);if(bt){bt.disabled=false;bt.textContent='Conectar com o Facebook'}};
   try{
     await carregaFb(cfg);
-    const resp=await new Promise(res=>FB.login(res,{config_id:cfg.config_id,response_type:'code',override_default_response_type:true,extras:{setup:{},featureType:'',sessionInfoVersion:'3'}}));
+    const resp=await new Promise(res=>FB.login(res,{config_id:cfg.config_id,response_type:'code',override_default_response_type:true,extras:{setup:{},sessionInfoVersion:'3'}}));
     const code=resp&&resp.authResponse&&resp.authResponse.code;
     if(!code||(sess&&sess.cancel)){volta();msg('A conexão foi cancelada. Tente de novo quando quiser.');return}
     for(let i=0;i<40&&!(sess&&sess.phone_id);i++)await new Promise(r=>setTimeout(r,150));
@@ -3464,7 +3464,7 @@ async function waFbConfig(){
 const WA_MODELOS=[['lembrete_agendamento','Olá, {{1}}! Lembrete do seu horário: {{2}} às {{3}}, serviço {{4}}, no {{5}}. Até lá!'],['pedido_aceito','Olá, {{1}}! Seu pedido de horário foi aceito: {{2}} às {{3}}, serviço {{4}}, no {{5}}. Te esperamos!'],['pedido_recusado','Olá, {{1}}! Não conseguimos confirmar o horário pedido para {{2}} às {{3}}, serviço {{4}}, no {{5}}. Escolha outro horário pelo nosso link.']];
 function blocoWaProprio(pode){
   const w=S.onl&&S.onl.wp;if(!w||S.legado)return '';
-  if(!w.conectado&&S.waFb===undefined)waFbConfig();
+  if((!w.conectado||w.reconectar)&&S.waFb===undefined)waFbConfig();
   const mod=WA_MODELOS.map(m=>`<li style="margin:6px 0"><b>Nome:</b> <code>${m[0]}</code><br><b>Texto:</b> ${esc(m[1])}</li>`).join('');
   const guia=`<details style="margin:8px 0"><summary class="muted" style="cursor:pointer">Como conectar (passo a passo)</summary><ol class="muted" style="margin:6px 0 0;padding-left:20px;max-width:620px">
   <li>Crie a conta no <b>Meta Business</b> (business.facebook.com) e, em <b>Meta for Developers</b> (developers.facebook.com), crie um app do tipo <b>Empresa</b> com o produto <b>WhatsApp</b>.</li>
@@ -3472,7 +3472,7 @@ function blocoWaProprio(pode){
   <li>Em <b>Configurações do negócio, Usuários do sistema</b>, crie um usuário do sistema, dê acesso ao app e à conta do WhatsApp e gere um <b>token permanente</b> com as permissões <i>whatsapp_business_messaging</i> e <i>whatsapp_business_management</i>.</li>
   <li>No <b>Gerenciador do WhatsApp, Modelos de mensagem</b>, crie estes 3 modelos (categoria <b>Utilidade</b>, idioma <b>Português (BR)</b>) com exatamente estes nomes e textos, e espere a aprovação da Meta:<ul style="margin:6px 0">${mod}</ul></li>
   <li>Cole aqui o ID do número e o token e toque em <b>Conectar</b>.</li></ol></details>`;
-  if(w.conectado)return `<div class="panel msg-card" style="margin-bottom:12px"><b>WhatsApp Business do salão</b><p style="margin:6px 0">Conectado${w.numero?`: <b>${esc(w.numero)}</b>`:''}${w.nome?` (${esc(w.nome)})`:''}. Os lembretes saem do número do seu salão e o Agendio <b>não cobra por mensagem</b>; a Meta cobra direto de você, conforme a tabela dela.</p>${pode?'<button type="button" class="btn ghost sm" data-act="waDesconectar">Desconectar</button>':''}${guia}</div>`;
+  if(w.conectado)return `<div class="panel msg-card" style="margin-bottom:12px"><b>WhatsApp Business do salão</b><p style="margin:6px 0">Conectado${w.numero?`: <b>${esc(w.numero)}</b>`:''}${w.nome?` (${esc(w.nome)})`:''}. Os lembretes saem do número do seu salão e o Agendio <b>não cobra por mensagem</b>; a Meta cobra direto de você, conforme a tabela dela.</p>${w.reconectar?`<p class="erro" style="display:block;margin:6px 0" role="alert"><b>Precisa reconectar.</b> O acesso ao WhatsApp venceu ou foi recusado pela Meta, e os lembretes estão parados. ${pode&&S.waFb?'Toque em <b>Reconectar com o Facebook</b>.':pode?'Cole um novo token abaixo.':'Peça para a proprietária reconectar.'}</p>${pode&&S.waFb?'<p style="margin:6px 0"><button type="button" class="btn" data-act="waFb">Reconectar com o Facebook</button><span class="erro" id="wa-fb-erro" role="alert"></span></p>':''}`:''}${pode?'<button type="button" class="btn ghost sm" data-act="waDesconectar">Desconectar</button>':''}${guia}</div>`;
   return `<div class="panel msg-card" style="margin-bottom:12px"><b>WhatsApp Business do salão</b><p class="muted" style="margin:6px 0;max-width:620px">Conecte o número do seu salão para os lembretes saírem dele (a cliente responde direto para você) e sem cobrança de mensagem do Agendio. Precisa de uma conta no WhatsApp Business da Meta e do plano com envio automático.</p>${pode&&S.waFb?`<div style="margin:10px 0"><button type="button" class="btn" data-act="waFb">Conectar com o Facebook</button><p class="muted" style="margin:6px 0 0;max-width:620px">Você entra no Facebook, escolhe ou cria sua conta do WhatsApp Business e confirma o número com um código por SMS. O Agendio cria os modelos de mensagem sozinho.</p><p class="erro" id="wa-fb-erro" role="alert"></p></div>`:''}${S.waFb?'':guia}${pode?`<details${S.waFb?'':' open'} style="margin-top:8px"><summary class="muted" style="cursor:pointer">${S.waFb?'Conexão manual (para quem já tem o token)':'Colar o ID e o token'}</summary>${S.waFb?guia:''}<form data-form="waconectar"><label for="wp-id">ID do número de telefone</label><input id="wp-id" name="phone_id" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="só números"><label for="wp-tk">Token permanente</label><input id="wp-tk" name="token" type="password" autocomplete="off" spellcheck="false" placeholder="EAAG..."><p class="erro" id="a-erro" role="alert"></p><div class="acts" style="justify-content:flex-start"><button class="btn">Conectar</button></div></form></details>`:'<p class="muted">Só a proprietária conecta.</p>'}</div>`;
 }
 function blocoMp(pode){

@@ -2,7 +2,7 @@
 // Guarda o WhatsApp Business DO SALÃO (código do número + token da Meta) para os lembretes saírem do número dele.
 // Só guarda depois de a Meta confirmar que o token funciona para aquele número. O token nunca volta para o navegador.
 const L = require('./_lib');
-const GRAPH = 'https://graph.facebook.com/v21.0';
+const GRAPH = 'https://graph.facebook.com/v25.0';
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return L.json(res, 405, { erro: 'Método não permitido.' }); }

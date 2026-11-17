@@ -4,7 +4,7 @@
 // O acesso nunca volta para o navegador. Fica desligado até existirem META_APP_ID, META_APP_SECRET e META_CONFIG_ID.
 const L = require('./_lib');
 const M = require('./_modelos');
-const GRAPH = 'https://graph.facebook.com/v21.0';
+const GRAPH = 'https://graph.facebook.com/v25.0';
 
 async function g(caminho, o = {}) {
   const r = await fetch(GRAPH + caminho, o);
@@ -38,6 +38,9 @@ module.exports = async (req, res) => {
     // 1) troca o código pelo acesso (o segredo do app fica só aqui)
     const t = await g('/oauth/access_token?' + new URLSearchParams({ client_id: app, client_secret: seg, code }).toString());
     const token = t.j && t.j.access_token;
+    // o acesso desse fluxo vale 60 dias: guardamos a validade para a rotina diária renovar (sem validade = não expira)
+    const seg_ = Number(t.j && t.j.expires_in);
+    const expira = seg_ > 0 && seg_ < 3.2e8 ? new Date(Date.now() + seg_ * 1000).toISOString() : null;
     if (!t.ok || !token) return L.json(res, 400, { erro: 'A Meta não aceitou a conexão. Tente de novo.' });
     // 2) confere se esse acesso enxerga mesmo o número informado
     const n = await g('/' + phone + '?fields=display_phone_number,verified_name', { headers: hdr(token) });
@@ -56,7 +59,7 @@ module.exports = async (req, res) => {
       if (r.ok || dup) modelos++; else avisos.push('modelo ' + m.name);
     }
     const numero = String((n.j && n.j.display_phone_number) || '').slice(0, 30), nome = String((n.j && n.j.verified_name) || '').slice(0, 80);
-    await L.rpcServico('wa_conta_gravar', { p_tenant: tenant, p_phone: phone, p_token: token, p_numero: numero, p_nome: nome, p_waba: waba });
+    await L.rpcServico('wa_conta_gravar', { p_tenant: tenant, p_phone: phone, p_token: token, p_numero: numero, p_nome: nome, p_waba: waba, p_expira: expira });
     return L.json(res, 200, { ok: true, conectado: true, numero, nome, modelos_criados: modelos, avisos });
   } catch (e) {
     console.error('wa-signup:', e.message);
