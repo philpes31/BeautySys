@@ -73,13 +73,17 @@
       "destination": "/agendar.html"
     },
     {
+      "source": "/c/:slug",
+      "destination": "/cliente.html"
+    },
+    {
       "source": "/divulgacao",
       "destination": "/divulgacao.html"
     }
   ],
   "headers": [
     {
-      "source": "/((?!a/|agendar\\.html).*)",
+      "source": "/((?!a/|agendar\\.html|c/|cliente\\.html).*)",
       "headers": [
         {
           "key": "X-Content-Type-Options",
@@ -108,7 +112,7 @@
       ]
     },
     {
-      "source": "/(a/.*|agendar\\.html)",
+      "source": "/(a/.*|agendar\\.html|c/.*|cliente\\.html)",
       "headers": [
         {
           "key": "X-Content-Type-Options",

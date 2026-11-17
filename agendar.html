@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>Agendar horário</title>
-<meta name="theme-color" content="#f3f6f2">
+<meta name="theme-color" content="#f1eee6">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=DM+Sans:opsz,wght@9..40,400..700&display=swap">
 <style>
@@ -76,6 +76,30 @@ input:focus,textarea:focus,button:focus-visible{outline:3px solid color-mix(in s
 .btn2{display:inline-block;font:inherit;font-weight:700;text-decoration:none;color:var(--ac);border:1.5px solid var(--ac);border-radius:12px;padding:12px 18px;min-height:48px;background:transparent;cursor:pointer;margin:6px 4px 0}
 .btn1{display:inline-block;font:inherit;font-weight:700;text-decoration:none;color:var(--ac-t);background:var(--ac);border:0;border-radius:12px;padding:13px 20px;min-height:48px;cursor:pointer;margin:6px 4px 0}
 .fim h2{font-size:1.4rem}
+/* ===== Ateliê: mesmo visual do app (papel, filetes finos, serifa). O destaque continua sendo a cor do salão (--ac). ===== */
+:root{--bg:#f1eee6;--card:#fbfaf6;--tx:#1a2420;--mu:#5b655f;--ln:#d8d2c4}
+body{background:var(--bg)}
+main{max-width:600px}
+header{padding:34px 0 14px;border-bottom:1px solid var(--ln);position:relative;margin-bottom:6px}
+header::after{content:"";position:absolute;left:0;bottom:-1px;width:56px;height:2px;background:var(--ac)}
+h1{font-weight:400;font-size:clamp(2.1rem,7vw,2.8rem);letter-spacing:-.03em;font-variation-settings:'opsz' 144,'SOFT' 50}
+.logo{border-radius:10px}
+.sub{font-size:.98rem}
+.aviso{border-left:0;border:1px solid var(--ln);border-radius:10px;background:var(--card)}
+section{margin-top:30px}
+h2{display:flex;align-items:center;gap:12px;font-weight:400;font-style:italic;font-size:1.3rem;letter-spacing:-.01em;font-variation-settings:'opsz' 72,'SOFT' 50}
+h2::after{content:"";flex:1;height:1px;background:var(--ln)}
+.fim h2{display:block;font-style:normal;font-size:1.7rem}.fim h2::after{display:none}
+.op,.chip,.resumo,.dica,.cal,.espera-btn{border-width:1px;border-radius:10px}
+.op:hover{border-color:var(--ac)}
+.op[aria-pressed=true]{background:color-mix(in srgb,var(--ac) 7%,var(--card));box-shadow:none;border-color:var(--ac)}
+.chip[aria-pressed=true]{box-shadow:none}
+.cal{border-radius:12px}
+.dia{border-radius:8px}.dia[aria-pressed=true]{box-shadow:none}
+input,textarea{border-width:1px;border-radius:8px;background:#fffefb}
+.enviar,.btn1,.btn2{border-radius:10px}
+.btn2{border-width:1px}
+.preco{font-family:var(--serif);font-size:1.05rem}
 [hidden]{display:none!important}
 </style>
 </head>

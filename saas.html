@@ -528,6 +528,20 @@ dialog::backdrop{background:rgba(18,48,42,.55)}
   dialog{border-radius:20px 20px 0 0}
   dialog::before{background:var(--line)}
 }
+
+/* ---- Fotos antes e depois ---- */
+.fotos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:10px}
+.foto{position:relative;display:block;padding:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface);cursor:pointer;aspect-ratio:3/4;font:inherit;text-align:left}
+.foto img{width:100%;height:100%;object-fit:cover;display:block}
+.foto .tag{position:absolute;left:6px;top:6px;background:rgba(251,250,246,.94)}
+.foto small{position:absolute;left:0;right:0;bottom:0;padding:14px 8px 5px;color:#fff;font-size:11.5px;background:linear-gradient(transparent,rgba(18,48,42,.78))}
+.foto:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.foto-dlg{width:min(92vw,720px)}
+.foto-par{display:grid;grid-template-columns:1fr;gap:10px}
+.foto-par.dois{grid-template-columns:1fr 1fr}
+.foto-fig{margin:0}
+.foto-fig img{width:100%;max-height:62vh;object-fit:contain;border-radius:8px;background:#e8e3d7;display:block}
+.foto-fig figcaption{font-size:12.5px;color:var(--muted);margin-top:5px}
 </style>
 </head>
 <body>
@@ -677,7 +691,7 @@ async function iniciar(){
   try{S.canal=sb.channel('salao-mudancas').on('postgres_changes',{event:'*',schema:'public'},agendar).subscribe()}catch(_){}
 }
 function parar(){
-  S.iniciado=false;S.got=false;S.push=null;S.anams=[];S.contas=[];S.promos=[];S.cb={ativo:false,pct:5,desde:''};S.pvs=[];S.vendas=[];S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
+  S.iniciado=false;S.got=false;S.push=null;S.anams=[];S.fotos=null;S.fotosUrl=null;S.fotosTs=null;S.semFotos=false;S.contas=[];S.promos=[];S.cb={ativo:false,pct:5,desde:''};S.pvs=[];S.vendas=[];S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
   if(S.canal&&sb){try{sb.removeChannel(S.canal)}catch(_){}}
   S.canal=null;
 }
@@ -2175,7 +2189,7 @@ function detalhe(){
     <div class="item-acts"><button class="btn ghost sm" data-act="editCliente" data-id="${esc(c.id)}">Editar</button>${!S.legado&&NV('clientes')==='escrita'&&c.nome!=='Cliente removida'?`<button class="btn ghost sm" data-act="anonCliente" data-id="${esc(c.id)}">Apagar dados pessoais</button>`:''}<button class="btn danger sm" data-act="delCliente" data-id="${esc(c.id)}">Excluir</button></div></div>
   <div class="stats"><div class="stat"><b>${a.length}</b><span>atendimentos</span></div><div class="stat"><b>${brl(soma(a))}</b><span>total gasto</span></div>${a.filter(aberto).length?`<div class="stat"><b>${brl(soma(a.filter(aberto)))}</b><span>a receber (${a.filter(aberto).length})</span></div>`:''}</div>
   ${(()=>{const u=a.find(x=>x.obs);return u?`<div class="panel"><b>Última fórmula / observação</b> <span class="muted num">${fd(u.data)} · ${esc(procTxt(u))}</span><p class="obs" style="margin:6px 0 0">${esc(u.obs)}</p></div>`:''})()}
-  ${blocoFidelidade(c)}${blocoPacotes(c)}${blocoCashback(c)}${blocoAnamnese(c)}
+  ${blocoFidelidade(c)}${blocoPacotes(c)}${blocoCashback(c)}${blocoAnamnese(c)}${blocoAreaCliente(c)}${blocoFotos(c)}
   <div class="bar"><button class="btn" data-act="novoAtend" data-cliente="${esc(c.id)}">Novo atendimento</button></div>
   <h3>Histórico</h3>`+(a.length?'<div class="list">'+a.map(x=>itemAtend(x,false)).join('')+'</div>':'<p class="muted">Nenhum procedimento registrado para esta cliente.</p>');
 }
@@ -2194,6 +2208,140 @@ function blocoAnamnese(c){
     ${pode?`<div class="row-actions" style="margin-top:6px"><button type="button" class="btn ghost sm" data-act="anExcluir" data-id="${esc(a.id)}">Excluir ficha</button></div>`:''}</div></div>`};
   const alerta=L[0]&&anSims(L[0]).length?'<span class="tag late" role="note">Atenção</span> ':'';
   return `<h3>${alerta}Anamnese e termo</h3>`+(L.length?'<div class="list">'+L.map(it).join('')+'</div>':'<p class="muted">Nenhuma ficha de anamnese ainda.</p>')+(pode?`<div class="bar"><button class="btn ghost" data-act="anNova" data-id="${esc(c.id)}">Nova ficha de anamnese</button></div>`:'');
+}
+/* ---------- Área da cliente ---------- */
+const areaLink=(slug,tok)=>location.origin+'/c/'+slug+'?k='+tok;
+function blocoAreaCliente(c){
+  if(S.legado||NV('clientes')!=='escrita'||!(S.onl&&S.onl.on&&S.onl.slug))return '';
+  const oc=(S.agCfg&&S.agCfg.online)||{};
+  if(oc.area_cliente!==true)return `<h3>Área da cliente</h3><p class="muted">Desligada. Para a cliente acompanhar horários, cashback e pacotes pelo celular, ligue em Salão &gt; Agendamento online.</p>`;
+  return `<h3>Área da cliente</h3><div class="panel"><p class="muted" style="margin:0 0 10px">Envie o link pessoal desta cliente: ela vê os próximos horários, cashback, pacotes e fidelidade, e remarca sozinha. O link é só dela.</p>
+  <div class="row-actions"><button type="button" class="btn sm" data-act="areaEnviar" data-id="${esc(c.id)}">Enviar link</button><button type="button" class="btn ghost sm" data-act="areaRenovar" data-id="${esc(c.id)}">Gerar novo link</button></div></div>`;
+}
+async function areaToken(cid,renovar){
+  const r=await sb.rpc(renovar?'area_renovar_link':'area_link',{p_cliente:cid});
+  if(r.error){if(r.error.code==='PGRST202'||r.error.code==='42883')throw erroUi('Rode o arquivo 50-area-cliente.sql (ou o agendio-TUDO.sql) no Supabase.');throw r.error}
+  return String(r.data||'');
+}
+async function areaEnviar(cid,renovar){
+  const c=cli(cid);if(!c)return;
+  const tok=await areaToken(cid,renovar),slug=S.onl&&S.onl.slug;
+  if(!/^[a-f0-9]{32}$/.test(tok)||!slug)throw erroUi('Não foi possível gerar o link agora.');
+  const url=areaLink(slug,tok),nome=String(c.nome||'').split(' ')[0],sal=(S.ctx&&S.ctx.tenant&&S.ctx.tenant.nome)||'nosso salão';
+  const txt=`Oi, ${nome}! Este é o seu espaço no ${sal}: veja seus horários, cashback e pacotes e remarque quando precisar. O link é só seu: ${url}`;
+  const wa=(c.telefone?zap(c.telefone)+'?text=':'https://wa.me/?text=')+encodeURIComponent(txt);
+  abrir(`<h2>Link de ${esc(c.nome)}</h2><p class="muted">${renovar?'Novo link gerado. O link antigo parou de funcionar. ':''}Envie esta mensagem para a cliente. O link é pessoal: quem tiver ele vê os dados dela.</p><textarea readonly rows="5" id="cv-txt" style="width:100%">${esc(txt)}</textarea>
+  <div class="acts"><button type="button" class="btn ghost" data-act="copiaConvite">Copiar mensagem</button><a class="btn" target="_blank" rel="noopener" href="${esc(wa)}">Enviar por WhatsApp</a><button type="button" class="btn ghost" data-act="fechar">Fechar</button></div>`);
+}
+/* ---------- Fotos antes e depois ---------- */
+const FT_TIPO={antes:'Antes',depois:'Depois',outra:'Outra'};
+const FT_SEM='Rode o arquivo 49-fotos.sql (ou o agendio-TUDO.sql) no Supabase para liberar as fotos.';
+function fotosLista(cid){return ((S.fotos||{})[cid]||[]).slice()}
+function fotoAcha(id){for(const k in (S.fotos||{})){const f=S.fotos[k].find(x=>x.id===id);if(f)return f}return null}
+function fotoUrl(f){return (S.fotosUrl||{})[f.caminho]||''}
+async function fotosCarrega(cid,forcar){
+  if(S.legado||!sb||S.semFotos)return;
+  S.fotos=S.fotos||{};S.fotosUrl=S.fotosUrl||{};S.fotosTs=S.fotosTs||{};
+  if(S.fotos[cid]&&!forcar&&Date.now()-(S.fotosTs[cid]||0)<40*60*1000)return;
+  const r=await sb.from('fotos_cliente').select('*').eq('cliente_id',cid).range(0,999);
+  if(r.error){if(/fotos_cliente|relation|does not exist|42P01|PGRST205/i.test((r.error.code||'')+(r.error.message||''))){S.semFotos=true;fotosPinta(cid);return}throw r.error}
+  const L=(r.data||[]).map(x=>({id:x.id,clienteId:x.cliente_id,tipo:x.tipo,caminho:x.caminho,legenda:x.legenda||'',data:x.tirada_em,criado:x.criado_em||''}));
+  L.sort((a,b)=>String(b.data).localeCompare(String(a.data))||String(b.criado).localeCompare(String(a.criado)));
+  S.fotos[cid]=L;S.fotosTs[cid]=Date.now();
+  if(L.length){const u=await sb.storage.from('fotos').createSignedUrls(L.map(x=>x.caminho),3600);(u.data||[]).forEach(y=>{if(y&&y.signedUrl)S.fotosUrl[y.path||'']=y.signedUrl})}
+}
+function fotosHtml(cid){
+  if(S.semFotos)return '';
+  const L=(S.fotos||{})[cid],pode=!S.legado&&NV('clientes')==='escrita';
+  const cab='<h3>Fotos antes e depois</h3>';
+  if(!L)return cab+'<p class="muted">Carregando as fotos…</p>';
+  const it=f=>`<button type="button" class="foto" data-act="fotoVer" data-id="${esc(f.id)}" aria-label="Abrir foto ${esc(FT_TIPO[f.tipo])} de ${esc(fd(f.data))}"><img src="${esc(fotoUrl(f))}" alt="" loading="lazy"><span class="tag ${f.tipo==='depois'?'ok':''}">${esc(FT_TIPO[f.tipo])}</span><small>${esc(fd(f.data))}</small></button>`;
+  return cab+(L.length?`<div class="fotos-grid">${L.map(it).join('')}</div>`:'<p class="muted">Nenhuma foto ainda. Tire a foto de antes e a de depois para mostrar a evolução da cliente.</p>')
+    +(pode?`<div class="bar" style="margin-top:12px"><button type="button" class="btn ghost" data-act="fotoNova" data-id="${esc(cid)}">Adicionar fotos</button></div>`:'');
+}
+function blocoFotos(c){
+  if(S.semFotos)return '';
+  setTimeout(()=>{fotosCarrega(c.id).then(()=>fotosPinta(c.id)).catch(()=>{const e=document.getElementById('fotos-bloco');if(e)e.innerHTML='<h3>Fotos antes e depois</h3><p class="muted">Não foi possível carregar as fotos agora.</p>'})},0);
+  return `<div id="fotos-bloco" data-cid="${esc(c.id)}">${fotosHtml(c.id)}</div>`;
+}
+function fotosPinta(cid){const e=document.getElementById('fotos-bloco');if(e&&e.dataset.cid===cid)e.innerHTML=fotosHtml(cid)}
+function formFoto(cid){
+  const c=cli(cid);if(!c)return;
+  abrir(`<h2>Fotos de ${esc(c.nome)}</h2><form data-form="foto" data-id="${esc(cid)}">
+  <div class="grid2"><div><label for="ft-t">Tipo</label><select id="ft-t" name="tipo"><option value="antes">Antes</option><option value="depois">Depois</option><option value="outra">Outra</option></select></div>
+  <div><label for="ft-d">Data</label><input id="ft-d" name="data" type="date" value="${hojeISO()}" max="${hojeISO()}"></div></div>
+  <label for="ft-l">Legenda (opcional)</label><input id="ft-l" name="legenda" maxlength="120" placeholder="Ex.: Raiz, coloração 7.1">
+  <label for="ft-arq">Fotos</label><input id="ft-arq" type="file" accept="image/*" multiple>
+  <p class="muted" style="margin:4px 0 0">Até 10 fotos por vez. Elas são reduzidas e guardadas em área privada do salão.</p>
+  <label class="chk"><input type="checkbox" name="auto"> A cliente autorizou guardar estas fotos</label>
+  <p class="erro" id="a-erro" role="alert"></p><div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Enviar</button></div></form>`);
+}
+async function fotoReduz(file){
+  if(!/^image\//.test(file.type||''))throw erroUi('Escolha um arquivo de imagem (JPG, PNG ou WebP).');
+  if(file.size>30*1024*1024)throw erroUi('Esta foto é muito grande (máximo 30 MB).');
+  let bmp;try{bmp=await createImageBitmap(file,{imageOrientation:'from-image'})}catch(_){try{bmp=await createImageBitmap(file)}catch(__){throw erroUi('Não foi possível ler esta imagem. Use JPG, PNG ou WebP.')}}
+  const e=Math.min(1,1600/Math.max(bmp.width,bmp.height)),w=Math.max(1,Math.round(bmp.width*e)),h=Math.max(1,Math.round(bmp.height*e));
+  const cv=document.createElement('canvas');cv.width=w;cv.height=h;const x=cv.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,w,h);x.drawImage(bmp,0,0,w,h);if(bmp.close)bmp.close();
+  let q=.82,b=await new Promise(r=>cv.toBlob(r,'image/jpeg',q));
+  while(b&&b.size>2.8*1024*1024&&q>.4){q-=.15;b=await new Promise(r=>cv.toBlob(r,'image/jpeg',q))}
+  if(!b)throw erroUi('Não foi possível preparar a foto.');
+  return b;
+}
+async function salvarFoto(cid,d){
+  const inp=document.getElementById('ft-arq'),fs=inp&&inp.files?Array.from(inp.files):[];
+  if(!fs.length)throw erroUi('Escolha pelo menos uma foto.');
+  if(fs.length>10)throw erroUi('Envie no máximo 10 fotos por vez.');
+  if(d.auto!=='on')throw erroUi('Confirme que a cliente autorizou guardar as fotos.');
+  const tipo=['antes','depois','outra'].includes(d.tipo)?d.tipo:'outra',tid=S.ctx&&S.ctx.tenant&&S.ctx.tenant.id;
+  if(!tid)throw erroUi('Não foi possível identificar o salão. Entre de novo.');
+  const bk=sb.storage.from('fotos');let ok=0;
+  for(const f of fs){
+    const b=await fotoReduz(f),cam=tid+'/'+cid+'/'+novoId().replace(/-/g,'')+'.jpg';
+    const up=await bk.upload(cam,b,{contentType:'image/jpeg',upsert:false});
+    if(up.error){if(/bucket/i.test(up.error.message||''))throw erroUi(FT_SEM);throw up.error}
+    const r=await sb.rpc('foto_registrar',{p_cliente:cid,p_tipo:tipo,p_caminho:cam,p_legenda:String(d.legenda||'').trim(),p_data:d.data||null});
+    if(r.error){await bk.remove([cam]);if(r.error.code==='PGRST202'||r.error.code==='42883')throw erroUi(FT_SEM);throw r.error}
+    ok++;
+  }
+  await fotosCarrega(cid,true);fotosPinta(cid);toast(ok===1?'Foto salva.':ok+' fotos salvas.');
+}
+function fotoPar(f){
+  const L=fotosLista(f.clienteId);
+  if(f.tipo==='antes'){const p=L.filter(x=>x.tipo==='depois'&&String(x.data)>=String(f.data)).sort((a,b)=>String(a.data).localeCompare(String(b.data)))[0];return p?{antes:f,depois:p}:null}
+  if(f.tipo==='depois'){const p=L.filter(x=>x.tipo==='antes'&&String(x.data)<=String(f.data)).sort((a,b)=>String(b.data).localeCompare(String(a.data)))[0];return p?{antes:p,depois:f}:null}
+  return null;
+}
+function verFoto(id){
+  const f=fotoAcha(id);if(!f)return;const c=cli(f.clienteId),pode=!S.legado&&NV('clientes')==='escrita',par=fotoPar(f);
+  const im=(x,t)=>`<figure class="foto-fig"><img src="${esc(fotoUrl(x))}" alt="Foto ${esc(FT_TIPO[x.tipo])} de ${esc(c?c.nome:'cliente')}"><figcaption>${esc(t||FT_TIPO[x.tipo])} · ${esc(fd(x.data))}${x.legenda?' · '+esc(x.legenda):''}</figcaption></figure>`;
+  abrir(`<div class="foto-dlg"><h2>${esc(c?c.nome:'Foto')}</h2>
+  <div class="foto-par ${par?'dois':''}">${par?im(par.antes,'Antes')+im(par.depois,'Depois'):im(f)}</div>
+  <div class="row-actions" style="margin:12px 0"><button type="button" class="btn ghost sm" data-act="fotoBaixar" data-id="${esc(f.id)}">Baixar foto</button>${par?`<button type="button" class="btn sm" data-act="fotoComp" data-id="${esc(f.id)}">Compartilhar antes e depois</button>`:''}${pode?`<button type="button" class="btn ghost sm" data-act="fotoExcluir" data-id="${esc(f.id)}">Excluir</button>`:''}</div>
+  ${pode?`<form data-form="fotoedit" data-id="${esc(f.id)}"><div class="grid2"><div><label for="fe-t">Tipo</label><select id="fe-t" name="tipo">${Object.keys(FT_TIPO).map(k=>`<option value="${k}" ${k===f.tipo?'selected':''}>${FT_TIPO[k]}</option>`).join('')}</select></div><div><label for="fe-l">Legenda</label><input id="fe-l" name="legenda" maxlength="120" value="${esc(f.legenda)}"></div></div>
+  <p class="erro" id="a-erro" role="alert"></p><div class="acts"><button type="button" class="btn ghost" data-act="fechar">Fechar</button><button class="btn">Salvar</button></div></form>`:'<div class="acts"><button type="button" class="btn ghost" data-act="fechar">Fechar</button></div>'}</div>`);
+}
+async function salvarFotoEd(id,d){
+  const f=fotoAcha(id);if(!f)return;
+  const r=await sb.rpc('foto_atualizar',{p_id:id,p_tipo:['antes','depois','outra'].includes(d.tipo)?d.tipo:'outra',p_legenda:String(d.legenda||'').trim()});
+  if(r.error)throw r.error;
+  await fotosCarrega(f.clienteId,true);fotosPinta(f.clienteId);toast('Foto atualizada.');
+}
+async function fotoBlob(f){const r=await sb.storage.from('fotos').download(f.caminho);if(r.error||!r.data)throw erroUi('Não foi possível baixar a foto agora.');return r.data}
+function baixaBlob(b,nome){const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=nome;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
+async function fotoBaixar(id){const f=fotoAcha(id);if(!f)return;baixaBlob(await fotoBlob(f),'foto-'+f.tipo+'-'+f.data+'.jpg')}
+async function fotoComparativo(id){
+  const f=fotoAcha(id),par=f&&fotoPar(f);if(!par)return;
+  const [ba,bd]=await Promise.all([fotoBlob(par.antes),fotoBlob(par.depois)]);
+  const [ia,id2]=await Promise.all([createImageBitmap(ba),createImageBitmap(bd)]);
+  const H=1200,wa=Math.round(ia.width*H/ia.height),wd=Math.round(id2.width*H/id2.height),G=16,cv=document.createElement('canvas');
+  cv.width=wa+wd+G;cv.height=H;const x=cv.getContext('2d');x.fillStyle='#fbfaf6';x.fillRect(0,0,cv.width,H);
+  x.drawImage(ia,0,0,wa,H);x.drawImage(id2,wa+G,0,wd,H);
+  const tag=(t,px)=>{x.font='600 34px DM Sans, Arial, sans-serif';const w=x.measureText(t).width+44;x.fillStyle='rgba(18,48,42,.82)';x.beginPath();x.roundRect?x.roundRect(px+24,H-92,w,56,28):x.rect(px+24,H-92,w,56);x.fill();x.fillStyle='#fff';x.textBaseline='middle';x.fillText(t,px+46,H-63)};
+  tag('Antes',0);tag('Depois',wa+G);
+  const b=await new Promise(r=>cv.toBlob(r,'image/jpeg',.9));if(!b)throw erroUi('Não foi possível montar a imagem.');
+  const c=cli(f.clienteId),nome='antes-e-depois-'+String(c?c.nome:'cliente').toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')+'.jpg',arq=new File([b],nome,{type:'image/jpeg'});
+  if(navigator.canShare&&navigator.canShare({files:[arq]})){try{await navigator.share({files:[arq]});return}catch(e){if(e&&e.name==='AbortError')return}}
+  baixaBlob(b,nome);toast('Imagem salva. Agora é só postar.');
 }
 function formAnamnese(cid){
   const c=cli(cid);if(!c)return;
@@ -3276,6 +3424,8 @@ function blocoOnline(pode){
   <p class="muted" style="margin:6px 0 0">A cliente recebe o QR code e o código copia e cola já com o valor do sinal. O dinheiro cai direto na sua conta, sem taxa do Agendio. Depois de pagar, ela avisa você pelo WhatsApp.</p></div>
   <p class="muted" style="margin:6px 0 0" id="sinal-mp-nota" ${sgModo==='mp'?'':'hidden'}>No Mercado Pago, o horário fica reservado só durante o prazo; se a cliente não pagar, ele é liberado sozinho. O dinheiro cai direto na conta do seu Mercado Pago.</p></div>
   <label class="chk"><input type="checkbox" name="cliente_pode" ${oc.cliente_pode===false?'':'checked'} ${pode?'':'disabled'}> A cliente pode remarcar ou cancelar pelo link do lembrete</label>
+  <label class="chk"><input type="checkbox" name="area_cliente" ${oc.area_cliente===true?'checked':''} ${pode?'':'disabled'}> Ligar a área da cliente</label>
+  <p class="muted" style="margin:2px 0 8px">Cada cliente recebe um link pessoal (você envia pelo WhatsApp, na ficha dela) para ver os próximos horários, cashback, pacotes e fidelidade, e remarcar sozinha. Desligando aqui, todos os links param de mostrar dados na hora.</p>
   <label for="on-av">Recado extra para a cliente, depois do pedido (opcional)</label><textarea id="on-av" name="aviso" rows="3" maxlength="400" ${pode?'':'disabled'} placeholder="Ex.: Chegue 10 minutos antes. Cancelamentos até 24 h antes.">${esc(oc.aviso||'')}</textarea>
   <p class="erro" id="a-erro" role="alert"></p>${pode?'<div class="acts" style="justify-content:flex-start"><button class="btn">Salvar</button></div>':''}</form><div id="mp-bloco" ${sgModo==='mp'?'':'hidden'}>${blocoMp(pode)}</div>`;
 }
@@ -3354,7 +3504,7 @@ async function salvarOnline(d){
   if(sm==='pix'&&!pixCfg.chave)throw erroUi('Informe a sua chave Pix para gerar o QR code do sinal.');
   if(sm==='pix'&&!pixCfg.nome){const e=$('on-pn');if(e){e.focus();e.scrollIntoView({block:'center'})}throw erroUi('Falta preencher o campo "Nome que aparece no Pix" (logo acima da caixa de recado). Pode ser o seu nome ou o do salão.')}
   if(sm==='pix'&&!pixCfg.cidade){const e=$('on-pd');if(e){e.focus();e.scrollIntoView({block:'center'})}throw erroUi('Falta preencher o campo "Cidade" (logo acima da caixa de recado). Exemplo: Blumenau.')}
-  const cfg=Object.assign({},S.agCfg,{online:{passo:Number(d.passo)||60,dias_max:Math.min(120,Math.max(1,Math.round(Number(d.dias)||30))),antecedencia_h:Math.min(72,Math.max(0,Math.round(Number(d.ant)||0))),aviso:String(d.aviso||'').trim().slice(0,400),cliente_pode:d.cliente_pode==='on',remarcar_h:Math.min(72,Math.max(1,Math.round(Number(d.remarcar_h)||24))),sinal:{modo:sm,modo_antes:sm0,tipo:st,valor:sv,expira_min:Math.min(240,Math.max(10,Math.round(Number(d.sinal_exp)||30)))},pix:pixCfg}});
+  const cfg=Object.assign({},S.agCfg,{online:{passo:Number(d.passo)||60,dias_max:Math.min(120,Math.max(1,Math.round(Number(d.dias)||30))),antecedencia_h:Math.min(72,Math.max(0,Math.round(Number(d.ant)||0))),aviso:String(d.aviso||'').trim().slice(0,400),cliente_pode:d.cliente_pode==='on',area_cliente:d.area_cliente==='on',remarcar_h:Math.min(72,Math.max(1,Math.round(Number(d.remarcar_h)||24))),sinal:{modo:sm,modo_antes:sm0,tipo:st,valor:sv,expira_min:Math.min(240,Math.max(10,Math.round(Number(d.sinal_exp)||30)))},pix:pixCfg}});
   const r=await sb.from('tenants').update({slug:slug||null,online_ativo:on,agenda_config:cfg}).eq('id',S.ctx.tenant.id);
   if(r.error){
     if(r.error.code==='23505')throw erroUi('Esse endereço já está em uso. Escolha outro.');
@@ -4057,7 +4207,7 @@ document.addEventListener('click',e=>{
     pubHora:()=>{S.pb.hora=a.dataset.hora;S.pb.prof=a.dataset.prof;render()},pubNovo:()=>{S.pb={sv:'',pf:'',dt:'',slots:null,hora:'',prof:'',nome:'',tel:'',obs:'',ok:null};render()},pubRecarrega:()=>carregarPublico(),linkWpp:()=>linkWpp(),linkQr:()=>linkQr(),qrImprime:()=>imprimeQr(),copiaLink:()=>{try{navigator.clipboard.writeText(a.dataset.link).then(()=>toast('Link copiado.'),()=>toast('Copie o link manualmente.',true))}catch(_){toast('Copie o link manualmente.',true)}},
     sinalOk:()=>sb.rpc('pedido_sinal_confirmar',{p_id:id}).then(async r=>{if(r.error)throw r.error;S.sig='';await recarregar();toast('Sinal marcado como recebido.')}).catch(x=>toast(falha(x),true)),aceitaPedido:()=>responderPedido(id,true).catch(x=>toast(falha(x),true)),recusaPedido:()=>{const go=()=>responderPedido(id,false).catch(x=>toast(falha(x),true));if(a.dataset.sinal)confirmar('Recusar pedido com sinal pago?','A cliente já pagou o sinal. Você precisa devolver o valor a ela (pelo Pix ou pelo app do Mercado Pago).','Recusar',go);else go()},
     waFb:()=>conectarFb(),
-    anNova:()=>formAnamnese(id),anLimpa:()=>window.anLimpaSig(),anExcluir:()=>confirmar('Excluir esta ficha?','A ficha de anamnese e a assinatura são apagadas definitivamente.','Excluir',async()=>{const r=await sb.rpc('anamnese_excluir',{p_id:id});if(r.error)throw r.error;if(!r.data||r.data.ok!==true)throw erroUi((r.data&&r.data.erro)||'Não foi possível excluir.');await recarregar();toast('Ficha excluída.')}),
+    areaEnviar:()=>areaEnviar(id,false).catch(falha),areaRenovar:()=>confirmar('Gerar novo link?','O link que a cliente já recebeu deixa de funcionar. Você terá de enviar o novo link para ela.','Gerar novo link',async()=>{await areaEnviar(id,true);throw Object.assign(new Error('mantem'),{mantem:true})}),fotoNova:()=>formFoto(id),fotoVer:()=>verFoto(id),fotoBaixar:()=>fotoBaixar(id).catch(falha),fotoComp:()=>fotoComparativo(id).catch(falha),fotoExcluir:()=>confirmar('Excluir esta foto?','A foto é apagada definitivamente do armazenamento do salão.','Excluir',async()=>{const f=fotoAcha(id),cid=f&&f.clienteId;const r=await sb.rpc('foto_excluir',{p_id:id});if(r.error)throw r.error;if(r.data)await sb.storage.from('fotos').remove([r.data]);if(cid){await fotosCarrega(cid,true);fotosPinta(cid)}toast('Foto excluída.')}),anNova:()=>formAnamnese(id),anLimpa:()=>window.anLimpaSig(),anExcluir:()=>confirmar('Excluir esta ficha?','A ficha de anamnese e a assinatura são apagadas definitivamente.','Excluir',async()=>{const r=await sb.rpc('anamnese_excluir',{p_id:id});if(r.error)throw r.error;if(!r.data||r.data.ok!==true)throw erroUi((r.data&&r.data.erro)||'Não foi possível excluir.');await recarregar();toast('Ficha excluída.')}),
     pvCat:()=>{S.pvCat=id;render()},vdAba:()=>{S.vdAba=id;render()},vdNova:()=>formVenda(),vdMais:()=>{S.vdLim=(S.vdLim||60)+60;render()},vdVer:()=>vdVer(id).catch(x=>toast(falha(x),true)),pvNovo:()=>formProdutoVenda(),pvEdit:()=>formProdutoVenda(id),pvAjusta:()=>formAjustePv(id),
     pvExcluir:()=>{const p=(S.pvs||[]).find(x=>x.id===id);if(p)confirmar('Excluir '+p.nome+'?','O produto sai da lista. As vendas antigas continuam no histórico.','Excluir',async()=>{await vdChama('pv_excluir',{p_id:id});await recarregar();toast('Produto excluído.')})},
     periodoPagar:()=>periodoPagar(Number(id)).catch(x=>toast(falha(x),true)),dpAba:()=>{S.dpAba=id;render()},fxSem:()=>{S.fxSem=Number(id);render()},cpNova:()=>formConta(),cpEdit:()=>formConta(id),cpPagar:()=>formContaPaga(id),cpExcluir:()=>confirmar('Excluir esta conta?','Ela deixa de aparecer nas contas a pagar.',async()=>{await cpChama('conta_excluir',{p_id:id});await recarregar();toast('Conta excluída.')}),instalarNao:()=>{LS.set('salao_inst_ok','1');render()},pushLigar:()=>pushLigar().catch(x=>toast(falha(x),true)),pushDesliga:()=>pushDesliga().catch(x=>toast(falha(x),true)),pushTeste:()=>pushTeste().catch(x=>toast(falha(x),true)),pmAba:()=>{S.pmAba=id;render()},pmNovo:()=>formPromo(),pmEdit:()=>formPromo(id),pmAlterna:()=>pmAlterna(id).catch(x=>toast(falha(x),true)),pmExcluir:()=>confirmar('Excluir este cupom?','O cupom deixa de existir. As vendas já feitas não mudam.',async()=>{await vdChama('promo_excluir',{p_id:id});await recarregar();toast('Cupom excluído.')}),cbConfig:()=>formCashback(),cbVer:()=>cbVer(id).catch(x=>toast(falha(x),true)),
@@ -4173,6 +4323,8 @@ $('dlg').addEventListener('submit',async e=>{
     else if(k==='fidelidade')await salvarFid(dados);
     else if(k==='vale')await salvarVale(dados);
     else if(k==='anamnese')await salvarAnamnese(id,dados);
+    else if(k==='foto')await salvarFoto(id,dados);
+    else if(k==='fotoedit')await salvarFotoEd(id,dados);
     else if(k==='conta')await salvarConta(id,dados);
     else if(k==='contapaga')await salvarContaPaga(id,dados);
     else if(k==='promo')await salvarPromo(id,dados);
@@ -4196,7 +4348,7 @@ $('dlg').addEventListener('submit',async e=>{
     else if(k==='exclsalao')await excluirSalao(dados.nome);
     else if(k==='plsalao'){try{await salvarNovoSalao(dados)}catch(x){if(x&&x.mantem)return;throw x}}
     else if(k==='meta'){LS.set('salao_meta',String(din(dados.valor)));toast('Meta salva.');render()}
-    else if(k==='confirmar')await S.conf();
+    else if(k==='confirmar'){try{await S.conf()}catch(x){if(x&&x.mantem)return;throw x}}
     $('dlg').close();
   }catch(err){falha(err)}
   finally{S.busy=false;bts.forEach(b=>{b.disabled=false})}
