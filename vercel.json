@@ -77,6 +77,10 @@
       "destination": "/cliente.html"
     },
     {
+      "source": "/privacidade",
+      "destination": "/privacidade.html"
+    },
+    {
       "source": "/divulgacao",
       "destination": "/divulgacao.html"
     }
