@@ -691,7 +691,7 @@ async function iniciar(){
   try{S.canal=sb.channel('salao-mudancas').on('postgres_changes',{event:'*',schema:'public'},agendar).subscribe()}catch(_){}
 }
 function parar(){
-  S.iniciado=false;S.got=false;S.push=null;S.anams=[];S.fotos=null;S.fotosUrl=null;S.fotosTs=null;S.semFotos=false;S.contas=[];S.promos=[];S.cb={ativo:false,pct:5,desde:''};S.pvs=[];S.vendas=[];S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
+  S.iniciado=false;S.got=false;S.push=null;S.anams=[];S.fotos=null;S.fotosUrl=null;S.fotosTs=null;S.semFotos=false;S.emCfg=undefined;S.contas=[];S.promos=[];S.cb={ativo:false,pct:5,desde:''};S.pvs=[];S.vendas=[];S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
   if(S.canal&&sb){try{sb.removeChannel(S.canal)}catch(_){}}
   S.canal=null;
 }
@@ -1587,10 +1587,27 @@ function blocoAssinatura(){
   ${A.planos.length>1?`<h4 style="margin:14px 0 6px;font-size:14px">Comparar planos</h4>${tabelaPlanos(A.planos,(A.planos.find(p=>pl&&p.nome===pl.nome)||{}).id)}`:''}
   ${outros.length?`<h4 style="margin:14px 0 6px;font-size:14px">Outros planos</h4><div class="list">${outros.map(p=>`<div class="item"><div class="grow"><div class="t">${esc(p.nome)}</div><div class="muted">${p.max_usuarios} usuários · ${p.max_profissionais} profissionais${recTxt(p)}</div>${p.recursos&&p.recursos.whatsapp_auto===true&&Number(p.preco_mensagem)>0?custoMsg(p.preco_mensagem):''}</div><div class="side"><b>${brl(p.preco_mensal)}</b>/mês <button class="btn ghost sm" data-act="pedePlano" data-id="${esc(p.id)}">Quero este</button></div></div>`).join('')}</div>`:''}</div>`;
 }
+async function emCfgCarrega(){
+  if(S.emCfg!==undefined)return;S.emCfg=null;
+  try{const r=await sb.rpc('emails_config_ler');if(!r.error&&r.data&&typeof r.data==='object'){S.emCfg=r.data;render()}else if(r.error&&/emails_config_ler/i.test(String(r.error.message||''))){S.emCfg=false}}catch(_){}
+}
+function blocoEmailsSalao(){
+  if(S.legado)return '';
+  if(S.emCfg===undefined)emCfgCarrega();
+  const c=S.emCfg;if(!c)return '';
+  return `<h4 style="margin:10px 0 4px;font-size:14px">E-mails automáticos</h4>
+  <label class="chk" style="padding:4px 0"><input type="checkbox" data-emcfg="relatorio_mensal" ${c.relatorio_mensal?'checked':''}> Resumo do mês (todo dia 1): faturamento, clientes novas e sumidas, serviços que mais renderam</label>
+  <label class="chk" style="padding:4px 0"><input type="checkbox" data-emcfg="backup_semanal" ${c.backup_semanal?'checked':''}> Cópia de segurança toda segunda-feira (arquivo com os dados do salão)</label>
+  <p class="muted" style="margin:2px 0 10px;max-width:560px">Os e-mails vão para o endereço da proprietária. A cópia leva dados pessoais das clientes: ligue só se for guardar o arquivo com cuidado.</p>`;
+}
+document.addEventListener('change',async e=>{const k=e.target&&e.target.dataset&&e.target.dataset.emcfg;if(!k||!S.emCfg)return;
+  const n=Object.assign({},S.emCfg,{[k]:e.target.checked});
+  try{const r=await sb.rpc('emails_config_gravar',{p_relatorio:!!n.relatorio_mensal,p_backup:!!n.backup_semanal});if(r.error)throw r.error;S.emCfg=r.data||n;toast('Preferência salva.')}catch(x){e.target.checked=!e.target.checked;toast(falha(x),true)}});
 function blocoLgpd(){
   if(S.ctx.role!=='proprietario'||!S.ctx.tenant)return '';
   return `<div class="panel" style="max-width:640px;margin:16px 0"><h3 style="margin:0 0 6px;font-size:16px">Seus dados (LGPD)</h3>
   <p class="muted" style="margin:0 0 10px">Você pode levar uma cópia de tudo do salão ou encerrar a conta e apagar os dados.</p>
+  ${blocoEmailsSalao()}
   <div class="row-actions"><button class="btn ghost" data-act="exportaSalao">Baixar todos os dados do salão</button><button class="btn danger" data-act="excluiSalao">Excluir meu salão</button></div></div>`;
 }
 async function exportarSalao(){
@@ -2963,7 +2980,7 @@ async function pushAtual(){try{if(!pushOk())return null;const r=await navigator.
 async function pushCarrega(){
   const sub=await pushAtual();let prefs=null;
   if(sub){try{const r=await sb.from('push_inscricoes').select('prefs').eq('endpoint',sub.endpoint).maybeSingle();if(!r.error&&r.data)prefs=r.data.prefs}catch(_){}}
-  const antes=JSON.stringify(S.push||null);S.push={ligado:!!sub&&!!prefs,endpoint:sub?sub.endpoint:'',prefs:prefs||{agendamento:true,cancelamento:true,aniversario:true},perm:pushOk()?Notification.permission:'indisponivel'};
+  const antes=JSON.stringify(S.push||null);S.push={ligado:!!sub&&!!prefs,endpoint:sub?sub.endpoint:'',prefs:Object.assign({agendamento:true,cancelamento:true,aniversario:true,sinal:true},prefs||{}),perm:pushOk()?Notification.permission:'indisponivel'};
   if(antes!==JSON.stringify(S.push))render();
 }
 function blocoApp(){
@@ -2976,7 +2993,7 @@ function blocoApp(){
   else if(P.perm==='denied')av='<p class="muted">Os avisos estão bloqueados neste navegador. Libere nas configurações do site (ícone do cadeado ao lado do endereço) e volte aqui.</p>';
   else if(!P.ligado)av=`<p class="muted" style="max-width:640px">Receba no celular um aviso quando uma cliente pedir horário, cancelar ou fizer aniversário, mesmo com o sistema fechado.${ios&&!inst?' <b>No iPhone, instale o Agendio na tela inicial antes de ligar.</b>':''}</p><div class="bar"><button type="button" class="btn" data-act="pushLigar">Ligar avisos neste aparelho</button></div>`;
   else av=`<p class="muted">Avisos ligados neste aparelho. Escolha o que quer receber:</p>
-    <div class="list" style="max-width:520px">${[['agendamento','Novo pedido de agendamento online'],['cancelamento','Cliente cancelou um horário'],['aniversario','Aniversariantes do dia']].map(([k,t])=>`<label class="chk" style="padding:6px 0"><input type="checkbox" data-pushpref="${k}" ${P.prefs[k]?'checked':''}> ${t}</label>`).join('')}</div>
+    <div class="list" style="max-width:520px">${[['agendamento','Novo pedido de agendamento online'],['cancelamento','Cliente cancelou um horário'],['aniversario','Aniversariantes do dia'],['sinal','Sinal pago (Pix)']].map(([k,t])=>`<label class="chk" style="padding:6px 0"><input type="checkbox" data-pushpref="${k}" ${P.prefs[k]?'checked':''}> ${t}</label>`).join('')}</div>
     <div class="row-actions" style="margin-top:8px"><button type="button" class="btn ghost sm" data-act="pushTeste">Enviar aviso de teste</button><button type="button" class="btn ghost sm" data-act="pushDesliga">Desligar neste aparelho</button></div>`;
   return `<div class="panel" style="max-width:640px;margin-bottom:16px"><h3 style="margin:0 0 6px;font-size:16px">Aplicativo e avisos no celular</h3>
   ${inst?'<p class="muted" style="margin:0 0 10px">O Agendio já está instalado neste aparelho.</p>':'<div class="bar" style="margin-top:0"><button type="button" class="btn ghost" data-act="instalarApp">Instalar o Agendio no celular</button></div>'}${av}</div>`;

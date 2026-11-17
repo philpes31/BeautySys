@@ -16,10 +16,11 @@ function layout(titulo, corpoHtml, botao) {
     + '</div><p style="color:#7a6670;font-size:12px;margin:14px 4px">Você recebeu este e-mail porque é responsável por um salão no Agendio. Dúvidas? É só responder esta mensagem.</p></div></body></html>';
 }
 
-async function enviar({ para, assunto, html, texto }) {
+async function enviar({ para, assunto, html, texto, anexos }) {
   if (!configurado()) return { ok: false, erro: 'E-mail não configurado.' };
   if (!/^[^\s@]+@[^\s@]+$/.test(String(para || ''))) return { ok: false, erro: 'Destinatário inválido.' };
   const corpo = { from: L.env('EMAIL_REMETENTE'), to: [String(para)], subject: String(assunto).slice(0, 200), html, text: texto || undefined };
+  if (Array.isArray(anexos) && anexos.length) corpo.attachments = anexos.slice(0, 3).map(a => ({ filename: String(a.nome).slice(0, 80), content: a.base64 }));
   if (/^[^\s@]+@[^\s@]+$/.test(L.env('EMAIL_ADMIN'))) corpo.reply_to = L.env('EMAIL_ADMIN');
   try {
     const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: 'Bearer ' + L.env('RESEND_API_KEY'), 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) });

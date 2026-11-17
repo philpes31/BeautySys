@@ -26,10 +26,13 @@ module.exports = async (req, res) => {
     try { tokens = await require('./_wa-renovar').renovarTodos(); } catch (e) { console.error('cron renovar token:', e.message); }
     let push = null;
     try { await L.rpcServico('cron_push_aniversarios', {}); push = await require('./_push').processar((L.siteUrl(req) || 'https://www.agendio.tec.br').replace(/^http:/, 'https:'), 50); } catch (e) { console.error('cron push:', e.message); }
+    let relatorios = null, copias = null;
+    try { relatorios = await require('./_relatorios').mensais(L.siteUrl(req)); } catch (e) { console.error('cron relatórios:', e.message); }
+    try { copias = await require('./_relatorios').backups(L.siteUrl(req)); } catch (e) { console.error('cron cópias:', e.message); }
     let emails = null, resumo = null;
     try { emails = await A.processar({ site: L.siteUrl(req) }); } catch (e) { console.error('cron emails:', e.message); }
     try { resumo = await A.resumoAdmin(L.siteUrl(req)); } catch (e) { console.error('cron resumo:', e.message); }
-    return L.json(res, 200, { ok: true, emails, resumo_admin: resumo, situacoes, cobrancas_geradas: geradas, saloes_bloqueados: bloqueados, cobrancas_mensagens: msgsCobradas, sinais_expirados: sinais, lembretes_na_fila: lembretes, avisos_celular: push, espera_removida: espera, whatsapp, tokens_whatsapp: tokens });
+    return L.json(res, 200, { ok: true, emails, resumo_admin: resumo, situacoes, cobrancas_geradas: geradas, saloes_bloqueados: bloqueados, cobrancas_mensagens: msgsCobradas, sinais_expirados: sinais, lembretes_na_fila: lembretes, avisos_celular: push, espera_removida: espera, whatsapp, tokens_whatsapp: tokens, relatorios_mensais: relatorios, copias_semanais: copias });
   } catch (e) {
     console.error('cron:', e.message);
     return L.json(res, 500, { erro: 'Falha na rotina diária.' });
