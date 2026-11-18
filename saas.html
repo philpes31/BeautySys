@@ -692,7 +692,7 @@ async function iniciar(){
   try{S.canal=sb.channel('salao-mudancas').on('postgres_changes',{event:'*',schema:'public'},agendar).subscribe()}catch(_){}
 }
 function parar(){
-  S.iniciado=false;S.got=false;S.push=null;S.anams=[];S.fotos=null;S.fotosUrl=null;S.fotosTs=null;S.semFotos=false;S.emCfg=undefined;S.clube=undefined;S.caixaDias=undefined;S.cxEsp=null;S.galeria=undefined;S.contas=[];S.promos=[];S.cb={ativo:false,pct:5,desde:''};S.pvs=[];S.vendas=[];S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
+  S.iniciado=false;S.got=false;S.push=null;S.anams=[];S.fotos=null;S.fotosUrl=null;S.fotosTs=null;S.semFotos=false;S.emCfg=undefined;S.clube=undefined;S.caixaDias=undefined;S.cxEsp=null;S.galeria=undefined;S.satisf=undefined;S.contas=[];S.promos=[];S.cb={ativo:false,pct:5,desde:''};S.pvs=[];S.vendas=[];S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
   if(S.canal&&sb){try{sb.removeChannel(S.canal)}catch(_){}}
   S.canal=null;
 }
@@ -815,7 +815,7 @@ function conteudo(){
   if(v==='estoque')return telaEstoque();
   if(v==='vendas')return telaVendas();
   if(v==='promocoes')return telaPromocoes();
-  if(v==='retornos')return telaRet()+blocoSumidas();
+  if(v==='retornos')return telaRet()+blocoSumidas()+blocoSatisf();
   if(v==='relatorios')return telaRel();
   if(v==='plataforma'&&ehAdmin())return telaPlataforma();
   if(v==='ajuda')return telaAjuda();
@@ -3946,6 +3946,24 @@ function telaAgenda(){
     return `<h3 style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${esc(diaTxt(d))}${d===h?' <span class="tag ok">Hoje</span>':''}<button class="btn ghost sm" data-act="novoAtend" data-data="${d}">Agendar</button>${podeBloq()?`<button class="btn ghost sm" data-act="novoBloq" data-data="${d}">Bloquear</button>`:''}</h3>`+bloqDia(d)+(l.length?`<div class="list">${l.map(linhaAg).join('')}</div>`:'<p class="muted" style="margin:0">Sem atendimentos.</p>')}).join('');
 }
 const retContatos=()=>{try{return JSON.parse(LS.get('salao_ret_contato','{}'))||{}}catch(_){return {}}};
+/* ===== Satisfação das clientes (notas de 1 a 5) ===== */
+async function satCarrega(){
+  if(S.satisf!==undefined)return;S.satisf=null;
+  try{const r=await todos('satisfacao');S.satisf=r.sort((a,b)=>String(b.criado_em).localeCompare(String(a.criado_em)));render()}catch(_){S.satisf=false}
+}
+function blocoSatisf(){
+  if(S.legado||!recOk('clientes'))return '';
+  if(S.satisf===undefined)satCarrega();
+  if(S.satisf===false||S.satisf===null)return S.satisf===false?`<h3>Satisfação das clientes</h3><p class="muted">Rode o arquivo 58-satisfacao.sql (ou o agendio-TUDO.sql) no Supabase para liberar.</p>`:'';
+  const lim=new Date(Date.now()-90*864e5).toISOString(),L=S.satisf.filter(x=>String(x.criado_em)>=lim);
+  if(!L.length)return `<h3>Satisfação das clientes</h3><p class="muted">Ainda não há notas. A cliente avalia pela área dela (link “Meu espaço”) depois do atendimento.</p>`;
+  const med=L.reduce((x,y)=>x+y.nota,0)/L.length,dist=[5,4,3,2,1].map(n=>[n,L.filter(x=>x.nota===n).length]);
+  const baixas=L.filter(x=>x.nota<=3).slice(0,15);
+  return `<h3>Satisfação das clientes</h3><div class="panel"><div><b class="num" style="font-size:1.6em">${med.toFixed(1).replace('.',',')}</b> <span class="muted">de 5 · ${L.length} ${L.length===1?'nota':'notas'} nos últimos 90 dias</span></div>
+  <div class="muted num" style="margin-top:6px">${dist.map(([n,q])=>n+'★ '+q).join(' · ')}</div></div>
+  ${baixas.length?`<h4 style="margin:14px 0 6px">Notas baixas para resolver</h4><div class="list">${baixas.map(x=>{const c=cli(x.cliente_id),at=S.atendTodos.find(y=>y.id===x.atendimento_id);
+    return `<div class="item"><div class="grow"><div class="t">${esc(c?c.nome:'(cliente removida)')} <span class="tag">${x.nota}★</span></div><div class="muted">${at?esc(procTxt(at))+' · '+esc(fd(at.data)):''}</div>${x.comentario?`<div class="obs">${esc(x.comentario)}</div>`:''}</div>${c&&c.telefone?`<div class="item-acts"><a class="btn ghost sm" href="${esc(linkZap(c,'Olá, '+(c.nome||'').split(' ')[0]+'! Vi a sua avaliação e quero entender como posso melhorar. Pode me contar o que aconteceu?'))}" target="_blank" rel="noopener noreferrer">Chamar</a></div>`:''}</div>`}).join('')}</div>`:'<p class="muted" style="margin-top:10px">Nenhuma nota baixa. Muito bom!</p>'}`;
+}
 function blocoSumidas(){
   const dias=[30,60,90].includes(S.retDias)?S.retDias:(Number(LS.get('salao_ret_dias','60'))||60);
   const l=sumidas(dias),ct=retContatos(),h=hoje();

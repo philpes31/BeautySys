@@ -122,6 +122,7 @@ input,textarea{border-width:1px;border-radius:8px;background:#fffefb}
 .hist span:last-child{color:var(--mu);white-space:nowrap;font-variant-numeric:tabular-nums}
 .priv{margin-top:34px;color:var(--mu);font-size:.85rem;text-align:center}
 
+.estrelas{display:flex;gap:6px;margin-top:10px}.est{font-size:34px;line-height:1;background:none;border:0;padding:4px 6px;color:#c9c4b8;cursor:pointer;min-width:44px;min-height:44px}.est.on{color:#d4a017}.est:focus-visible{outline:2px solid var(--cor,#12302a);border-radius:8px}
 </style>
 </head>
 <body>
@@ -169,6 +170,7 @@ function proximo(p,slug,d){
 }
 function tela(d){
   pronto(d);var h=topo(d,'Olá, '+esc(d.nome||'')+'! Aqui estão os seus horários e benefícios.');
+  h+='<div id="aval"></div>';
   h+='<section><h2>Próximos horários</h2>'+((d.proximos||[]).length?d.proximos.map(function(p){return proximo(p,d.slug,d)}).join(''):'<p class="vazio">Você não tem horários marcados.</p>')+
     '<div class="acoes"><a class="btn1" href="/a/'+encodeURIComponent(d.slug||SLUG)+'">Agendar um horário</a></div></section>';
   if(d.cashback){h+='<section><h2>Cashback</h2><div class="cartao"><div class="num">'+esc(brl(d.cashback.saldo))+'</div><div class="d">Seu saldo para usar no salão. A cada compra ou atendimento pago você ganha '+esc(String(d.cashback.percentual).replace('.',','))+'% de volta. Avise na hora de pagar que quer usar.</div></div></section>'}
@@ -180,13 +182,30 @@ function tela(d){
   h+='<p class="priv">Este link é só seu. Não compartilhe com outras pessoas.</p>';
   A.innerHTML=h;
 }
+function avalTela(L){
+  var B=document.getElementById('aval');if(!B||!L||!L.length)return;
+  var x=L[0],st=[1,2,3,4,5].map(function(n){return '<button type="button" class="est" data-n="'+n+'" aria-label="Nota '+n+' de 5" aria-pressed="false">★</button>'}).join('');
+  B.innerHTML='<section><h2>Como foi o seu atendimento?</h2><div class="cartao"><div class="t">'+esc(x.servico)+'</div><div class="d">'+esc(dmy(x.data))+'</div>'+
+    '<div class="estrelas" role="group" aria-label="Sua nota">'+st+'</div><textarea id="av-c" rows="2" maxlength="300" placeholder="Quer contar mais? (opcional)" style="width:100%;margin-top:10px;font:inherit;padding:10px;border:1px solid var(--ln);border-radius:10px"></textarea>'+
+    '<div class="acoes"><button type="button" class="btn1" id="av-ok" disabled>Enviar minha nota</button></div><p class="leg" id="av-msg" role="status" style="margin:8px 0 0"></p></div></section>';
+  var nota=0,bs=B.querySelectorAll('.est');
+  bs.forEach(function(b){b.addEventListener('click',function(){nota=+b.dataset.n;bs.forEach(function(o){var on=+o.dataset.n<=nota;o.classList.toggle('on',on);o.setAttribute('aria-pressed',+o.dataset.n===nota?'true':'false')});document.getElementById('av-ok').disabled=false})});
+  document.getElementById('av-ok').addEventListener('click',async function(){
+    var ok=this;ok.disabled=true;var m=document.getElementById('av-msg');m.textContent='';
+    try{var r=await rpc('publico_avaliar',{p_slug:SLUG,p_token:TOKEN,p_atend_token:x.token,p_nota:nota,p_comentario:document.getElementById('av-c').value});
+      if(r&&r.ok){B.innerHTML='<section><div class="cartao"><div class="t">Obrigada pela sua nota!</div><div class="d">Ela ajuda o salão a cuidar cada vez melhor de você.</div></div></section>';avalCarrega()}
+      else{m.textContent=(r&&r.erro)||'Não foi possível enviar agora.';ok.disabled=false}}
+    catch(e){m.textContent='Não foi possível enviar agora. Tente de novo.';ok.disabled=false}
+  });
+}
+async function avalCarrega(){try{var L=await rpc('publico_avaliar_pendentes',{p_slug:SLUG,p_token:TOKEN});setTimeout(function(){avalTela(L)},L&&L.length?0:0)}catch(_){}}
 (async function(){
   if(!SLUG||!/^[a-f0-9]{32}$/.test(TOKEN)){vazio('Link inválido','Este link está incompleto ou incorreto. Peça um novo link ao salão.',null);return}
   var d=null;
   try{d=await rpc('publico_area',{p_slug:SLUG,p_token:TOKEN})}catch(e){A.innerHTML='<header><h1>Meu espaço</h1><p class="sub">'+esc(e.message)+' Tente de novo em instantes.</p></header>';return}
   if(!d){vazio('Link inválido ou trocado','Este link não vale mais. Peça um novo link ao salão.',null);return}
   if(d.desligada){vazio('Área indisponível','O salão não está usando esta área no momento. Fale com ele pelo WhatsApp.',d);return}
-  tela(d);
+  tela(d);avalCarrega();
 })();
 })();
 </script>
