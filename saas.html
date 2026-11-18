@@ -2161,7 +2161,7 @@ async function salvarMensagens(d){
 }
 /* ---------- Clientes ---------- */
 function lista(){
-  return `<div class="bar"><input id="busca" type="search" placeholder="Buscar por nome ou telefone" value="${esc(S.busca)}" autocomplete="off" aria-label="Buscar cliente">${!S.legado&&NV('config')==='escrita'?'<button class="btn ghost" data-act="fidConfig">Fidelidade</button>':''}<button class="btn" data-act="novaCliente">Nova cliente</button></div>${avisoRepetidas()}${blocoIndicacoes()}<div id="lista">${itensClientes()}</div>`;
+  return `<div class="bar"><input id="busca" type="search" placeholder="Buscar por nome ou telefone" value="${esc(S.busca)}" autocomplete="off" aria-label="Buscar cliente">${!S.legado&&NV('config')==='escrita'?'<button class="btn ghost" data-act="fidConfig">Fidelidade</button>':''}${!S.legado&&NV('clientes')==='escrita'?'<button class="btn ghost" data-act="impAbrir">Importar planilha</button>':''}<button class="btn" data-act="novaCliente">Nova cliente</button></div>${avisoRepetidas()}${blocoIndicacoes()}<div id="lista">${itensClientes()}</div>`;
 }
 const indicouLista=id=>S.clientes.filter(x=>x.indicadaPor===id);
 function blocoIndicacoes(){
@@ -2615,6 +2615,101 @@ async function salvarCliente(id,d){
   if(r.error)throw r.error;
   await recarregar();
   toast(id?'Cliente atualizada.':'Cliente cadastrada.');
+}
+/* ===== Importar clientes por planilha (CSV) ===== */
+function csvLer(txt){
+  txt=String(txt||'').replace(/^﻿/,'');
+  const prim=txt.split(/\r?\n/).find(l=>l.trim())||'';
+  const del=[';','\t',','].map(d=>[d,prim.split(d).length]).sort((x,y)=>y[1]-x[1])[0][0];
+  const rows=[];let r=[],c='',q=false;
+  for(let i=0;i<txt.length;i++){const ch=txt[i];
+    if(q){if(ch==='"'){if(txt[i+1]==='"'){c+='"';i++}else q=false}else c+=ch}
+    else if(ch==='"')q=true;
+    else if(ch===del){r.push(c);c=''}
+    else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&txt[i+1]==='\n')i++;r.push(c);c='';if(r.some(x=>x.trim()))rows.push(r);r=[]}
+    else c+=ch}
+  r.push(c);if(r.some(x=>x.trim()))rows.push(r);
+  return rows;
+}
+function impData(v){
+  v=String(v||'').trim();if(!v)return '';
+  let m=v.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})$/),d,mo,y;
+  if(m){d=+m[1];mo=+m[2];y=+m[3];if(y<100)y+=y>(new Date().getFullYear()%100)?1900:2000}
+  else{m=v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);if(!m)return null;y=+m[1];mo=+m[2];d=+m[3]}
+  const dt=new Date(Date.UTC(y,mo-1,d));
+  if(dt.getUTCFullYear()!==y||dt.getUTCMonth()!==mo-1||dt.getUTCDate()!==d||y<1900||y>new Date().getFullYear())return null;
+  return y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+}
+function impAnalisa(txt){
+  const rows=csvLer(txt);if(!rows.length)return {erro:'A planilha está vazia.'};
+  const norm=x=>nomeNorm(x);
+  const h=rows[0].map(norm);
+  const temCab=h.some(x=>/^(nome|cliente|nome completo)/.test(x));
+  let iN=0,iT=1,iD=2,iO=-1;
+  if(temCab){
+    iN=h.findIndex(x=>/^(nome|cliente|nome completo)/.test(x));
+    iT=h.findIndex(x=>/(telefone|celular|whats|fone|contato)/.test(x));
+    iD=h.findIndex(x=>/(nasc|aniversario|data de nasc)/.test(x));
+    iO=h.findIndex(x=>/^(obs|observ)/.test(x));
+  }
+  const dados=temCab?rows.slice(1):rows;
+  if(dados.length>2000)return {erro:'Máximo de 2.000 clientes por vez. Divida a planilha em partes.'};
+  const vistosFone=new Set(S.clientes.map(c=>foneNorm(c.telefone)).filter(Boolean)),vistosNome=new Set(S.clientes.map(c=>nomeNorm(c.nome)));
+  const novas=[],pular=[];let semData=0;
+  dados.forEach((l,i)=>{
+    const lin=i+(temCab?2:1),nome=String(l[iN]||'').trim().replace(/\s+/g,' ').slice(0,80),tel=iT>=0?String(l[iT]||'').trim().slice(0,30):'';
+    if(nome.length<2){pular.push({lin,nome:nome||'(sem nome)',motivo:'sem nome'});return}
+    const fn=foneNorm(tel);
+    if(fn&&vistosFone.has(fn)){pular.push({lin,nome,motivo:'telefone já cadastrado'});return}
+    if(!fn&&vistosNome.has(nomeNorm(nome))){pular.push({lin,nome,motivo:'nome já cadastrado'});return}
+    let nasc=iD>=0?impData(l[iD]):'';if(nasc===null){nasc='';semData++}
+    if(fn)vistosFone.add(fn);else vistosNome.add(nomeNorm(nome));
+    const o={nome,telefone:tel,nascimento:nasc||null};
+    const obs=iO>=0?String(l[iO]||'').trim().slice(0,500):'';if(obs)o.obs=obs;
+    novas.push(o);
+  });
+  return {novas,pular,semData,total:dados.length};
+}
+function impAbrir(){
+  S.imp=null;
+  abrir(`<h2>Importar clientes</h2>
+  <p class="muted">Use um arquivo <b>CSV</b> com as colunas <b>nome</b>, <b>telefone</b> e <b>nascimento</b> (dia/mês/ano). No Excel ou Google Planilhas: Arquivo → Salvar como → CSV. Quem já está cadastrada (mesmo telefone) é ignorada.</p>
+  <label for="imp-f">Arquivo da planilha</label><input id="imp-f" type="file" accept=".csv,.txt,text/csv,text/plain">
+  <label for="imp-t">Ou cole as linhas aqui</label><textarea id="imp-t" rows="4" placeholder="nome;telefone;nascimento&#10;Maria Souza;(81) 99999-0001;15/03/1990"></textarea>
+  <div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button type="button" class="btn ghost" data-act="impConferir">Conferir</button></div>
+  <div id="imp-prev" aria-live="polite" style="margin-top:12px"></div>`);
+}
+function impConferir(){
+  const t=$('imp-t')?$('imp-t').value:'',w=$('imp-prev');if(!w)return;
+  S.imp=null;
+  if(!t.trim()){w.innerHTML='<div class="muted">Escolha um arquivo ou cole as linhas primeiro.</div>';return}
+  const r=impAnalisa(t);
+  if(r.erro){w.innerHTML=`<div class="erro">${esc(r.erro)}</div>`;return}
+  S.imp=r;
+  const ex=r.novas.slice(0,5).map(x=>`<li>${esc(x.nome)}${x.telefone?' · '+esc(x.telefone):''}${x.nascimento?' · '+esc(fd(x.nascimento)):''}</li>`).join('');
+  w.innerHTML=`<div class="panel"><b>${r.novas.length}</b> ${r.novas.length===1?'cliente nova':'clientes novas'} para importar${r.pular.length?`, <b>${r.pular.length}</b> ignorada${r.pular.length===1?'':'s'}`:''}.
+  ${ex?`<ul class="muted" style="margin:8px 0 0 18px">${ex}${r.novas.length>5?'<li>…</li>':''}</ul>`:''}
+  ${r.semData?`<div class="muted" style="margin-top:6px">${r.semData} data${r.semData===1?'':'s'} de nascimento não entendida${r.semData===1?'':'s'} (ficam em branco).</div>`:''}
+  ${r.pular.length?`<details style="margin-top:6px"><summary class="muted">Ver as ignoradas</summary><ul class="muted" style="margin:6px 0 0 18px">${r.pular.slice(0,30).map(x=>`<li>Linha ${x.lin}: ${esc(x.nome)} (${esc(x.motivo)})</li>`).join('')}${r.pular.length>30?'<li>…</li>':''}</ul></details>`:''}</div>
+  ${r.novas.length?`<div class="acts"><button type="button" class="btn" data-act="impIr">Importar ${r.novas.length} ${r.novas.length===1?'cliente':'clientes'}</button></div>`:''}`;
+}
+async function impIr(){
+  const r=S.imp;if(!r||!r.novas.length||S.busy)return;
+  S.busy=true;const bt=document.querySelector('[data-act=impIr]');if(bt)bt.disabled=true;
+  let feitas=0;
+  try{
+    for(let i=0;i<r.novas.length;i+=200){
+      const x=await sb.from('clientes').insert(r.novas.slice(i,i+200));
+      if(x.error)throw x.error;
+      feitas+=Math.min(200,r.novas.length-i);
+    }
+    S.imp=null;$('dlg').close();await recarregar();toast(feitas+(feitas===1?' cliente importada.':' clientes importadas.'));
+  }catch(e){
+    S.busy=false;
+    const w=$('imp-prev');if(w)w.innerHTML=`<div class="erro">${feitas?feitas+' foram importadas antes do erro. ':''}${esc(e&&e.aviso?e.aviso:'Não foi possível importar agora.')} Confira a lista de clientes e tente de novo só com as que faltam.</div>`;
+    if(feitas)recarregar();
+    return;
+  }finally{S.busy=false}
 }
 function pedirAnonCliente(id){
   const c=cli(id);if(!c)return;
@@ -4320,7 +4415,7 @@ document.addEventListener('click',e=>{
   const a=e.target.closest('[data-act]');if(!a)return;
   const id=a.dataset.id;
   const f={
-    novaCliente:()=>formCliente(),editCliente:()=>formCliente(id),delCliente:()=>pedirDelCliente(id),maisMenu:menuMais,plSalvaBloqueio:()=>salvarBloqueio(a),plCupomAtivo:async()=>{const r=await sb.rpc('plataforma_cupom_ativo',{p_id:id,p_ativo:a.dataset.v==='1'});if(r.error)return toast(falha(r.error),true);await carregarPlataforma()},pgCupom:()=>aplicarCupom(id,a),instalarApp:()=>instalarApp(),reciboAtend:()=>reciboAtend(id),reciboPag:()=>reciboPag(id),reciboImprime:()=>imprimeRecibo(),pagarMP:()=>abrirPagamento(id),pagarMPantigo:()=>pagarCobranca(id,a),pgAba:()=>pgAba(id),pgPix:()=>gerarPix(id,a),pgCopia:()=>{const i=$('pg-copia');if(i){i.select();try{navigator.clipboard.writeText(i.value)}catch(_){try{document.execCommand('copy')}catch(_){}}toast('Código Pix copiado.')}},pgCartao:()=>enviarCartao('cobranca',id,a),pgDebito:()=>enviarCartao('debito','',a),debitoAtivar:()=>abrirDebito(),debitoAtivarMP:()=>chamaAssinar('criar',a),debitoParar:()=>confirmar('Cancelar o débito automático?','O cartão deixa de ser cobrado todo mês. Você poderá pagar cada mensalidade à mão ou ativar de novo.','Cancelar débito',()=>chamaAssinar('cancelar')),setStatus:()=>mudarStatus(id,a.dataset.st).catch(x=>toast(falha(x))),anonCliente:()=>pedirAnonCliente(id),exportaSalao:()=>exportarSalao().catch(x=>toast(falha(x))),clubePlanos:()=>formClubePlanos(),clubePlanoEdit:()=>formClubePlanos(id),clubeAssinar:()=>formClubeAssinar(a.dataset.cliente),clubePagar:()=>formClubePagar(id),clubeUsar:()=>clubeUsar(id).catch(x=>toast(falha(x),true)),clubeStatus:()=>clubeStatus(id,a.dataset.st).catch(x=>toast(falha(x),true)),excluiSalao:formExcluirSalao,
+    novaCliente:()=>formCliente(),impAbrir:impAbrir,impConferir:impConferir,impIr:impIr,editCliente:()=>formCliente(id),delCliente:()=>pedirDelCliente(id),maisMenu:menuMais,plSalvaBloqueio:()=>salvarBloqueio(a),plCupomAtivo:async()=>{const r=await sb.rpc('plataforma_cupom_ativo',{p_id:id,p_ativo:a.dataset.v==='1'});if(r.error)return toast(falha(r.error),true);await carregarPlataforma()},pgCupom:()=>aplicarCupom(id,a),instalarApp:()=>instalarApp(),reciboAtend:()=>reciboAtend(id),reciboPag:()=>reciboPag(id),reciboImprime:()=>imprimeRecibo(),pagarMP:()=>abrirPagamento(id),pagarMPantigo:()=>pagarCobranca(id,a),pgAba:()=>pgAba(id),pgPix:()=>gerarPix(id,a),pgCopia:()=>{const i=$('pg-copia');if(i){i.select();try{navigator.clipboard.writeText(i.value)}catch(_){try{document.execCommand('copy')}catch(_){}}toast('Código Pix copiado.')}},pgCartao:()=>enviarCartao('cobranca',id,a),pgDebito:()=>enviarCartao('debito','',a),debitoAtivar:()=>abrirDebito(),debitoAtivarMP:()=>chamaAssinar('criar',a),debitoParar:()=>confirmar('Cancelar o débito automático?','O cartão deixa de ser cobrado todo mês. Você poderá pagar cada mensalidade à mão ou ativar de novo.','Cancelar débito',()=>chamaAssinar('cancelar')),setStatus:()=>mudarStatus(id,a.dataset.st).catch(x=>toast(falha(x))),anonCliente:()=>pedirAnonCliente(id),exportaSalao:()=>exportarSalao().catch(x=>toast(falha(x))),clubePlanos:()=>formClubePlanos(),clubePlanoEdit:()=>formClubePlanos(id),clubeAssinar:()=>formClubeAssinar(a.dataset.cliente),clubePagar:()=>formClubePagar(id),clubeUsar:()=>clubeUsar(id).catch(x=>toast(falha(x),true)),clubeStatus:()=>clubeStatus(id,a.dataset.st).catch(x=>toast(falha(x),true)),excluiSalao:formExcluirSalao,
     pubHora:()=>{S.pb.hora=a.dataset.hora;S.pb.prof=a.dataset.prof;render()},pubNovo:()=>{S.pb={sv:'',pf:'',dt:'',slots:null,hora:'',prof:'',nome:'',tel:'',obs:'',ok:null};render()},pubRecarrega:()=>carregarPublico(),linkWpp:()=>linkWpp(),linkQr:()=>linkQr(),qrImprime:()=>imprimeQr(),copiaLink:()=>{try{navigator.clipboard.writeText(a.dataset.link).then(()=>toast('Link copiado.'),()=>toast('Copie o link manualmente.',true))}catch(_){toast('Copie o link manualmente.',true)}},
     sinalOk:()=>sb.rpc('pedido_sinal_confirmar',{p_id:id}).then(async r=>{if(r.error)throw r.error;S.sig='';await recarregar();toast('Sinal marcado como recebido.')}).catch(x=>toast(falha(x),true)),aceitaPedido:()=>responderPedido(id,true).catch(x=>toast(falha(x),true)),recusaPedido:()=>{const go=()=>responderPedido(id,false).catch(x=>toast(falha(x),true));if(a.dataset.sinal)confirmar('Recusar pedido com sinal pago?','A cliente já pagou o sinal. Você precisa devolver o valor a ela (pelo Pix ou pelo app do Mercado Pago).','Recusar',go);else go()},
     waFb:()=>conectarFb(),
@@ -4423,6 +4518,14 @@ document.addEventListener('change',e=>{
   else if(t.classList&&t.classList.contains('ver-chk')){const i=t.parentElement.querySelector('input:not(.ver-chk)'),l=t.nextElementSibling;i.type=t.checked?'text':'password';if(l)l.textContent=t.checked?'Ocultar':'Mostrar';t.setAttribute('aria-label',t.checked?'Ocultar a senha':'Mostrar a senha')}
 });
 $('dlg').addEventListener('click',e=>{if(e.target===$('dlg'))$('dlg').close()});
+$('dlg').addEventListener('change',async e=>{
+  if(!e.target||e.target.id!=='imp-f'||!e.target.files||!e.target.files[0])return;
+  const f=e.target.files[0],w=$('imp-prev');
+  if(f.size>2e6){if(w)w.innerHTML='<div class="erro">Arquivo muito grande (máximo 2 MB).</div>';return}
+  const buf=await f.arrayBuffer();let t;
+  try{t=new TextDecoder('utf-8',{fatal:true}).decode(buf)}catch(_){t=new TextDecoder('windows-1252').decode(buf)}
+  $('imp-t').value=t;impConferir();
+});
 $('dlg').addEventListener('submit',async e=>{
   e.preventDefault();
   if(S.busy||!sb)return;
