@@ -3646,7 +3646,7 @@ function telaHorarios(){
   ${pode?'<div class="row-actions" style="margin-top:10px"><button class="btn ghost" data-act="novoServico">Novo serviço</button></div>':''}
   <h3>Salas e equipamentos</h3><p class="muted" style="max-width:640px;margin:0 0 8px">Opcional. Escreva um nome por linha (ex.: Cabine 1, Laser, Maca). Ao marcar um atendimento você escolhe a sala, e a agenda avisa se ela já está ocupada no mesmo horário.</p>
   <form data-form="salas" class="panel" style="max-width:640px"><label for="sl-t">Salas e equipamentos (até 10)</label><textarea id="sl-t" name="salas" rows="3" maxlength="400" ${pode?'':'disabled'} placeholder="Cabine 1&#10;Laser">${esc((S.agCfg.salas||[]).join('\n'))}</textarea>
-  <p class="erro" id="a-erro" role="alert"></p>${pode?'<div class="acts"><button class="btn">Salvar salas</button></div>':''}</form>
+  <p class="erro" id="sl-erro" role="alert"></p>${pode?'<div class="acts"><button class="btn">Salvar salas</button></div>':''}</form>
   <h3>Horário de trabalho</h3>
   <form data-form="horarios">${profs.map(bloco).join('')}<p class="erro" id="a-erro" role="alert"></p>${pode?'<div class="acts" style="justify-content:flex-start"><button class="btn">Salvar horários</button></div>':'<p class="muted">Só o proprietário altera os horários.</p>'}</form>`;
 }
@@ -4904,7 +4904,7 @@ document.addEventListener('submit',async e=>{
     }else if(k==='online'){
       try{await salvarOnline(d)}catch(x){er.textContent=String((x&&(x.aviso||x.message))||'Não foi possível salvar.')}
     }else if(k==='salas'){
-      try{await salvarSalas(d)}catch(x){er.textContent=String((x&&x.message)||'Não foi possível salvar.')}
+      try{await salvarSalas(d)}catch(x){const e2=$('sl-erro')||er;e2.textContent=String((x&&x.message)||'Não foi possível salvar.')}
     }else if(k==='horarios'){
       try{await salvarHorarios(d)}catch(x){er.textContent=String((x&&x.message)||'Não foi possível salvar.')}
     }else if(k==='mensagens'){
