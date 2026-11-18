@@ -590,6 +590,7 @@ function listaProfs(){
 }
 const PARC=n=>Math.min(12,Math.max(1,parseInt(n,10)||1));
 
+try{const c=(new URLSearchParams(location.search).get('ind')||'').toUpperCase();if(/^[A-Z0-9]{6,12}$/.test(c))localStorage.setItem('agendio_ind',c)}catch(_){}
 const PUB_SLUG=(()=>{try{return (new URLSearchParams(location.search).get('salao')||'').toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,40)}catch(_){return ''}})();
 const S={msgs:null,msgsLocal:false,pl:{aba:'painel',ok:false,q:'',st:'',saloes:[],cresc:[],ind:null,pags:[],logs:[],planos:[],lim:60},eq:{ok:false,membros:[],convites:[]},salao:null,logoNovo:undefined,auth:'entrar',ctx:null,ctxPronto:false,ctxErro:false,suspenso:false,legado:false,recuperando:false,aviso:'',clientes:[],atend:[],view:'inicio',agSem:0,sel:null,busca:'',mesFiltro:'',mesRel:'',relAba:'fat',lim:{at:100,desp:100,gasto:100},gastos:[],produtos:[],fichas:[],movs:[],semEst:false,estAba:'prod',estCat:'',estBusca:'',mesDesp:hoje().slice(0,7),semDesp:false,
   pronto:false,semConfig:false,semLib:false,sessao:null,got:false,erro:'',busy:false,prog:'',conf:null,
@@ -693,7 +694,7 @@ async function iniciar(){
   try{S.canal=sb.channel('salao-mudancas').on('postgres_changes',{event:'*',schema:'public'},agendar).subscribe()}catch(_){}
 }
 function parar(){
-  S.iniciado=false;S.got=false;S.push=null;S.anams=[];S.fotos=null;S.fotosUrl=null;S.fotosTs=null;S.semFotos=false;S.emCfg=undefined;S.clube=undefined;S.caixaDias=undefined;S.cxEsp=null;S.galeria=undefined;S.satisf=undefined;S.etqFiltro='';S.contas=[];S.promos=[];S.cb={ativo:false,pct:5,desde:''};S.pvs=[];S.vendas=[];S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
+  S.iniciado=false;S.got=false;S.push=null;S.anams=[];S.fotos=null;S.fotosUrl=null;S.fotosTs=null;S.semFotos=false;S.emCfg=undefined;S.clube=undefined;S.caixaDias=undefined;S.cxEsp=null;S.galeria=undefined;S.satisf=undefined;S.etqFiltro='';S.indic=undefined;S.contas=[];S.promos=[];S.cb={ativo:false,pct:5,desde:''};S.pvs=[];S.vendas=[];S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
   if(S.canal&&sb){try{sb.removeChannel(S.canal)}catch(_){}}
   S.canal=null;
 }
@@ -1608,6 +1609,23 @@ function blocoEmailsSalao(){
 document.addEventListener('change',async e=>{const k=e.target&&e.target.dataset&&e.target.dataset.emcfg;if(!k||!S.emCfg)return;
   const n=Object.assign({},S.emCfg,{[k]:e.target.checked});
   try{const r=await sb.rpc('emails_config_gravar',{p_relatorio:!!n.relatorio_mensal,p_backup:!!n.backup_semanal});if(r.error)throw r.error;S.emCfg=r.data||n;toast('Preferência salva.')}catch(x){e.target.checked=!e.target.checked;toast(falha(x),true)}});
+/* ===== Indique e ganhe (salão indica salão) ===== */
+async function indCarrega(){
+  if(S.indic!==undefined)return;S.indic=null;
+  try{const r=await sb.rpc('indicacao_info');S.indic=r.error?false:r.data;render()}catch(_){S.indic=false}
+}
+const indLink=()=>'https://www.agendio.tec.br/?ind='+encodeURIComponent((S.indic&&S.indic.codigo)||'');
+function blocoIndicacao(){
+  if(S.legado||!S.ctx||S.ctx.role!=='proprietario')return '';
+  if(S.indic===undefined)indCarrega();
+  if(!S.indic)return '';
+  const I=S.indic,msg='Uso o Agendio para organizar a agenda do meu salão e recomendo! Teste grátis por este link: '+indLink();
+  return `<div class="panel" style="max-width:640px;margin-bottom:14px"><b>Indique o Agendio e ganhe</b>
+  <p class="muted" style="margin:4px 0 10px">Cada salão que se cadastrar pelo seu link e pagar o primeiro plano dá <b>1 mês grátis</b> para você (até ${I.maximo} meses).</p>
+  <label for="ind-l">Seu link de indicação</label><input id="ind-l" readonly value="${esc(indLink())}" onfocus="this.select()">
+  <div class="acts"><button type="button" class="btn ghost" data-act="indCopiar">Copiar link</button><a class="btn" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener noreferrer">Enviar no WhatsApp</a></div>
+  <p class="muted num" style="margin:10px 0 0">${I.indicados} ${I.indicados===1?'salão indicado':'salões indicados'} · ${I.creditados} ${I.creditados===1?'mês ganho':'meses ganhos'}</p></div>`;
+}
 function blocoLgpd(){
   if(S.ctx.role!=='proprietario'||!S.ctx.tenant)return '';
   return `<div class="panel" style="max-width:640px;margin:16px 0"><h3 style="margin:0 0 6px;font-size:16px">Seus dados (LGPD)</h3>
@@ -1635,7 +1653,7 @@ function telaSalao(){
   const t=S.salao,ro=NV('config')!=='escrita'?'disabled':'';
   const f=(id,rot,extra,v)=>`<div><label for="cf-${id}">${rot}</label><input id="cf-${id}" name="${id}" value="${esc(v!==undefined?v:(t[id]||''))}" ${ro} ${extra||''}></div>`;
   const logo=S.logoNovo!==undefined?S.logoNovo:t.logo_url;
-  return blocoApp()+blocoAssinatura()+blocoLgpd()+`<form data-form="config" class="panel" style="max-width:640px">
+  return blocoApp()+blocoAssinatura()+blocoIndicacao()+blocoLgpd()+`<form data-form="config" class="panel" style="max-width:640px">
   <h3 style="margin:0 0 10px;font-size:16px">Marca</h3>
   <div class="logo-linha"><div class="logo-prev" id="cf-prev">${logo?`<img src="${esc(logo)}" alt="Logotipo">`:'<span class="muted">Sem logotipo</span>'}</div>
   <div><input id="cf-logo" type="file" accept="image/png,image/jpeg,image/webp" ${ro}> ${logo&&!ro?'<button type="button" class="btn ghost sm" data-act="tiraLogo">Remover logotipo</button>':''}<p class="muted" style="font-size:12.5px;margin:6px 0 0">A imagem é reduzida automaticamente.</p></div></div>
@@ -4643,7 +4661,7 @@ document.addEventListener('click',e=>{
     plSituacoes:()=>plRpc('plataforma_atualizar_situacoes',{},r=>`${r.saloes_vencidos} salão(ões) vencido(s) e ${r.cobrancas_atrasadas} cobrança(s) atrasada(s).`),novoConvite:()=>formConvite(),editMembro:()=>formMembro(id),delMembro:()=>pedirDelMembro(id),
     cancelaConvite:async()=>{try{const r=await sb.rpc('cancelar_convite',{p_id:id});if(r.error)throw r.error;await carregarEquipe();toast('Convite cancelado.')}catch(e){falha(e)}},
     listaCompras:()=>listaCompras(),
-    copiaConvite:async()=>{const t=$('cv-txt');try{await navigator.clipboard.writeText(t.value);toast('Mensagem copiada.')}catch(_){t.select();toast('Selecione e copie a mensagem.')}},
+    indCopiar:async()=>{const t=$('ind-l');try{await navigator.clipboard.writeText(t.value);toast('Link copiado.')}catch(_){t.select();toast('Selecione e copie o link.')}},copiaConvite:async()=>{const t=$('cv-txt');try{await navigator.clipboard.writeText(t.value);toast('Mensagem copiada.')}catch(_){t.select();toast('Selecione e copie a mensagem.')}},
     tiraLogo:()=>{S.logoNovo=null;const pv=$('cf-prev');if(pv)pv.innerHTML='<span class="muted">Sem logotipo</span>';a.remove()},liberaSuporte:()=>formSuporte(),
     sair:async()=>{const dl=$('dlg');if(dl&&dl.open)dl.close();S.auth='entrar';S.recuperando=false;try{await sb.auth.signOut()}catch(_){}}
   }[a.dataset.act];
@@ -4833,8 +4851,10 @@ document.addEventListener('submit',async e=>{
     }else if(k==='salao'){
       const p={};Object.keys(d).forEach(x=>{p[x]=String(d[x]||'').trim()});
       p.email=(S.sessao&&S.sessao.user&&S.sessao.user.email)||'';p.uf=p.uf.toUpperCase();
+      try{const ci=localStorage.getItem('agendio_ind');if(ci)p.indicacao=ci}catch(_){}
       const r=await sb.rpc('criar_salao',{p});
       if(r.error){er.textContent=String(r.error.message||'Não foi possível cadastrar o salão.');return}
+      try{localStorage.removeItem('agendio_ind')}catch(_){}
       S.view='inicio';parar();iniciar();
     }
   }catch(err){er.textContent=(err&&err.aviso)||'Sem conexão. Verifique a internet e tente de novo.'}

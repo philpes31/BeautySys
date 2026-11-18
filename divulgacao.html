@@ -387,6 +387,7 @@ footer{background:var(--foot);color:var(--foot-ink);padding-block:26px;font-size
 
 <script src="config.js"></script>
 <script>
+(function(){try{var c=(new URLSearchParams(location.search).get('ind')||'').toUpperCase();if(/^[A-Z0-9]{6,12}$/.test(c))localStorage.setItem('agendio_ind',c)}catch(_){}})();
 (function(){
   var C=window.SALAO_CONFIG||{},$=function(i){return document.getElementById(i)};
   var esc=function(t){return String(t==null?'':t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
