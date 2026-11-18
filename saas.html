@@ -2771,6 +2771,7 @@ function formAtend(id,clienteId,data){
   <div id="a-pag-wrap" ${pagoSel?'':'hidden'}><label for="a-pag">Forma de pagamento</label><select id="a-pag" name="pagamento"><option value="">—</option>${pags.map(p=>`<option ${p===a.pagamento?'selected':''}>${p}</option>`).join('')}</select></div>
   <div id="a-parc-wrap" ${credito?'':'hidden'}><label for="a-parc">Parcelas</label><select id="a-parc" name="parcelas">${Array.from({length:12},(_,i)=>i+1).map(n=>`<option value="${n}" ${n===parcSel?'selected':''}>${n}x</option>`).join('')}</select><div id="a-parc-info" class="muted num"></div></div>
   <div id="a-taxa-wrap" ${cartao?'':'hidden'}><label for="a-taxa">Taxa da máquina (R$)</label><input id="a-taxa" name="taxaMaquina" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(a.taxaMaquina||'')}"></div>
+  ${!id&&recOk('promocoes')&&!S.semPromo&&(S.promos||[]).some(x=>x.ativo)?`<div><label for="a-cup">Cupom (opcional)</label><input id="a-cup" name="cupom" maxlength="20" autocapitalize="characters" placeholder="Ex.: NATAL10" autocomplete="off"></div>`:''}
   <div><label for="a-prod">Gastos com produtos (R$)</label><input id="a-prod" name="gastoProdutos" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(a.gastoProdutos||'')}"></div>
   <div><label for="a-ret">Retorno previsto</label><input id="a-ret" name="retorno" type="date" value="${esc(a.retorno)}"></div></div>
   <div id="a-estq" class="panel" style="margin-top:10px" hidden><div id="a-estq-txt" class="muted num"></div>
@@ -2808,12 +2809,16 @@ function atualizaParc(){
 async function salvarAtend(id,d){
   const pago=d.pago!=='0',pagForma=pago?(d.pagamento||''):'',cred=pagForma==='Cartão de crédito',cartao=cred||pagForma==='Cartão de débito';
   const v2=String(d.procedimento2||'').trim()?din(d.valor2):0,v1=din(d.valor);
+  /* Cupom: confere o desconto antes de gravar; o uso só é registrado depois que o atendimento salvou. */
+  let cupDesc=0,cupCod='';const cupom=id?'':String(d.cupom||'').trim();
+  if(cupom){const c=await vdChama('promo_aplicar',{p_codigo:cupom,p_base:v1+v2,p_apenas_ver:true});cupDesc=Math.min(v1+v2,Number(c.desconto)||0);cupCod=c.codigo||cupom}
+  const tot=Math.max(0,v1+v2-cupDesc);
   const o={cliente_id:d.clienteId,data:d.data,procedimento:d.procedimento.trim(),profissional:(d.profissional||profPadrao()||PROF).trim(),
-    valor:v1+v2,pagamento:pagForma,parcelas:cred?PARC(d.parcelas):1,gasto_produtos:din(d.gastoProdutos),taxa_maquina:cartao?din(d.taxaMaquina):0,retorno:d.retorno||null,obs:(d.obs||'').trim()};
+    valor:tot,pagamento:pagForma,parcelas:cred?PARC(d.parcelas):1,gasto_produtos:din(d.gastoProdutos),taxa_maquina:cartao?din(d.taxaMaquina):0,retorno:d.retorno||null,obs:((d.obs||'').trim()+(cupDesc>0?((d.obs||'').trim()?' ':'')+'(cupom '+cupCod+': −'+brl(cupDesc)+')':'')).trim()};
   if(!S.semEst)o.hora=d.hora||null;
   if(!S.semProc2)o.procedimento2=String(d.procedimento2||'').trim().slice(0,60);
   const antes=id&&S.atendTodos.find(x=>x.id===id);
-  if(!S.semPago){o.valor2=v2;o.pago=pago;o.pago_em=pago?((antes&&antes.pago&&antes.pagoEm)||(String(d.data)>hoje()?d.data:hoje())):null}
+  if(!S.semPago){o.valor2=Math.min(v2,tot);o.pago=pago;o.pago_em=pago?((antes&&antes.pago&&antes.pagoEm)||(String(d.data)>hoje()?d.data:hoje())):null}
   if(!S.semDur)o.duracao=Math.min(720,Math.max(5,Math.round(Number(d.duracao)||60)));
   if(!id&&!S.semStatus)o.status='agendado';
   const aid=id||novoId();
@@ -2843,6 +2848,7 @@ async function salvarAtend(id,d){
       }else if(tinha)msg+=' Baixa do estoque desfeita.';
     }catch(_){msg+=' Atenção: não foi possível atualizar o estoque, confira na aba Estoque.'}
   }
+  if(cupDesc>0){try{await vdChama('promo_aplicar',{p_codigo:cupom,p_base:v1+v2,p_apenas_ver:false});msg+=' Cupom '+cupCod+' aplicado.'}catch(_){msg+=' Atenção: o uso do cupom não foi registrado.'}}
   await recarregar();
   toast(msg);
 }
