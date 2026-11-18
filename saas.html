@@ -691,7 +691,7 @@ async function iniciar(){
   try{S.canal=sb.channel('salao-mudancas').on('postgres_changes',{event:'*',schema:'public'},agendar).subscribe()}catch(_){}
 }
 function parar(){
-  S.iniciado=false;S.got=false;S.push=null;S.anams=[];S.fotos=null;S.fotosUrl=null;S.fotosTs=null;S.semFotos=false;S.emCfg=undefined;S.clube=undefined;S.contas=[];S.promos=[];S.cb={ativo:false,pct:5,desde:''};S.pvs=[];S.vendas=[];S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
+  S.iniciado=false;S.got=false;S.push=null;S.anams=[];S.fotos=null;S.fotosUrl=null;S.fotosTs=null;S.semFotos=false;S.emCfg=undefined;S.clube=undefined;S.caixaDias=undefined;S.cxEsp=null;S.contas=[];S.promos=[];S.cb={ativo:false,pct:5,desde:''};S.pvs=[];S.vendas=[];S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
   if(S.canal&&sb){try{sb.removeChannel(S.canal)}catch(_){}}
   S.canal=null;
 }
@@ -4005,6 +4005,60 @@ function tipMostra(e){
 document.addEventListener('pointermove',tipMostra);document.addEventListener('pointerdown',tipMostra);
 document.addEventListener('scroll',tipEsconde,true);
 
+/* ===== Fechamento de caixa diário ===== */
+const cxGrupo=k=>/^pix/i.test(k)?'Pix':k==='Dinheiro'?'Dinheiro':/^Cartão de (débito|crédito)/.test(k)?'Cartão':'Outros';
+async function caixaCarrega(){
+  if(S.caixaDias!==undefined)return;S.caixaDias=null;
+  try{const r=await sb.from('caixa_dias').select('*').order('data',{ascending:false}).limit(120);
+    if(!r.error){S.caixaDias=r.data||[];render()}else S.caixaDias=false}catch(_){S.caixaDias=false}
+}
+function blocoCaixa(d,porForma){
+  if(S.legado)return '';
+  if(S.caixaDias===undefined)caixaCarrega();
+  if(S.caixaDias===false)return '';
+  const g={};Object.entries(porForma).forEach(([k,v])=>{const n=cxGrupo(k);g[n]=Math.round(((g[n]||0)+v)*100)/100});
+  if(g.Dinheiro===undefined)g.Dinheiro=0;
+  const ordem=['Dinheiro','Pix','Cartão','Outros'].filter(k=>g[k]!==undefined&&(g[k]!==0||k==='Dinheiro'));
+  S.cxEsp={data:d,g,ordem};
+  const rec=(S.caixaDias||[]).find(x=>x.data===d),pode=cpPode();
+  const fdif=v=>v===0?'<b>bateu certinho</b>':v>0?`<b>sobrou ${brl(v)}</b>`:`<b class="neg">faltou ${brl(-v)}</b>`;
+  let h=`<h3>Fechamento do caixa</h3>`;
+  if(rec){
+    const ks=Object.keys({...rec.esperado,...rec.contado});
+    h+=`<div class="panel"><div>Caixa fechado em ${esc(fd(d))} · diferença: ${fdif(Number(rec.diferenca)||0)}</div>
+    <div class="list" style="margin-top:8px">${ks.map(k=>{const e=Number((rec.esperado||{})[k])||0,c=Number((rec.contado||{})[k])||0;return `<div class="item"><div class="grow t">${esc(k)}</div><div class="muted num">esperado ${brl(e)} · contado ${brl(c)}</div></div>`}).join('')}</div>
+    ${rec.obs?`<div class="muted" style="margin-top:6px">${esc(rec.obs)}</div>`:''}</div>`;
+  }
+  if(pode&&d<=hoje()){
+    const c0=rec?rec.contado||{}:{};
+    h+=`<div class="panel" id="cx-form" style="margin-top:10px"><p class="muted" style="margin:0 0 8px">Conte o que tem de verdade e digite abaixo. O sistema compara com o que era esperado.</p>
+    ${ordem.map((k,i)=>`<div class="item"><div class="grow"><label for="cx-${i}" style="margin:0">${esc(k)}</label><div class="muted num">esperado ${brl(g[k])}</div></div><input id="cx-${i}" data-cx="${esc(k)}" type="number" step="0.01" min="0" inputmode="decimal" style="max-width:130px" placeholder="0,00" value="${c0[k]!==undefined?esc(c0[k]):''}"></div>`).join('')}
+    <div id="cx-dif" class="muted num" style="margin:8px 0" aria-live="polite"></div>
+    <label for="cx-obs">Observação (opcional)</label><input id="cx-obs" maxlength="300" placeholder="Ex.: faltou troco" value="${esc(rec?rec.obs:'')}">
+    <div class="acts"><button type="button" class="btn" data-act="caixaFechar">${rec?'Atualizar fechamento':'Fechar o caixa'}</button></div></div>`;
+  }else if(!rec){h+='<p class="muted">Este dia ainda não foi fechado.</p>'}
+  return h;
+}
+function caixaDifTela(){
+  const w=$('cx-dif');if(!w||!S.cxEsp)return;
+  const ins=[...document.querySelectorAll('#cx-form [data-cx]')];
+  if(ins.some(i=>i.value===''))return void(w.textContent='');
+  const con=ins.reduce((x,i)=>x+(Number(i.value)||0),0),esp=S.cxEsp.ordem.reduce((x,k)=>x+S.cxEsp.g[k],0),dif=Math.round((con-esp)*100)/100;
+  w.textContent=dif===0?'Bateu certinho.':dif>0?`Sobrou ${brl(dif)}.`:`Faltou ${brl(-dif)}.`;
+}
+async function caixaFechar(){
+  if(S.busy||!S.cxEsp)return;
+  const ins=[...document.querySelectorAll('#cx-form [data-cx]')];
+  if(ins.some(i=>i.value===''||!(Number(i.value)>=0))){toast('Digite o valor contado de cada forma (use 0 se não tiver).',true);return}
+  const contado={},esperado={};ins.forEach(i=>{contado[i.dataset.cx]=Math.round(Number(i.value)*100)/100;esperado[i.dataset.cx]=S.cxEsp.g[i.dataset.cx]});
+  S.busy=true;
+  try{
+    const r=await sb.rpc('caixa_fechar',{p_data:S.cxEsp.data,p_esperado:esperado,p_contado:contado,p_obs:($('cx-obs').value||'').trim()});
+    if(r.error){if(r.error.code==='PGRST202'||r.error.code==='42883')throw erroUi('Rode o arquivo 55-caixa.sql (ou o agendio-TUDO.sql) no Supabase.');throw r.error}
+    if(!r.data||r.data.ok!==true)throw erroUi((r.data&&r.data.erro)||'Não foi possível fechar o caixa.');
+    S.caixaDias=undefined;await caixaCarrega();toast('Caixa fechado.');
+  }catch(e){falha(e)}finally{S.busy=false}
+}
 const diaCaixa=x=>{const p=String(x.pagoEm||''),d=String(x.data||'');return p&&p>d?p:d};
 function relDia(){
   const d=S.diaRel||hoje(),f=x=>diaCaixa(x)===d;
@@ -4020,7 +4074,7 @@ function relDia(){
   const item=a=>{const c=cli(a.clienteId)||{nome:'(cliente removida)'};return `<div class="item"><div class="grow"><div class="t">${a.hora?esc(a.hora)+' · ':''}${esc(c.nome)}</div><div class="muted num">${esc(procTxt(a))} · ${esc(a.profissional||'')}${aberto(a)?' · <b>não pago</b>':a.pagamento?' · '+esc(a.pagamento):''}${diaCaixa(a)!==a.data?' · recebido em '+fd(diaCaixa(a)):''}</div></div><div class="side-val">${brl(a.valor)}</div></div>`};
   return `<p class="so-print">${esc(S.nomeSalao||salaoNome())} — fechamento de ${fd(d)}</p>`+segRel()+nav+
   `<div class="stats">${k(brl(rec),'entrou no caixa')}${k(brl(dContas+custos),'despesas do dia')}${k(brl(saldo),'saldo do dia',saldo<0?'neg':'')}${k(brl(soma(pend)),'a receber ('+pend.length+')')}</div>
-  <h3>Entrou no caixa, por forma de pagamento</h3>`+(formas.length?'<div class="list">'+formas.map(([n,v])=>`<div class="item"><div class="grow t">${esc(n)}</div><div class="side-val">${brl(v)}</div></div>`).join('')+'</div>':'<p class="muted">Nada recebido neste dia.</p>')+
+  <h3>Entrou no caixa, por forma de pagamento</h3>`+(formas.length?'<div class="list">'+formas.map(([n,v])=>`<div class="item"><div class="grow t">${esc(n)}</div><div class="side-val">${brl(v)}</div></div>`).join('')+'</div>':'<p class="muted">Nada recebido neste dia.</p>')+blocoCaixa(d,porForma)+
   (cpd.itens.length?`<h3>Cartões-presente do dia</h3><div class="list">${cpd.itens.map(x=>`<div class="item"><div class="grow"><div class="t">${x.m.tipo==='venda'?'Venda':'Cancelamento'} · ${esc(x.c.codigo||'')}</div><div class="muted">${esc(x.c.presenteado||x.c.comprador||'')}${x.c.forma?' · '+esc(x.c.forma):''}</div></div><div class="side-val">${brl(x.v)}</div></div>`).join('')}</div><p class="muted" style="font-size:13px">Vender um cartão entra no caixa do dia. Quando a cliente usa o saldo, o atendimento fica pago com “Cartão-presente” e não entra no caixa de novo.</p>`:'')+
   (vdd.itens.length?`<h3>Vendas de produtos do dia</h3><div class="list">${vdd.itens.map(v=>`<div class="item"><div class="grow"><div class="t">${esc((v.clienteId&&cli(v.clienteId)&&cli(v.clienteId).nome)||'Venda de produtos')}</div><div class="muted">${esc(v.forma||'')}${v.forma===CP_PAG?' · pago com saldo de cartão, não entra no caixa':''}</div></div><div class="side-val">${brl(v.total)}</div></div>`).join('')}</div>`:'')+
   `<h3>Atendimentos do dia (${feitos.length})</h3>`+(feitos.length?'<div class="list">'+feitos.sort(byHora).map(item).join('')+'</div>':'<p class="muted">Nenhum atendimento neste dia.</p>')+
@@ -4435,7 +4489,7 @@ document.addEventListener('click',e=>{
     novoAtend:()=>formAtend(null,a.dataset.cliente,a.dataset.data),receber:()=>formReceber(id),agVis:()=>{S.agVis=['mes','lista'].includes(id)?id:'sem';LS.set('salao_ag_vis',S.agVis);render()},agMes:()=>{S.agMes=id==='0'?0:(S.agMes||0)+Number(id);S.agDia=null;render()},agDia:()=>{S.agDia=id;render()},agSem:()=>{S.agSem=id==='0'?0:(S.agSem||0)+Number(id);render()},meta:()=>formMeta(),imprimir:()=>window.print(),editAtend:()=>formAtend(id),delAtend:()=>pedirDelAtend(id),
     abrir:()=>{S.view='clientes';S.sel=id;render();window.scrollTo(0,0)},
     novoVale:()=>formVale(),delVale:()=>confirmar('Excluir este vale?','O valor volta a entrar na comissão a pagar.','Excluir',async()=>{const r=await sb.from('vales').delete().eq('id',id);if(r.error)throw r.error;await recarregar();toast('Vale excluído.')}),
-    relAba:()=>{S.relAba=id;render()},diaRel:()=>{S.diaRel=id==='0'?hoje():addDia(S.diaRel||hoje(),Number(id));render()},juntarVer:()=>dlgRepetidas(),juntarManter:()=>confirmar('Juntar estes cadastros?','Os atendimentos das outras passam para a cliente escolhida e o cadastro repetido é removido. Não dá para desfazer.','Juntar',()=>juntarClientes(id,String(a.dataset.outras||'').split(',').filter(Boolean))),novoPacote:()=>formPacote(a.dataset.cliente),usarSessao:()=>{usarSessao(id).catch(x=>toast(falha(x),true))},encerrarPacote:()=>confirmar('Encerrar este pacote?','As sessões que sobraram deixam de poder ser usadas.','Encerrar',()=>encerrarPacote(id)),fidConfig:()=>formFid(),fidResgatar:()=>confirmar('Resgatar o prêmio?','Isso registra que a cliente já recebeu o prêmio.','Resgatar',()=>resgatarPremio(id)),novaEspera:()=>formEspera(),esAvisada:()=>{esMarcar(id,'avisada').catch(x=>toast(falha(x),true))},esRemover:()=>confirmar('Remover da lista de espera?','A cliente deixa de aparecer na lista.','Remover',()=>esMarcar(id,'remover')),retDias:()=>{S.retDias=Number(id)||60;LS.set('salao_ret_dias',String(S.retDias));render()},retChamei:()=>{const c=retContatos();c[id]=hoje();LS.set('salao_ret_contato',JSON.stringify(c));setTimeout(render,50)},mais:()=>{S.lim[id]=(S.lim[id]||100)+200;render()},voltar:()=>{S.sel=null;render()},estAba:()=>{S.estAba=id;render()},novoProd:()=>formProd(),editProd:()=>formProd(id),delProd:()=>pedirDelProd(id),movProd:()=>formMov(id),histProd:()=>histProd(id),novaFicha:()=>formFicha(id),editFicha:()=>formFicha(null,id),delFicha:()=>pedirDelFicha(id),exportJson,exportCsv,exportXlsx,novaDesp:()=>formDesp(),editDesp:()=>formDesp(id),delDesp:()=>pedirDelDesp(id),fechar:()=>$('dlg').close(),
+    relAba:()=>{S.relAba=id;render()},caixaFechar:caixaFechar,diaRel:()=>{S.diaRel=id==='0'?hoje():addDia(S.diaRel||hoje(),Number(id));render()},juntarVer:()=>dlgRepetidas(),juntarManter:()=>confirmar('Juntar estes cadastros?','Os atendimentos das outras passam para a cliente escolhida e o cadastro repetido é removido. Não dá para desfazer.','Juntar',()=>juntarClientes(id,String(a.dataset.outras||'').split(',').filter(Boolean))),novoPacote:()=>formPacote(a.dataset.cliente),usarSessao:()=>{usarSessao(id).catch(x=>toast(falha(x),true))},encerrarPacote:()=>confirmar('Encerrar este pacote?','As sessões que sobraram deixam de poder ser usadas.','Encerrar',()=>encerrarPacote(id)),fidConfig:()=>formFid(),fidResgatar:()=>confirmar('Resgatar o prêmio?','Isso registra que a cliente já recebeu o prêmio.','Resgatar',()=>resgatarPremio(id)),novaEspera:()=>formEspera(),esAvisada:()=>{esMarcar(id,'avisada').catch(x=>toast(falha(x),true))},esRemover:()=>confirmar('Remover da lista de espera?','A cliente deixa de aparecer na lista.','Remover',()=>esMarcar(id,'remover')),retDias:()=>{S.retDias=Number(id)||60;LS.set('salao_ret_dias',String(S.retDias));render()},retChamei:()=>{const c=retContatos();c[id]=hoje();LS.set('salao_ret_contato',JSON.stringify(c));setTimeout(render,50)},mais:()=>{S.lim[id]=(S.lim[id]||100)+200;render()},voltar:()=>{S.sel=null;render()},estAba:()=>{S.estAba=id;render()},novoProd:()=>formProd(),editProd:()=>formProd(id),delProd:()=>pedirDelProd(id),movProd:()=>formMov(id),histProd:()=>histProd(id),novaFicha:()=>formFicha(id),editFicha:()=>formFicha(null,id),delFicha:()=>pedirDelFicha(id),exportJson,exportCsv,exportXlsx,novaDesp:()=>formDesp(),editDesp:()=>formDesp(id),delDesp:()=>pedirDelDesp(id),fechar:()=>$('dlg').close(),
     recarregar:()=>{S.erro='';render();recarregar()},
     tentarCtx:()=>{parar();iniciar()},
     siteRecarrega:()=>{S.pl.siteErro=false;S.pl.site=null;render();carregarSite()},siteFaqAdd:()=>{lerSiteDom();S.pl.site.faq.push({p:'',r:''});render();const q=document.querySelectorAll('[data-fq=p]');if(q.length)q[q.length-1].focus()},siteFaqDel:()=>{lerSiteDom();S.pl.site.faq.splice(Number(id),1);render()},siteFaqPadrao:()=>{lerSiteDom();S.pl.site.faq=SITE_FAQ.map(x=>({p:x.p,r:x.r}));render()},siteRestaurar:()=>confirmar('Voltar o site aos textos padrão?','Os textos, o contato, a faixa de promoção e as perguntas que você escreveu serão apagados. Os planos continuam vindo da aba Planos.','Restaurar',async()=>{const r=await sb.rpc('plataforma_salvar_site',{p:{}});if(r.error)throw r.error;S.pl.site=null;await carregarSite();toast('Site restaurado.')}),
@@ -4480,6 +4534,7 @@ document.addEventListener('input',e=>{
   else if(e.target.id==='estBusca'){S.estBusca=e.target.value;$('lista-est').innerHTML=itensProdutos()}
   else if(['p-cont','p-preco','p-uso','p-perda'].includes(e.target.id))previaProd();
   else if(e.target.id==='f-qtd')previaFicha(false);
+  else if(e.target.dataset&&e.target.dataset.cx!==undefined)caixaDifTela();
   else if(['a-val','a-val2','a-prod','a-taxa'].includes(e.target.id)){if(e.target.id==='a-prod')e.target.dataset.auto='';atualizaParc()}
 });
 document.addEventListener('change',e=>{
