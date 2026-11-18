@@ -542,6 +542,7 @@ dialog::backdrop{background:rgba(18,48,42,.55)}
 .foto-fig{margin:0}
 .foto-fig img{width:100%;max-height:62vh;object-fit:contain;border-radius:8px;background:#e8e3d7;display:block}
 .foto-fig figcaption{font-size:12.5px;color:var(--muted);margin-top:5px}
+.gal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}.gal-it{margin:0;display:flex;flex-direction:column;gap:6px}.gal-it img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;background:var(--line,#ddd)}
 </style>
 </head>
 <body>
@@ -618,7 +619,7 @@ const rowC=r=>({id:r.id,nome:r.nome||'',telefone:r.telefone||'',nascimento:r.nas
 const STATUS_OK=['agendado','confirmado','cancelado','faltou'],STATUS_ROT={agendado:'Agendado',confirmado:'Confirmado',cancelado:'Cancelou',faltou:'Faltou'};
 const inativo=a=>a.status==='cancelado'||a.status==='faltou';
 const procTxt=a=>(a.procedimento||'')+(a.procedimento2?' + '+a.procedimento2:'');
-const rowA=r=>({token:r.token_cliente||'',cancCli:!!r.cancelado_pela_cliente,remarcadoEm:r.remarcado_em||'',id:r.id,clienteId:r.cliente_id,data:r.data,procedimento:r.procedimento||'',procedimento2:r.procedimento2||'',procTxt:(r.procedimento||'')+(r.procedimento2?' + '+r.procedimento2:''),profissional:r.profissional||'',
+const rowA=r=>({fila:r.fila||'',filaEm:r.fila_em||'',token:r.token_cliente||'',cancCli:!!r.cancelado_pela_cliente,remarcadoEm:r.remarcado_em||'',id:r.id,clienteId:r.cliente_id,data:r.data,procedimento:r.procedimento||'',procedimento2:r.procedimento2||'',procTxt:(r.procedimento||'')+(r.procedimento2?' + '+r.procedimento2:''),profissional:r.profissional||'',
   hora:String(r.hora||'').slice(0,5),valor:Number(r.valor)||0,pagamento:r.pagamento||'',parcelas:PARC(r.parcelas),gastoProdutos:Number(r.gasto_produtos)||0,taxaMaquina:Number(r.taxa_maquina)||0,retorno:r.retorno||'',obs:r.obs||'',duracao:Math.min(720,Math.max(5,Number(r.duracao)||60)),status:STATUS_OK.includes(r.status)?r.status:'agendado',valor2:Math.max(0,Number(r.valor2)||0),pago:r.pago!==false,pagoEm:r.pago_em||''});
 const CATS=['Anúncio Instagram','Água','Internet','Produtos de limpeza','Luz','Manutenção','Aluguel','Condomínio','Outros'];
 const rowD=r=>({id:r.id,data:r.data,categoria:r.categoria||'Outros',descricao:r.descricao||'',valor:Number(r.valor)||0});
@@ -691,7 +692,7 @@ async function iniciar(){
   try{S.canal=sb.channel('salao-mudancas').on('postgres_changes',{event:'*',schema:'public'},agendar).subscribe()}catch(_){}
 }
 function parar(){
-  S.iniciado=false;S.got=false;S.push=null;S.anams=[];S.fotos=null;S.fotosUrl=null;S.fotosTs=null;S.semFotos=false;S.emCfg=undefined;S.clube=undefined;S.caixaDias=undefined;S.cxEsp=null;S.contas=[];S.promos=[];S.cb={ativo:false,pct:5,desde:''};S.pvs=[];S.vendas=[];S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
+  S.iniciado=false;S.got=false;S.push=null;S.anams=[];S.fotos=null;S.fotosUrl=null;S.fotosTs=null;S.semFotos=false;S.emCfg=undefined;S.clube=undefined;S.caixaDias=undefined;S.cxEsp=null;S.galeria=undefined;S.contas=[];S.promos=[];S.cb={ativo:false,pct:5,desde:''};S.pvs=[];S.vendas=[];S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
   if(S.canal&&sb){try{sb.removeChannel(S.canal)}catch(_){}}
   S.canal=null;
 }
@@ -3638,8 +3639,10 @@ function blocoOnline(pode){
   <label class="chk"><input type="checkbox" name="cliente_pode" ${oc.cliente_pode===false?'':'checked'} ${pode?'':'disabled'}> A cliente pode remarcar ou cancelar pelo link do lembrete</label>
   <label class="chk"><input type="checkbox" name="area_cliente" ${oc.area_cliente===true?'checked':''} ${pode?'':'disabled'}> Ligar a área da cliente</label>
   <p class="muted" style="margin:2px 0 8px">Cada cliente recebe um link pessoal (você envia pelo WhatsApp, na ficha dela) para ver os próximos horários, cashback, pacotes e fidelidade, e remarcar sozinha. Desligando aqui, todos os links param de mostrar dados na hora.</p>
+  <label for="on-sb">Sobre o salão, aparece na página de agendamento (opcional)</label><textarea id="on-sb" name="sobre" rows="3" maxlength="400" ${pode?'':'disabled'} placeholder="Ex.: Aberto de terça a sábado, das 9h às 19h. Estacionamento na porta.">${esc(oc.sobre||'')}</textarea>
+  <label class="chk"><input type="checkbox" name="mostrar_endereco" ${oc.mostrar_endereco===false?'':'checked'} ${pode?'':'disabled'}> Mostrar o endereço do salão na página de agendamento</label>
   <label for="on-av">Recado extra para a cliente, depois do pedido (opcional)</label><textarea id="on-av" name="aviso" rows="3" maxlength="400" ${pode?'':'disabled'} placeholder="Ex.: Chegue 10 minutos antes. Cancelamentos até 24 h antes.">${esc(oc.aviso||'')}</textarea>
-  <p class="erro" id="a-erro" role="alert"></p>${pode?'<div class="acts" style="justify-content:flex-start"><button class="btn">Salvar</button></div>':''}</form><div id="mp-bloco" ${sgModo==='mp'?'':'hidden'}>${blocoMp(pode)}</div>`;
+  <p class="erro" id="a-erro" role="alert"></p>${pode?'<div class="acts" style="justify-content:flex-start"><button class="btn">Salvar</button></div>':''}</form><div id="mp-bloco" ${sgModo==='mp'?'':'hidden'}>${blocoMp(pode)}</div>${blocoGaleria(pode)}`;
 }
 function carregaFb(cfg){return new Promise((ok,err)=>{
   if(window.FB){ok();return}
@@ -3699,6 +3702,46 @@ async function chamaApi(rota,corpo){
   if(!r.ok)throw erroUi((j&&j.erro)||'Não foi possível concluir.');
   return j;
 }
+/* ===== Galeria do salão (fotos públicas na página de agendamento) ===== */
+async function galCarrega(){
+  if(S.galeria!==undefined)return;S.galeria=null;
+  try{const r=await todos('galeria_salao');S.galeria=r.sort((a,b)=>String(a.criado_em).localeCompare(String(b.criado_em)));render()}catch(_){S.galeria=false}
+}
+const galUrl=cam=>{try{return sb.storage.from('galeria').getPublicUrl(cam).data.publicUrl}catch(_){return ''}};
+function blocoGaleria(pode){
+  if(S.legado)return '';
+  if(S.galeria===undefined)galCarrega();
+  if(S.galeria===false)return `<div class="panel" style="margin-top:12px"><b>Fotos do salão</b><p class="muted">Rode o arquivo 57-galeria.sql (ou o agendio-TUDO.sql) no Supabase para liberar a galeria.</p></div>`;
+  const L=S.galeria||[];
+  return `<div class="panel" style="margin-top:12px"><b>Fotos do salão (${L.length} de 12)</b>
+  <p class="muted" style="margin:4px 0 10px">Estas fotos aparecem para qualquer pessoa na sua página de agendamento. Use fotos do ambiente e do seu trabalho. <b>Não use fotos de clientes</b> sem a autorização delas.</p>
+  ${L.length?`<div class="gal-grid">${L.map(g=>`<figure class="gal-it"><img src="${esc(galUrl(g.caminho))}" alt="${esc(g.legenda||'Foto do salão')}" loading="lazy">${pode?`<button type="button" class="btn ghost sm" data-act="galRemover" data-id="${esc(g.id)}">Remover</button>`:''}</figure>`).join('')}</div>`:'<p class="muted">Nenhuma foto ainda.</p>'}
+  ${pode&&L.length<12?`<label for="gal-f" style="margin-top:10px">Adicionar fotos</label><input id="gal-f" type="file" accept="image/*" multiple>`:''}
+  <p class="erro" id="gal-erro" role="alert"></p></div>`;
+}
+async function galEnviar(files){
+  const tid=S.ctx&&S.ctx.tenant&&S.ctx.tenant.id,er=$('gal-erro'),msg=t=>{if(er)er.textContent=t};msg('');
+  if(!tid)return;
+  const livres=12-(S.galeria||[]).length,fs=Array.from(files).slice(0,Math.max(0,livres));
+  if(!fs.length){msg('A galeria já tem 12 fotos.');return}
+  const bk=sb.storage.from('galeria');let ok=0;
+  try{
+    for(const f of fs){
+      const b=await fotoReduz(f),cam=tid+'/'+novoId().replace(/-/g,'')+'.jpg';
+      const up=await bk.upload(cam,b,{contentType:'image/jpeg',upsert:false});
+      if(up.error){if(/bucket/i.test(up.error.message||''))throw erroUi('Rode o arquivo 57-galeria.sql (ou o agendio-TUDO.sql) no Supabase.');throw up.error}
+      const r=await sb.rpc('galeria_adicionar',{p_caminho:cam,p_legenda:''});
+      if(r.error){await bk.remove([cam]);throw r.error}
+      ok++;
+    }
+  }catch(e){msg(e&&e.aviso?e.aviso:(e&&e.message&&/12 fotos|Sem permiss/.test(e.message)?e.message:'Não foi possível enviar a foto agora.'))}
+  S.galeria=undefined;await galCarrega();if(ok)toast(ok===1?'Foto adicionada.':ok+' fotos adicionadas.');
+}
+async function galRemover(id){
+  const r=await sb.rpc('galeria_remover',{p_id:id});if(r.error)throw r.error;
+  try{await sb.storage.from('galeria').remove([r.data])}catch(_){}
+  S.galeria=undefined;await galCarrega();toast('Foto removida.');
+}
 async function salvarOnline(d){
   const slug=String(d.slug||'').trim().toLowerCase(),on=d.on==='on';
   if(on&&!/^[a-z0-9][a-z0-9-]{2,39}$/.test(slug))throw erroUi('Escolha um endereço com 3 a 40 letras minúsculas, números ou hífen.');
@@ -3716,7 +3759,7 @@ async function salvarOnline(d){
   if(sm==='pix'&&!pixCfg.chave)throw erroUi('Informe a sua chave Pix para gerar o QR code do sinal.');
   if(sm==='pix'&&!pixCfg.nome){const e=$('on-pn');if(e){e.focus();e.scrollIntoView({block:'center'})}throw erroUi('Falta preencher o campo "Nome que aparece no Pix" (logo acima da caixa de recado). Pode ser o seu nome ou o do salão.')}
   if(sm==='pix'&&!pixCfg.cidade){const e=$('on-pd');if(e){e.focus();e.scrollIntoView({block:'center'})}throw erroUi('Falta preencher o campo "Cidade" (logo acima da caixa de recado). Exemplo: Blumenau.')}
-  const cfg=Object.assign({},S.agCfg,{online:{passo:Number(d.passo)||60,dias_max:Math.min(120,Math.max(1,Math.round(Number(d.dias)||30))),antecedencia_h:Math.min(72,Math.max(0,Math.round(Number(d.ant)||0))),aviso:String(d.aviso||'').trim().slice(0,400),cliente_pode:d.cliente_pode==='on',area_cliente:d.area_cliente==='on',remarcar_h:Math.min(72,Math.max(1,Math.round(Number(d.remarcar_h)||24))),sinal:{modo:sm,modo_antes:sm0,tipo:st,valor:sv,expira_min:Math.min(240,Math.max(10,Math.round(Number(d.sinal_exp)||30)))},pix:pixCfg}});
+  const cfg=Object.assign({},S.agCfg,{online:{passo:Number(d.passo)||60,dias_max:Math.min(120,Math.max(1,Math.round(Number(d.dias)||30))),antecedencia_h:Math.min(72,Math.max(0,Math.round(Number(d.ant)||0))),aviso:String(d.aviso||'').trim().slice(0,400),sobre:String(d.sobre||'').trim().slice(0,400),mostrar_endereco:d.mostrar_endereco==='on',cliente_pode:d.cliente_pode==='on',area_cliente:d.area_cliente==='on',remarcar_h:Math.min(72,Math.max(1,Math.round(Number(d.remarcar_h)||24))),sinal:{modo:sm,modo_antes:sm0,tipo:st,valor:sv,expira_min:Math.min(240,Math.max(10,Math.round(Number(d.sinal_exp)||30)))},pix:pixCfg}});
   const r=await sb.from('tenants').update({slug:slug||null,online_ativo:on,agenda_config:cfg}).eq('id',S.ctx.tenant.id);
   if(r.error){
     if(r.error.code==='23505')throw erroUi('Esse endereço já está em uso. Escolha outro.');
@@ -3839,7 +3882,7 @@ function blocoDiaAg(d){
   const h=hoje(),l=S.atendTodos.filter(a=>a.data===d).sort(byHora);
   return `<h3 style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${esc(diaTxt(d))}${d===h?' <span class="tag ok">Hoje</span>':''}<button class="btn ghost sm" data-act="novoAtend" data-data="${d}">Agendar</button>${podeBloq()?`<button class="btn ghost sm" data-act="novoBloq" data-data="${d}">Bloquear</button>`:''}</h3>`+bloqDia(d)+(l.length?`<div class="list">${l.map(linhaAg).join('')}</div>`:'<p class="muted" style="margin:0">Sem atendimentos.</p>');
 }
-const agToggle=()=>`<div class="seg" role="group" aria-label="Modo de visualização">${[['sem','Semana'],['mes','Mês'],['lista','Lista do mês']].map(([k,l])=>`<button class="btn sm ${(S.agVis||'sem')===k?'':'ghost'}" data-act="agVis" data-id="${k}" aria-pressed="${(S.agVis||'sem')===k}">${l}</button>`).join('')}</div>`;
+const agToggle=()=>`<div class="seg" role="group" aria-label="Modo de visualização">${[['sem','Semana'],['mes','Mês'],['lista','Lista do mês'],['fila','Fila de hoje']].map(([k,l])=>`<button class="btn sm ${(S.agVis||'sem')===k?'':'ghost'}" data-act="agVis" data-id="${k}" aria-pressed="${(S.agVis||'sem')===k}">${l}</button>`).join('')}</div>`;
 function telaAgendaLista(){
   const h=hoje(),base=addMes(h.slice(0,7),S.agMes||0),[y,m]=base.split('-').map(Number),nd=new Date(y,m,0).getDate();
   const dias=Array.from({length:nd},(_,i)=>base+'-'+String(i+1).padStart(2,'0'));
@@ -3868,9 +3911,31 @@ function telaAgendaMes(){
   <div class="cal" role="group" aria-label="Calendário de ${esc(mesNome(base))}">${SEMNOM.map(x=>`<div class="cal-h">${x}</div>`).join('')}${dias.map(cel).join('')}</div>
   <div class="cal-det">${blocoDiaAg(sel)}</div>`;
 }
+/* ===== Fila do dia ===== */
+const FILA_ROT={aguardando:'Aguardando',atendendo:'Em atendimento',finalizado:'Finalizado'};
+async function filaMarca(id,st){
+  if(!['aguardando','atendendo','finalizado',''].includes(st))return;
+  const r=await sb.from('atendimentos').update({fila:st||null,fila_em:st?new Date().toISOString():null}).eq('id',id);
+  if(r.error){if(/fila/i.test(String(r.error.message||'')))throw erroUi('Rode o arquivo 56-fila.sql (ou o agendio-TUDO.sql) no Supabase.');throw r.error}
+  await recarregar();render();
+}
+function telaFila(){
+  const pode=!S.legado&&NV('agenda')==='escrita';
+  const h=hoje(),L=S.atendTodos.filter(a=>a.data===h&&!inativo(a)).sort(byHora);
+  const col=(k,t)=>{const l=L.filter(a=>(a.fila||'')===k).sort((x,y)=>k==='aguardando'?String(x.filaEm).localeCompare(String(y.filaEm)):byHora(x,y));
+    const mins=a=>{if(!a.filaEm)return '';const m=Math.max(0,Math.round((Date.now()-new Date(a.filaEm).getTime())/6e4));return m<1?'agora':m+' min'};
+    const btn=(a)=>{if(!pode)return '';const b=(st,x,pri)=>`<button class="btn ${pri?'':'ghost '}sm" data-act="filaMarca" data-id="${esc(a.id)}" data-st="${st}">${x}</button>`;
+      return k===''?b('aguardando','Chegou',1):k==='aguardando'?b('atendendo','Iniciar',1)+b('','Voltar'):k==='atendendo'?b('finalizado','Finalizar',1)+b('aguardando','Voltar'):b('atendendo','Reabrir')};
+    return `<h3>${t} <span class="tag">${l.length}</span></h3>`+(l.length?`<div class="list">${l.map(a=>{const c=cli(a.clienteId)||{nome:'(cliente removida)'};
+      return `<div class="item"><div class="side-val" style="min-width:56px">${esc(a.hora||'—')}</div>${avatar(c.nome)}<div class="grow"><div class="t">${esc(c.nome)}</div><div class="muted">${esc(procTxt(a))}${a.profissional?' · '+esc(a.profissional):''}${k&&k!=='finalizado'&&mins(a)?' · '+(k==='aguardando'?'esperando ':'há ')+mins(a):''}</div></div><div class="item-acts">${btn(a)}</div></div>`}).join('')}</div>`:'<p class="muted">Ninguém aqui.</p>');};
+  return `<div class="bar">${agToggle()}</div>`+
+  (!L.length?'<div class="empty"><p>Nenhum atendimento marcado para hoje.</p></div>':
+   (pode?'':'<p class="muted">Você só pode ver a fila; quem tem acesso à agenda marca a chegada.</p>')+col('','Ainda não chegaram')+col('aguardando','Aguardando')+col('atendendo','Em atendimento')+col('finalizado','Finalizados'));
+}
 function telaAgenda(){
   if(S.agVis==='mes')return telaAgendaMes();
   if(S.agVis==='lista')return telaAgendaLista();
+  if(S.agVis==='fila')return telaFila();
   const h=hoje(),ini=addDia(segunda(h),7*(S.agSem||0)),dias=Array.from({length:7},(_,i)=>addDia(ini,i)),am=addDia(h,1);
   const pend=S.atend.filter(a=>a.data===am).sort(byHora),env=enviados();
   const total=S.atend.filter(a=>a.data>=ini&&a.data<=dias[6]).length;
@@ -4486,7 +4551,7 @@ document.addEventListener('click',e=>{
     ocultaPassos:()=>{LS.set('salao_passos_off','1');render();toast('Primeiros passos ocultados. Para ver de novo, use o botão no cartão Agendamento online.')},
     mostraPassos:()=>{LS.set('salao_passos_off','');render()},
     novoServico:()=>formServico(''),editServico:()=>formServico(id),delServico:()=>removerServico(id).catch(x=>toast(falha(x),true)),novoBloq:()=>formBloq(a.dataset.data),delBloq:()=>confirmar('Remover este bloqueio?','O horário volta a ficar livre.','Remover',async()=>{const r=await sb.from('bloqueios').delete().eq('id',id);if(r.error)throw r.error;await recarregar();toast('Bloqueio removido.')}),
-    novoAtend:()=>formAtend(null,a.dataset.cliente,a.dataset.data),receber:()=>formReceber(id),agVis:()=>{S.agVis=['mes','lista'].includes(id)?id:'sem';LS.set('salao_ag_vis',S.agVis);render()},agMes:()=>{S.agMes=id==='0'?0:(S.agMes||0)+Number(id);S.agDia=null;render()},agDia:()=>{S.agDia=id;render()},agSem:()=>{S.agSem=id==='0'?0:(S.agSem||0)+Number(id);render()},meta:()=>formMeta(),imprimir:()=>window.print(),editAtend:()=>formAtend(id),delAtend:()=>pedirDelAtend(id),
+    novoAtend:()=>formAtend(null,a.dataset.cliente,a.dataset.data),receber:()=>formReceber(id),agVis:()=>{S.agVis=['mes','lista','fila'].includes(id)?id:'sem';if(id!=='fila')LS.set('salao_ag_vis',S.agVis);render()},filaMarca:()=>filaMarca(id,a.dataset.st),galRemover:()=>confirmar('Remover esta foto?','Ela deixa de aparecer na página de agendamento.','Remover',()=>galRemover(id)),agMes:()=>{S.agMes=id==='0'?0:(S.agMes||0)+Number(id);S.agDia=null;render()},agDia:()=>{S.agDia=id;render()},agSem:()=>{S.agSem=id==='0'?0:(S.agSem||0)+Number(id);render()},meta:()=>formMeta(),imprimir:()=>window.print(),editAtend:()=>formAtend(id),delAtend:()=>pedirDelAtend(id),
     abrir:()=>{S.view='clientes';S.sel=id;render();window.scrollTo(0,0)},
     novoVale:()=>formVale(),delVale:()=>confirmar('Excluir este vale?','O valor volta a entrar na comissão a pagar.','Excluir',async()=>{const r=await sb.from('vales').delete().eq('id',id);if(r.error)throw r.error;await recarregar();toast('Vale excluído.')}),
     relAba:()=>{S.relAba=id;render()},caixaFechar:caixaFechar,diaRel:()=>{S.diaRel=id==='0'?hoje():addDia(S.diaRel||hoje(),Number(id));render()},juntarVer:()=>dlgRepetidas(),juntarManter:()=>confirmar('Juntar estes cadastros?','Os atendimentos das outras passam para a cliente escolhida e o cadastro repetido é removido. Não dá para desfazer.','Juntar',()=>juntarClientes(id,String(a.dataset.outras||'').split(',').filter(Boolean))),novoPacote:()=>formPacote(a.dataset.cliente),usarSessao:()=>{usarSessao(id).catch(x=>toast(falha(x),true))},encerrarPacote:()=>confirmar('Encerrar este pacote?','As sessões que sobraram deixam de poder ser usadas.','Encerrar',()=>encerrarPacote(id)),fidConfig:()=>formFid(),fidResgatar:()=>confirmar('Resgatar o prêmio?','Isso registra que a cliente já recebeu o prêmio.','Resgatar',()=>resgatarPremio(id)),novaEspera:()=>formEspera(),esAvisada:()=>{esMarcar(id,'avisada').catch(x=>toast(falha(x),true))},esRemover:()=>confirmar('Remover da lista de espera?','A cliente deixa de aparecer na lista.','Remover',()=>esMarcar(id,'remover')),retDias:()=>{S.retDias=Number(id)||60;LS.set('salao_ret_dias',String(S.retDias));render()},retChamei:()=>{const c=retContatos();c[id]=hoje();LS.set('salao_ret_contato',JSON.stringify(c));setTimeout(render,50)},mais:()=>{S.lim[id]=(S.lim[id]||100)+200;render()},voltar:()=>{S.sel=null;render()},estAba:()=>{S.estAba=id;render()},novoProd:()=>formProd(),editProd:()=>formProd(id),delProd:()=>pedirDelProd(id),movProd:()=>formMov(id),histProd:()=>histProd(id),novaFicha:()=>formFicha(id),editFicha:()=>formFicha(null,id),delFicha:()=>pedirDelFicha(id),exportJson,exportCsv,exportXlsx,novaDesp:()=>formDesp(),editDesp:()=>formDesp(id),delDesp:()=>pedirDelDesp(id),fechar:()=>$('dlg').close(),
@@ -4539,6 +4604,7 @@ document.addEventListener('input',e=>{
 });
 document.addEventListener('change',e=>{
   const t=e.target;
+  if(t.id==='gal-f'){if(t.files&&t.files.length)galEnviar(t.files).then(()=>{t.value=''});return}
   if(t.id==='mesFiltro'){S.mesFiltro=t.value;render()}
   else if(t.id==='mesRel'){S.mesRel=t.value;render()}
   else if(t.id==='agLivres'){S.agLivres=t.checked;render()}

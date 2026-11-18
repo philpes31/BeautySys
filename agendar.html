@@ -101,6 +101,7 @@ input,textarea{border-width:1px;border-radius:8px;background:#fffefb}
 .btn2{border-width:1px}
 .preco{font-family:var(--serif);font-size:1.05rem}
 [hidden]{display:none!important}
+.sobre{margin:12px 0 0;white-space:pre-line}.end{margin-top:6px}.gal{display:flex;gap:8px;overflow-x:auto;margin:14px 0 0;padding-bottom:4px;-webkit-overflow-scrolling:touch}.gal a{flex:0 0 auto}.gal img{display:block;height:120px;width:auto;max-width:200px;object-fit:cover;border-radius:10px}
 </style>
 </head>
 <body>
@@ -159,10 +160,17 @@ function dias(n){
   return out;
 }
 function dataExtensa(iso){var p=iso.split('-');return new Date(+p[0],+p[1]-1,+p[2]).toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'})}
+function galHTML(g){
+  if(!g||!g.length)return '';
+  return '<div class="gal" aria-label="Fotos do salão">'+g.slice(0,12).map(function(x){
+    var c=String(x.caminho||'');if(!/^[0-9a-f-]{36}\/[A-Za-z0-9_-]{1,64}\.(jpg|png|webp)$/.test(c))return '';
+    var u=C.url+'/storage/v1/object/public/galeria/'+c;
+    return '<a href="'+esc(u)+'" target="_blank" rel="noopener"><img src="'+esc(u)+'" alt="'+esc(x.legenda||'Foto do salão')+'" loading="lazy"></a>'}).join('')+'</div>';
+}
 function montar(){
   var s=S.salao;
   var profs=s.profissionais||[];
-  A.innerHTML='<header>'+(/^https:\/\//.test(s.logo||'')?'<img class="logo" alt="" src="'+esc(s.logo)+'">':'')+'<h1>'+esc(s.nome)+'</h1><p class="sub">Escolha o serviço e o horário. O salão confirma o seu pedido pelo WhatsApp.</p>'+(s.aviso?'<p class="aviso">'+esc(s.aviso)+'</p>':'')+'</header>'+
+  A.innerHTML='<header>'+(/^https:\/\//.test(s.logo||'')?'<img class="logo" alt="" src="'+esc(s.logo)+'">':'')+'<h1>'+esc(s.nome)+'</h1><p class="sub">Escolha o serviço e o horário. O salão confirma o seu pedido pelo WhatsApp.</p>'+(s.endereco?'<p class="sub end">'+esc(s.endereco)+'</p>':'')+(s.sobre?'<p class="sobre">'+esc(s.sobre)+'</p>':'')+(s.aviso?'<p class="aviso">'+esc(s.aviso)+'</p>':'')+galHTML(s.galeria)+'</header>'+
   '<section aria-labelledby="h-serv"><h2 id="h-serv">Serviço</h2><div class="opcoes" id="serv">'+
     (s.servicos.length?s.servicos.map(function(x,i){return '<button type="button" class="op" data-i="'+i+'" aria-pressed="false"><span>'+esc(x.nome)+'<small>'+(Number(x.duracao)||60)+' min</small>'+(x.sinal&&x.sinal.modo!=='nenhum'?'<span class="sinal-tag">Sinal de '+brl(x.sinal.valor)+'</span>':'')+'</span>'+(Number(x.preco)>0?'<span class="preco">'+brl(x.preco)+'</span>':'')+'</button>'}).join(''):'<p class="vazio">Este salão ainda não cadastrou serviços para agendar online.</p>')+
   '</div></section>'+
