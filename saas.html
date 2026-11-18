@@ -2223,7 +2223,7 @@ function itensClientes(){
   if(!l.length)return '<p class="muted">Nenhuma cliente encontrada.</p>';
   return '<div class="list">'+l.map(c=>{
     const a=atends(c.id);
-    return `<div class="item click" tabindex="0" role="button" data-act="abrir" data-id="${esc(c.id)}">${avatar(c.nome)}<div class="grow"><div class="t">${esc(c.nome)}</div><div class="muted">${esc(c.telefone||'sem telefone')}</div>${chipsEtq(c)}</div><div class="side">${a.length} atend.<br>${a[0]?'Última: '+fd(a[0].data):'Sem visitas'}</div></div>`;
+    return `<div class="item click" tabindex="0" role="button" data-act="abrir" data-id="${esc(c.id)}">${avatar(c.nome)}<div class="grow"><div class="t">${esc(c.nome)}</div><div class="muted">${esc(c.telefone||'sem telefone')} ${chipFaltas(c)}</div>${chipsEtq(c)}</div><div class="side">${a.length} atend.<br>${a[0]?'Última: '+fd(a[0].data):'Sem visitas'}</div></div>`;
   }).join('')+'</div>';
 }
 function detalhe(){
@@ -2235,6 +2235,7 @@ function detalhe(){
     <div class="muted">${c.telefone?`${esc(c.telefone)} · <a class="wa" href="${zap(c.telefone)}" target="_blank" rel="noopener">WhatsApp</a>`:'sem telefone'}</div>
     ${c.nascimento?`<div class="muted">Nascimento: ${fd(c.nascimento)}</div>`:''}
     ${chipsEtq(c)}
+    ${faltasDe(c.id)?`<div class="muted">${chipFaltas(c)} Faltou sem avisar.</div>`:''}
     ${(()=>{const q=cli(c.indicadaPor),L=indicouLista(c.id);return (q?`<div class="muted">Indicada por ${esc(q.nome)}</div>`:'')+(L.length?`<div class="muted">Indicou ${L.length} ${L.length===1?'cliente':'clientes'}: ${esc(L.map(x=>x.nome).join(', '))}</div>`:'')})()}
     ${(()=>{const f=S.atendTodos.filter(x=>x.clienteId===c.id&&x.status==='faltou').length,k=S.atendTodos.filter(x=>x.clienteId===c.id&&x.status==='cancelado').length;return f||k?`<div class="muted">${f?`<span class="tag late">${f} ${f===1?'falta':'faltas'}</span> `:''}${k?`${k} ${k===1?'cancelamento':'cancelamentos'}`:''}</div>`:''})()}
     ${/alergi|al[eé]rgic|sensibilidade|n[aã]o pode usar/i.test(c.obs||'')?'<div><span class="tag late" role="note">Atenção: alergia ou sensibilidade anotada</span></div>':''}
@@ -2889,7 +2890,7 @@ function formAtend(id,clienteId,data){
   const tem2=!!a.procedimento2,v2=Number(a.valor2)||0,v1=a.valor===undefined||a.valor===''?'':Math.max(0,(Number(a.valor)||0)-v2),pagoSel=id?(a.pago!==false&&!isFiado(a)):String(a.data||hoje())<=hoje();
   const cls=[...S.clientes].sort((x,y)=>(x.nome||'').localeCompare(y.nome||'','pt-BR'));
   abrir(`<h2>${id?'Editar atendimento':'Novo atendimento'}</h2><form data-form="atend" data-id="${esc(id||'')}">
-  <label for="a-cli">Cliente *</label><select id="a-cli" name="clienteId" required><option value="">Selecione…</option>${cls.map(c=>`<option value="${esc(c.id)}" ${c.id===a.clienteId?'selected':''}>${esc(c.nome)}</option>`).join('')}</select>
+  <label for="a-cli">Cliente *</label><select id="a-cli" name="clienteId" required><option value="">Selecione…</option>${cls.map(c=>`<option value="${esc(c.id)}" ${c.id===a.clienteId?'selected':''}>${esc(c.nome)}</option>`).join('')}</select><div id="a-falta" class="muted" role="status" style="margin-top:4px;color:var(--late,#9b2f2f)">${esc(avisoFaltas(a.clienteId))}</div>
   <div class="grid2"><div><label for="a-data">Data *</label><input id="a-data" name="data" type="date" required value="${esc(a.data)}"></div>
   <div><label for="a-hora">Horário</label><input id="a-hora" name="hora" type="time" value="${esc(a.hora||'')}"></div>
   <div><label for="a-proc">Procedimento *</label><select id="a-proc" name="procedimento" required><option value="">Selecione…</option>${procs.map(p=>`<option value="${esc(p)}" ${p===a.procedimento?'selected':''}>${esc(p)}</option>`).join('')}</select></div>
@@ -3513,6 +3514,12 @@ function telaInicio(){
   {const np=(S.pedidos||[]).filter(x=>x.status==='pendente').length,dev=(S.pedidos||[]).filter(x=>x.status==='recusado').length;
     if(dev)al.unshift([`${dev} sinal(is) recebido(s) de horário que não está mais livre. Devolva pelo Mercado Pago.`,'agenda','Ver']);
     if(np)al.unshift([`${np} ${np===1?'pedido de agendamento online aguardando':'pedidos de agendamento online aguardando'} resposta.`,'agenda','Ver pedidos'])}
+  {const fut=S.atend.filter(a=>String(a.data)>=h&&!inativo(a)),rep=[...new Set(fut.map(a=>a.clienteId))].filter(id=>cli(id)&&faltasDe(id)>=2);
+    if(rep.length)al.push([`${rep.length} ${rep.length===1?'cliente que já faltou 2 vezes ou mais tem':'clientes que já faltaram 2 vezes ou mais têm'} horário marcado. Confirme com ${rep.length===1?'ela':'elas'}.`,'agenda','Ver agenda']);
+    if(recOk('estoque')&&!S.semEst){const nf=(S.produtos||[]).filter(emFalta).length,nv=(S.produtos||[]).filter(p=>p.validade&&diasPara(p.validade)<=15).length;
+      if(nf)al.push([`${nf} ${nf===1?'produto do estoque está acabando':'produtos do estoque estão acabando'}.`,'estoque','Ver estoque']);
+      if(nv)al.push([`${nv} ${nv===1?'produto vence':'produtos vencem'} em até 15 dias (ou já venceram).`,'estoque','Ver estoque'])}
+    const npv=(S.pvs||[]).filter(pvBaixo).length;if(npv)al.push([`${npv} ${npv===1?'produto à venda está com estoque baixo':'produtos à venda estão com estoque baixo'}.`,'vendas','Ver produtos'])}
   if(dono){
     const pg=((S.assin&&S.assin.pags)||[]),atr=pg.filter(g=>g.status==='atrasado'),prox=pg.filter(g=>g.status==='pendente'&&diasPara(g.vencimento)>=0&&diasPara(g.vencimento)<=3);
     if(atr.length)al.unshift([`Cobrança do Agendio atrasada (${brl(atr.reduce((t,g)=>t+Number(g.valor||0),0))}). Pague para não perder o acesso.`,'salao','Pagar agora']);
@@ -3979,6 +3986,10 @@ function telaAgendaMes(){
   <div class="cal" role="group" aria-label="Calendário de ${esc(mesNome(base))}">${SEMNOM.map(x=>`<div class="cal-h">${x}</div>`).join('')}${dias.map(cel).join('')}</div>
   <div class="cal-det">${blocoDiaAg(sel)}</div>`;
 }
+/* ===== Controle de faltas ===== */
+const faltasDe=cid=>S.atendTodos.filter(a=>a.clienteId===cid&&a.status==='faltou').length;
+const chipFaltas=c=>{const n=faltasDe(c.id);return n?`<span class="tag ${n>=2?'late':''}">${n} ${n===1?'falta':'faltas'}</span>`:''};
+const avisoFaltas=cid=>{const n=cid?faltasDe(cid):0;return n>=2?`Atenção: esta cliente já faltou ${n} vezes. Vale combinar um sinal ou confirmar o horário antes.`:n===1?'Esta cliente já faltou 1 vez.':''};
 /* ===== Fila do dia ===== */
 const FILA_ROT={aguardando:'Aguardando',atendendo:'Em atendimento',finalizado:'Finalizado'};
 async function filaMarca(id,st){
@@ -4704,6 +4715,7 @@ document.addEventListener('change',e=>{
   else if(t.classList&&t.classList.contains('com-pct'))salvarComissao(t.dataset.prof,t.value).catch(x=>toast(falha(x)));
   else if(t.id==='mesDesp'){S.mesDesp=t.value;S.lim.gasto=100;render()}
   else if(t.id==='a-pag'||t.id==='a-parc'||t.id==='a-pago')atualizaParc();
+  else if(t.id==='a-cli'){const w=$('a-falta');if(w)w.textContent=avisoFaltas(t.value)}
   else if(t.id==='d-cat'||t.id==='cp-c'){const n=$(t.id==='d-cat'?'d-cn':'cp-cn');if(n){n.hidden=t.value!=='__nova';if(!n.hidden)n.focus()}}
   else if(t.id==='pv-c'){const n=$('pv-cn');if(n){n.hidden=t.value!=='__nova';if(!n.hidden)n.focus()}}
   else if(t.id==='a-ret'){delete t.dataset.auto}
