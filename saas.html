@@ -3321,12 +3321,16 @@ function telaContas(){
   (L.length?`<div class="list">${L.map(item).join('')}</div>`:'<div class="empty"><h2>Nenhuma conta em aberto</h2><p>Cadastre as contas que vencem para não esquecer e ver o fluxo de caixa.</p></div>')+
   (pagas.length?`<h3>Pagas recentemente</h3><div class="list">${pagas.map(c=>`<div class="item" style="opacity:.75"><div class="grow"><div class="t">${esc(c.descricao)} <span class="tag ok">Paga em ${fd(c.pagoEm)}</span></div><div class="muted">${esc(c.categoria)}</div></div><div class="side-val">${brl(c.valor)}</div></div>`).join('')}</div>`:'');
 }
+const catsDesp=atual=>{const m=new Map();[...CATS,...(S.gastos||[]).map(x=>x.categoria),...(S.contas||[]).map(x=>x.categoria),atual].forEach(c=>{c=String(c||'').trim();if(c&&!m.has(c.toLowerCase()))m.set(c.toLowerCase(),c)});return [...m.values()]};
+const optNovaCat=(idn)=>`<option value="__nova">+ Nova categoria…</option>`;
+const campoNovaCat=idn=>`<input id="${idn}" name="categoria_nova" maxlength="40" placeholder="Nome da nova categoria" aria-label="Nome da nova categoria" hidden style="margin-top:6px">`;
+const catFinal=d=>{const c=d.categoria==='__nova'?String(d.categoria_nova||'').trim().replace(/\s+/g,' ').slice(0,40):String(d.categoria||'').trim();if(d.categoria==='__nova'&&!c)throw erroUi('Digite o nome da nova categoria ou escolha uma da lista.');return c};
 function formConta(id){
   const c=id?(S.contas||[]).find(x=>x.id===id&&!x.pagoEm):{descricao:'',categoria:'',valor:'',vencimento:hoje(),repete:'nao'};if(id&&!c)return;
-  const cats=[...CATS];if(c.categoria&&!cats.includes(c.categoria))cats.push(c.categoria);
+  const cats=catsDesp(c.categoria);
   abrir(`<h2>${id?'Editar':'Nova'} conta a pagar</h2><form data-form="conta" data-id="${esc(id||'')}">
   <label for="cp-d">Descrição *</label><input id="cp-d" name="descricao" required maxlength="120" value="${esc(c.descricao)}" placeholder="Ex.: Aluguel da sala, fornecedor de tintas">
-  <div class="grid2"><div><label for="cp-c">Categoria</label><select id="cp-c" name="categoria">${cats.map(x=>`<option ${x===(c.categoria||'Outros')?'selected':''}>${esc(x)}</option>`).join('')}</select></div>
+  <div class="grid2"><div><label for="cp-c">Categoria</label><select id="cp-c" name="categoria">${cats.map(x=>`<option ${x===(c.categoria||'Outros')?'selected':''}>${esc(x)}</option>`).join('')}${optNovaCat()}</select>${campoNovaCat('cp-cn')}</div>
   <div><label for="cp-v">Valor (R$) *</label><input id="cp-v" name="valor" type="number" step="0.01" min="0.01" required inputmode="decimal" value="${esc(c.valor)}"></div>
   <div><label for="cp-dt">Vence em *</label><input id="cp-dt" name="vencimento" type="date" required value="${esc(c.vencimento)}"></div></div>
   <label class="chk"><input type="checkbox" name="repete" ${c.repete==='mensal'?'checked':''}> Repete todo mês (cria a próxima conta quando esta for paga)</label>
@@ -3335,7 +3339,7 @@ function formConta(id){
 async function salvarConta(id,d){
   const v=Number(d.valor);if(!(v>0))throw erroUi('Informe um valor maior que zero.');
   if(!d.vencimento)throw erroUi('Informe quando a conta vence.');
-  await cpChama('conta_salvar',{p_id:id||null,p_descricao:String(d.descricao||'').trim(),p_categoria:String(d.categoria||'Outros'),p_valor:v,p_vencimento:d.vencimento,p_repete:d.repete==='on'?'mensal':'nao'});
+  await cpChama('conta_salvar',{p_id:id||null,p_descricao:String(d.descricao||'').trim(),p_categoria:catFinal(d)||'Outros',p_valor:v,p_vencimento:d.vencimento,p_repete:d.repete==='on'?'mensal':'nao'});
   await recarregar();toast('Conta salva.');
 }
 function formContaPaga(id){
@@ -3373,16 +3377,16 @@ function telaFluxo(){
 
 function formDesp(id){
   const g=id?S.gastos.find(x=>x.id===id):{data:hoje(),categoria:'',descricao:'',valor:''};if(id&&!g)return;
-  const cats=[...CATS];if(g.categoria&&!cats.includes(g.categoria))cats.push(g.categoria);
+  const cats=catsDesp(g.categoria);
   abrir(`<h2>${id?'Editar despesa':'Nova despesa'}</h2><form data-form="desp" data-id="${esc(id||'')}"><div class="grid2">
   <div><label for="d-data">Data *</label><input id="d-data" name="data" type="date" required value="${esc(g.data)}"></div>
-  <div><label for="d-cat">Categoria *</label><select id="d-cat" name="categoria" required><option value="">Selecione…</option>${cats.map(c=>`<option value="${esc(c)}" ${c===g.categoria?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
+  <div><label for="d-cat">Categoria *</label><select id="d-cat" name="categoria" required><option value="">Selecione…</option>${cats.map(c=>`<option value="${esc(c)}" ${c===g.categoria?'selected':''}>${esc(c)}</option>`).join('')}${optNovaCat()}</select>${campoNovaCat('d-cn')}</div>
   <div><label for="d-val">Valor (R$) *</label><input id="d-val" name="valor" type="number" step="0.01" min="0.01" required inputmode="decimal" value="${esc(g.valor)}"></div></div>
   <label for="d-desc">Descrição</label><input id="d-desc" name="descricao" maxlength="200" placeholder="Ex.: conta de maio" value="${esc(g.descricao)}">
   <div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Salvar</button></div></form>`);
 }
 async function salvarDesp(id,d){
-  const o={data:d.data,categoria:(d.categoria||'Outros').trim(),descricao:(d.descricao||'').trim(),valor:din(d.valor)};
+  const o={data:d.data,categoria:catFinal(d)||'Outros',descricao:(d.descricao||'').trim(),valor:din(d.valor)};
   if(!o.data||!(o.valor>0))throw new Error('dados inválidos');
   const r=id?await sb.from('despesas').update(o).eq('id',id):await sb.from('despesas').insert(o);
   if(r.error)throw r.error;
@@ -4700,6 +4704,7 @@ document.addEventListener('change',e=>{
   else if(t.classList&&t.classList.contains('com-pct'))salvarComissao(t.dataset.prof,t.value).catch(x=>toast(falha(x)));
   else if(t.id==='mesDesp'){S.mesDesp=t.value;S.lim.gasto=100;render()}
   else if(t.id==='a-pag'||t.id==='a-parc'||t.id==='a-pago')atualizaParc();
+  else if(t.id==='d-cat'||t.id==='cp-c'){const n=$(t.id==='d-cat'?'d-cn':'cp-cn');if(n){n.hidden=t.value!=='__nova';if(!n.hidden)n.focus()}}
   else if(t.id==='pv-c'){const n=$('pv-cn');if(n){n.hidden=t.value!=='__nova';if(!n.hidden)n.focus()}}
   else if(t.id==='a-ret'){delete t.dataset.auto}
   else if(t.id==='a-data'){const rt=$('a-ret'),pr=servicosCat(),A=pr.find(x=>x.nome===($('a-proc')||{}).value),B=pr.find(x=>x.nome===($('a-proc2')||{}).value),dias=Math.max((A&&A.retornoDias)||0,(B&&B.retornoDias)||0);if(rt&&rt.dataset.auto==='1'&&dias>0&&t.value)rt.value=addDia(t.value,dias)}
