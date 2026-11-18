@@ -621,7 +621,7 @@ const rowC=r=>({id:r.id,nome:r.nome||'',telefone:r.telefone||'',nascimento:r.nas
 const STATUS_OK=['agendado','confirmado','cancelado','faltou'],STATUS_ROT={agendado:'Agendado',confirmado:'Confirmado',cancelado:'Cancelou',faltou:'Faltou'};
 const inativo=a=>a.status==='cancelado'||a.status==='faltou';
 const procTxt=a=>(a.procedimento||'')+(a.procedimento2?' + '+a.procedimento2:'');
-const rowA=r=>({fila:r.fila||'',filaEm:r.fila_em||'',token:r.token_cliente||'',cancCli:!!r.cancelado_pela_cliente,remarcadoEm:r.remarcado_em||'',id:r.id,clienteId:r.cliente_id,data:r.data,procedimento:r.procedimento||'',procedimento2:r.procedimento2||'',procTxt:(r.procedimento||'')+(r.procedimento2?' + '+r.procedimento2:''),profissional:r.profissional||'',
+const rowA=r=>({sala:r.sala||'',fila:r.fila||'',filaEm:r.fila_em||'',token:r.token_cliente||'',cancCli:!!r.cancelado_pela_cliente,remarcadoEm:r.remarcado_em||'',id:r.id,clienteId:r.cliente_id,data:r.data,procedimento:r.procedimento||'',procedimento2:r.procedimento2||'',procTxt:(r.procedimento||'')+(r.procedimento2?' + '+r.procedimento2:''),profissional:r.profissional||'',
   hora:String(r.hora||'').slice(0,5),valor:Number(r.valor)||0,pagamento:r.pagamento||'',parcelas:PARC(r.parcelas),gastoProdutos:Number(r.gasto_produtos)||0,taxaMaquina:Number(r.taxa_maquina)||0,retorno:r.retorno||'',obs:r.obs||'',duracao:Math.min(720,Math.max(5,Number(r.duracao)||60)),status:STATUS_OK.includes(r.status)?r.status:'agendado',valor2:Math.max(0,Number(r.valor2)||0),pago:r.pago!==false,pagoEm:r.pago_em||''});
 const CATS=['Anúncio Instagram','Água','Internet','Produtos de limpeza','Luz','Manutenção','Aluguel','Condomínio','Outros'];
 const rowD=r=>({id:r.id,data:r.data,categoria:r.categoria||'Outros',descricao:r.descricao||'',valor:Number(r.valor)||0});
@@ -918,6 +918,7 @@ function blocoComissao(m,L){
   (S.vendas||[]).filter(v=>v.status==='ativa'&&v.prof&&(!m||String(v.data).startsWith(m))).forEach(v=>{if(!by[v.prof])by[v.prof]={n:0,v:0,p:[]};by[v.prof].p.push([PROD_COM,v.total]);by[v.prof].vp=(by[v.prof].vp||0)+v.total});
   const nomes=Object.keys(by).sort((a,b)=>(by[b].v+(by[b].vp||0))-(by[a].v+(by[a].vp||0)));if(!nomes.length&&!pend.length&&!VL.length)return '';
   if(!recOk('comissoes'))return `<h3>Comissão por profissional</h3><p class="muted" style="max-width:640px">Este recurso faz parte de um plano superior. Peça a troca em Salão, Plano e assinatura.</p>`;
+  S.comCtx={m,L};
   const C=comissoes(),pode=NV('config')==='escrita'&&!(S.ctx&&S.ctx.role==='profissional');
   const servs=[...new Set([...servicosCat().filter(x=>x.ativo!==false).map(x=>x.nome),...PROCS,PROD_COM])].filter(Boolean);
   let tot=0,totV=0;
@@ -926,10 +927,36 @@ function blocoComissao(m,L){
     const usados=[...new Set(by[n].p.map(x=>x[0]).filter(Boolean))].sort(),espec=servs.filter(sv=>C[chaveCom(n,sv)]!=null);
     const lista=[...new Set([...usados,...espec])];
     const det=n!=='(sem profissional)'&&lista.length?`<details style="margin-top:6px"${S.comAb===n?' open':''}><summary class="muted" style="cursor:pointer">Porcentagem por serviço${espec.length?` (${espec.length} diferente${espec.length>1?'s':''})`:''}</summary><div style="display:grid;gap:6px;margin-top:6px">${lista.map(sv=>`<div style="display:flex;gap:8px;align-items:center;justify-content:space-between"><label for="cs-${esc(n)}-${esc(sv)}">${esc(sv)}</label><span><input id="cs-${esc(n)}-${esc(sv)}" class="com-srv" data-prof="${esc(n)}" data-srv="${esc(sv)}" type="number" min="0" max="100" step="0.5" inputmode="decimal" style="width:84px" value="${C[chaveCom(n,sv)]!=null?esc(C[chaveCom(n,sv)]):''}" placeholder="${pct||0}" ${pode?'':'disabled'}> %</span></div>`).join('')}<span class="muted">Deixe em branco para usar ${pct||0}%, a porcentagem geral de ${esc(n)}.</span></div></details>`:'';
-    return `<div class="item"><div class="grow"><div class="t">${esc(n)}</div><div class="muted num">${by[n].n} ${by[n].n===1?'atendimento':'atendimentos'} · ${brl(by[n].v)} recebidos${by[n].vp?` · ${brl(by[n].vp)} em produtos`:''}</div>${det}</div>
+    return `<div class="item"><div class="grow"><div class="t">${esc(n)} ${n!=='(sem profissional)'?`<button type="button" class="btn ghost sm" data-act="reciboCom" data-id="${esc(n)}">Recibo</button>`:''}</div><div class="muted num">${by[n].n} ${by[n].n===1?'atendimento':'atendimentos'} · ${brl(by[n].v)} recebidos${by[n].vp?` · ${brl(by[n].vp)} em produtos`:''}</div>${det}</div>
     <div class="side" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end"><label class="sr-only" for="com-${esc(n)}">Comissão de ${esc(n)} em %</label><input id="com-${esc(n)}" class="com-pct" data-prof="${esc(n)}" type="number" min="0" max="100" step="0.5" inputmode="decimal" style="width:84px" value="${pct||''}" placeholder="0" ${pode&&n!=='(sem profissional)'?'':'disabled'}><span class="muted">%</span><b class="num">${brl(com)}</b>${vl?`<span class="muted num" style="flex-basis:100%;text-align:right">Vale −${brl(vl)} · a pagar <b>${brl(Math.max(0,Math.round((com-vl)*100)/100))}</b></span>`:''}</div></div>`}).join('');
   const pv=pend.reduce((t,x)=>t+x.v,0);
   return `<h3>Comissão por profissional</h3><p class="muted" style="margin:0 0 8px;max-width:640px">Calculada só sobre o que já foi pago pela cliente${m?' (valor recebido no mês)':''}. ${pode?'Digite a porcentagem geral de cada pessoa e, se quiser, uma diferente para cada serviço.':'Só quem administra o salão altera os percentuais.'}</p>${pend.length?`<p class="muted" style="margin:0 0 8px;max-width:640px"><b>${pend.length}</b> ${pend.length===1?'atendimento ainda não pago':'atendimentos ainda não pagos'} (${brl(pv)}) não ${pend.length===1?'entra':'entram'} na conta até receber.</p>`:''}<div class="list">${linhas}</div><p class="num" style="margin:8px 0 0"><b>Total de comissões: ${brl(tot)}</b>${totV?` · Vales: ${brl(totV)} · <b>A pagar: ${brl(Math.max(0,Math.round((tot-totV)*100)/100))}</b>`:''}</p>${pode?`<p style="margin:8px 0 0"><button class="btn ghost sm" data-act="novoVale">Registrar vale ou adiantamento</button></p>`:''}${VL.length?`<h4 style="margin:14px 0 4px">Vales${m?' do mês':''}</h4><div class="list">${VL.slice().sort((x,y)=>String(y.data).localeCompare(String(x.data))).map(v=>`<div class="item"><div class="grow"><div class="t">${esc(v.prof)}</div><div class="muted num">${fd(v.data)}${v.obs?' · '+esc(v.obs):''}</div></div><div class="side-val">${brl(v.valor)}</div>${pode?`<div class="item-acts"><button class="btn danger sm" data-act="delVale" data-id="${esc(v.id)}">Excluir</button></div>`:''}</div>`).join('')}</div>`:''}`;
+}
+/* ===== Recibo de comissão (imprime ou salva em PDF) ===== */
+function imprimirHtml(html){
+  if(window.__TESTE__){window.__ultimoHtml=html;return}
+  const f=document.createElement('iframe');f.setAttribute('aria-hidden','true');f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+  document.body.appendChild(f);const d=f.contentWindow.document;d.open();d.write(html);d.close();
+  setTimeout(()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(_){toast('Não foi possível abrir a impressão.',true)}setTimeout(()=>f.remove(),60000)},300);
+}
+function reciboCom(nome){
+  const X=S.comCtx;if(!X)return;const {m,L}=X,C=comissoes();
+  const mine=L.filter(x=>!aberto(x.a)&&(x.a.profissional||'(sem profissional)')===nome).sort((a,b)=>String(a.a.data).localeCompare(String(b.a.data)));
+  const vl=(S.vales||[]).filter(v=>v.prof===nome&&(!m||String(v.data).startsWith(m)));
+  const vp=(S.vendas||[]).filter(v=>v.status==='ativa'&&v.prof===nome&&(!m||String(v.data).startsWith(m)));
+  const linhas=[];let tot=0;
+  mine.forEach(x=>{const com=Math.round(partesCom(x.a,x.v).reduce((t,[sv,v])=>t+v*pctCom(C,nome,sv),0))/100;tot+=com;const c=cli(x.a.clienteId);linhas.push([fd(x.a.data),(c&&c.nome)||'—',procTxt(x.a),x.v,com])});
+  vp.forEach(v=>{const com=Math.round(v.total*pctCom(C,nome,PROD_COM))/100;tot+=com;linhas.push([fd(v.data),'Venda de produtos','Produtos',v.total,com])});
+  const totV=Math.round(vl.reduce((t,v)=>t+v.valor,0)*100)/100,liq=Math.round((tot-totV)*100)/100;
+  const per=m?mesNome(m):'todo o período',sal=S.nomeSalao||salaoNome();
+  const td=(x,al)=>`<td style="padding:6px 8px;border-bottom:1px solid #ddd;${al?'text-align:right;':''}">${esc(x)}</td>`;
+  const html=`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Recibo de comissão — ${esc(nome)}</title><style>body{font:14px/1.45 system-ui,sans-serif;color:#111;margin:32px}h1{font-size:20px;margin:0 0 4px}table{border-collapse:collapse;width:100%;margin:14px 0}th{text-align:left;padding:6px 8px;border-bottom:2px solid #111;font-size:12px}.d{color:#555}.tot{font-weight:700}.ass{display:flex;gap:40px;margin-top:60px}.ass div{flex:1;border-top:1px solid #111;padding-top:4px;text-align:center;font-size:12px}</style></head><body>
+  <h1>Recibo de comissão</h1><div class="d">${esc(sal)} · ${esc(per)}</div><p>Profissional: <b>${esc(nome)}</b></p>
+  <table><thead><tr><th>Data</th><th>Cliente</th><th>Serviço</th><th style="text-align:right">Recebido</th><th style="text-align:right">Comissão</th></tr></thead><tbody>${linhas.map(r=>`<tr>${td(r[0])}${td(r[1])}${td(r[2])}${td(brl(r[3]),1)}${td(brl(r[4]),1)}</tr>`).join('')||'<tr><td colspan="5" class="d" style="padding:8px">Nenhum atendimento pago no período.</td></tr>'}</tbody></table>
+  <table><tr><td>Comissão total</td>${td(brl(tot),1)}</tr>${vl.map(v=>`<tr><td class="d">Vale de ${esc(fd(v.data))}${v.obs?' ('+esc(v.obs)+')':''}</td>${td('− '+brl(v.valor),1)}</tr>`).join('')}<tr class="tot"><td>Valor a pagar</td>${td(brl(liq),1)}</tr></table>
+  <p class="d">Declaro ter recebido o valor acima referente ao período indicado.</p>
+  <div class="ass"><div>${esc(nome)}</div><div>${esc(sal)}</div></div></body></html>`;
+  imprimirHtml(html);
 }
 function formVale(){
   const nomes=[...new Set([...Object.keys((S.agCfg&&S.agCfg.profissionais)||{}),...S.atendTodos.map(a=>a.profissional).filter(Boolean)])].sort();
@@ -2903,6 +2930,7 @@ function formAtend(id,clienteId,data){
   <div id="a-pag-wrap" ${pagoSel?'':'hidden'}><label for="a-pag">Forma de pagamento</label><select id="a-pag" name="pagamento"><option value="">—</option>${pags.map(p=>`<option ${p===a.pagamento?'selected':''}>${p}</option>`).join('')}</select></div>
   <div id="a-parc-wrap" ${credito?'':'hidden'}><label for="a-parc">Parcelas</label><select id="a-parc" name="parcelas">${Array.from({length:12},(_,i)=>i+1).map(n=>`<option value="${n}" ${n===parcSel?'selected':''}>${n}x</option>`).join('')}</select><div id="a-parc-info" class="muted num"></div></div>
   <div id="a-taxa-wrap" ${cartao?'':'hidden'}><label for="a-taxa">Taxa da máquina (R$)</label><input id="a-taxa" name="taxaMaquina" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(a.taxaMaquina||'')}"></div>
+  ${(S.agCfg&&S.agCfg.salas||[]).length?`<div><label for="a-sala">Sala ou equipamento</label><select id="a-sala" name="sala"><option value="">Nenhuma</option>${[...(S.agCfg.salas||[]),...(a.sala&&!(S.agCfg.salas||[]).includes(a.sala)?[a.sala]:[])].map(x=>`<option ${x===a.sala?'selected':''}>${esc(x)}</option>`).join('')}</select></div>`:''}
   ${!id&&!S.legado?`<div class="grid2"><div><label for="a-rep">Repetir este horário</label><select id="a-rep" name="repetir"><option value="">Não repete</option><option value="7">Toda semana</option><option value="14">A cada 15 dias</option><option value="mes">Todo mês</option></select></div><div><label for="a-vz">Quantas vezes no total</label><input id="a-vz" name="vezes" type="number" min="2" max="12" value="4" inputmode="numeric"></div></div>`:''}
   ${!id&&recOk('promocoes')&&!S.semPromo&&(S.promos||[]).some(x=>x.ativo)?`<div><label for="a-cup">Cupom (opcional)</label><input id="a-cup" name="cupom" maxlength="20" autocapitalize="characters" placeholder="Ex.: NATAL10" autocomplete="off"></div>`:''}
   <div><label for="a-prod">Gastos com produtos (R$)</label><input id="a-prod" name="gastoProdutos" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(a.gastoProdutos||'')}"></div>
@@ -2954,6 +2982,7 @@ async function salvarAtend(id,d){
   if(!S.semPago){o.valor2=Math.min(v2,tot);o.pago=pago;o.pago_em=pago?((antes&&antes.pago&&antes.pagoEm)||(String(d.data)>hoje()?d.data:hoje())):null}
   if(!S.semDur)o.duracao=Math.min(720,Math.max(5,Math.round(Number(d.duracao)||60)));
   if(!id&&!S.semStatus)o.status='agendado';
+  if(d.sala!==undefined&&(d.sala||(antes&&antes.sala)))o.sala=String(d.sala||'').slice(0,40);
   const aid=id||novoId();
   if(!id)o.id=aid;
   const grava=x=>id?sb.from('atendimentos').update(x).eq('id',id):sb.from('atendimentos').insert(x);
@@ -2961,6 +2990,7 @@ async function salvarAtend(id,d){
   if(r.error&&/hora/i.test(String(r.error.message||''))&&(r.error.code==='42703'||r.error.code==='PGRST204'||/column/i.test(r.error.message||''))){
     delete o.hora;r=await grava(o);S.semHora=true;
   }
+  if(r.error&&/\bsala\b/i.test(String(r.error.message||''))&&o.sala!==undefined){delete o.sala;if(o.sala===undefined&&(d.sala||'')!=='')throw erroUi('Para usar salas, rode o arquivo 61-salas.sql (ou o agendio-TUDO.sql) no Supabase.');r=await grava(o)}
   if(r.error&&/duracao/i.test(String(r.error.message||''))){delete o.duracao;S.semDur=true;r=await grava(o)}
   if(r.error&&/procedimento2/i.test(String(r.error.message||''))){const quis=o.procedimento2;delete o.procedimento2;S.semProc2=true;if(quis)throw erroUi('Para usar dois procedimentos, rode o arquivo 14-dois-procedimentos.sql (ou o agendio-TUDO.sql) no Supabase.');r=await grava(o)}
   if(r.error&&/valor2|pago/i.test(String(r.error.message||''))&&(r.error.code==='42703'||r.error.code==='PGRST204'||/column/i.test(r.error.message||''))){
@@ -3002,13 +3032,13 @@ async function repetirAtend(o,d,total,v2){
   if(!['7','14','mes'].includes(modo))return '';
   const livres=[],pulou=[];
   datasRepetidas(o.data,modo,vezes).forEach(dt=>{
-    const av=avisosAgenda({data:dt,hora:o.hora,duracao:o.duracao,profissional:o.profissional},null);
+    const av=avisosAgenda({data:dt,hora:o.hora,duracao:o.duracao,profissional:o.profissional,sala:o.sala},null);
     (av.length?pulou:livres).push(dt)});
   if(livres.length){
     const linhas=livres.map(dt=>{const x={id:novoId(),cliente_id:o.cliente_id,data:dt,procedimento:o.procedimento,profissional:o.profissional,valor:total,pagamento:'',parcelas:1,gasto_produtos:0,taxa_maquina:0,retorno:null,obs:String(d.obs||'').trim()};
       if(!S.semEst)x.hora=o.hora||null;if(!S.semProc2)x.procedimento2=o.procedimento2||'';
       if(!S.semPago){x.valor2=Math.min(v2,total);x.pago=false;x.pago_em=null}
-      if(!S.semDur)x.duracao=o.duracao;if(!S.semStatus)x.status='agendado';return x});
+      if(!S.semDur)x.duracao=o.duracao;if(o.sala)x.sala=o.sala;if(!S.semStatus)x.status='agendado';return x});
     const r=await sb.from('atendimentos').insert(linhas);if(r.error)throw r.error;
   }
   return livres.length?`Repetido em mais ${livres.length} ${livres.length===1?'data':'datas'}.`+(pulou.length?` Ficaram de fora por conflito: ${pulou.map(fd).join(', ')}.`:''):`Nenhuma data livre para repetir (${pulou.map(fd).join(', ')}).`;
@@ -3566,6 +3596,8 @@ function avisosAgenda(d,idAtual){
   const fim=ini+dur,prof=(d.profissional||'').trim();
   S.atend.filter(a=>a.id!==idAtual&&a.data===d.data&&a.hora&&(!prof||a.profissional===prof)).forEach(a=>{
     const i=hmin(a.hora);if(i!==null&&i<fim&&ini<i+(a.duracao||60)){const c=cli(a.clienteId);av.push('Já existe atendimento às '+a.hora+(c?' ('+c.nome+')':'')+(prof?' com '+prof:'')+'.')}});
+  if(d.sala)S.atend.filter(a=>a.id!==idAtual&&a.data===d.data&&a.hora&&a.sala===d.sala).forEach(a=>{
+    const i=hmin(a.hora);if(i!==null&&i<fim&&ini<i+(a.duracao||60)){const c=cli(a.clienteId);av.push('A sala/equipamento "'+d.sala+'" já está ocupada às '+a.hora+(c?' ('+c.nome+')':'')+'.')}});
   (S.bloq||[]).filter(b=>b.data===d.data&&(!b.profissional||!prof||b.profissional===prof)).forEach(b=>{
     const bi=b.inicio?hmin(b.inicio):0,bf=b.inicio?hmin(b.fim):1440;
     if(bi<fim&&ini<bf)av.push('Horário bloqueado'+(b.profissional?' para '+b.profissional:'')+(b.motivo?': '+b.motivo:'')+'.')});
@@ -3600,8 +3632,17 @@ function telaHorarios(){
   return blocoOnline(pode)+`<h3>Serviços</h3><p class="muted" style="max-width:640px;margin:0 0 8px">A duração evita dois atendimentos no mesmo horário e será usada no agendamento online.${sv.length?'':' Enquanto não houver serviços, a lista padrão do sistema é usada.'}</p>
   ${todos.length?`<div class="list">${todos.map(linhaServ).join('')}</div>`:''}
   ${pode?'<div class="row-actions" style="margin-top:10px"><button class="btn ghost" data-act="novoServico">Novo serviço</button></div>':''}
+  <h3>Salas e equipamentos</h3><p class="muted" style="max-width:640px;margin:0 0 8px">Opcional. Escreva um nome por linha (ex.: Cabine 1, Laser, Maca). Ao marcar um atendimento você escolhe a sala, e a agenda avisa se ela já está ocupada no mesmo horário.</p>
+  <form data-form="salas" class="panel" style="max-width:640px"><label for="sl-t">Salas e equipamentos (até 10)</label><textarea id="sl-t" name="salas" rows="3" maxlength="400" ${pode?'':'disabled'} placeholder="Cabine 1&#10;Laser">${esc((S.agCfg.salas||[]).join('\n'))}</textarea>
+  <p class="erro" id="a-erro" role="alert"></p>${pode?'<div class="acts"><button class="btn">Salvar salas</button></div>':''}</form>
   <h3>Horário de trabalho</h3>
   <form data-form="horarios">${profs.map(bloco).join('')}<p class="erro" id="a-erro" role="alert"></p>${pode?'<div class="acts" style="justify-content:flex-start"><button class="btn">Salvar horários</button></div>':'<p class="muted">Só o proprietário altera os horários.</p>'}</form>`;
+}
+async function salvarSalas(d){
+  const L=[];String(d.salas||'').split(/\n/).map(x=>x.trim().replace(/\s+/g,' ').slice(0,30)).forEach(x=>{if(x&&!L.some(y=>y.toLowerCase()===x.toLowerCase()))L.push(x)});
+  if(L.length>10)throw erroUi('Use no máximo 10 salas ou equipamentos.');
+  const cfg=Object.assign({},S.agCfg);if(L.length)cfg.salas=L;else delete cfg.salas;
+  await salvarAgCfg(cfg);render();toast('Salas salvas.');
 }
 async function salvarHorarios(d){
   const profs=listaProfs(),out={};
@@ -4653,7 +4694,7 @@ document.addEventListener('click',e=>{
     ocultaPassos:()=>{LS.set('salao_passos_off','1');render();toast('Primeiros passos ocultados. Para ver de novo, use o botão no cartão Agendamento online.')},
     mostraPassos:()=>{LS.set('salao_passos_off','');render()},
     novoServico:()=>formServico(''),editServico:()=>formServico(id),delServico:()=>removerServico(id).catch(x=>toast(falha(x),true)),novoBloq:()=>formBloq(a.dataset.data),delBloq:()=>confirmar('Remover este bloqueio?','O horário volta a ficar livre.','Remover',async()=>{const r=await sb.from('bloqueios').delete().eq('id',id);if(r.error)throw r.error;await recarregar();toast('Bloqueio removido.')}),
-    novoAtend:()=>formAtend(null,a.dataset.cliente,a.dataset.data),receber:()=>formReceber(id),agVis:()=>{S.agVis=['mes','lista','fila'].includes(id)?id:'sem';if(id!=='fila')LS.set('salao_ag_vis',S.agVis);render()},filaMarca:()=>filaMarca(id,a.dataset.st),etqFiltro:()=>{S.etqFiltro=id||'';render()},galRemover:()=>confirmar('Remover esta foto?','Ela deixa de aparecer na página de agendamento.','Remover',()=>galRemover(id)),agMes:()=>{S.agMes=id==='0'?0:(S.agMes||0)+Number(id);S.agDia=null;render()},agDia:()=>{S.agDia=id;render()},agSem:()=>{S.agSem=id==='0'?0:(S.agSem||0)+Number(id);render()},meta:()=>formMeta(),imprimir:()=>window.print(),editAtend:()=>formAtend(id),delAtend:()=>pedirDelAtend(id),
+    novoAtend:()=>formAtend(null,a.dataset.cliente,a.dataset.data),receber:()=>formReceber(id),agVis:()=>{S.agVis=['mes','lista','fila'].includes(id)?id:'sem';if(id!=='fila')LS.set('salao_ag_vis',S.agVis);render()},filaMarca:()=>filaMarca(id,a.dataset.st),reciboCom:()=>reciboCom(id),etqFiltro:()=>{S.etqFiltro=id||'';render()},galRemover:()=>confirmar('Remover esta foto?','Ela deixa de aparecer na página de agendamento.','Remover',()=>galRemover(id)),agMes:()=>{S.agMes=id==='0'?0:(S.agMes||0)+Number(id);S.agDia=null;render()},agDia:()=>{S.agDia=id;render()},agSem:()=>{S.agSem=id==='0'?0:(S.agSem||0)+Number(id);render()},meta:()=>formMeta(),imprimir:()=>window.print(),editAtend:()=>formAtend(id),delAtend:()=>pedirDelAtend(id),
     abrir:()=>{S.view='clientes';S.sel=id;render();window.scrollTo(0,0)},
     novoVale:()=>formVale(),delVale:()=>confirmar('Excluir este vale?','O valor volta a entrar na comissão a pagar.','Excluir',async()=>{const r=await sb.from('vales').delete().eq('id',id);if(r.error)throw r.error;await recarregar();toast('Vale excluído.')}),
     relAba:()=>{S.relAba=id;render()},caixaFechar:caixaFechar,diaRel:()=>{S.diaRel=id==='0'?hoje():addDia(S.diaRel||hoje(),Number(id));render()},juntarVer:()=>dlgRepetidas(),juntarManter:()=>confirmar('Juntar estes cadastros?','Os atendimentos das outras passam para a cliente escolhida e o cadastro repetido é removido. Não dá para desfazer.','Juntar',()=>juntarClientes(id,String(a.dataset.outras||'').split(',').filter(Boolean))),novoPacote:()=>formPacote(a.dataset.cliente),usarSessao:()=>{usarSessao(id).catch(x=>toast(falha(x),true))},encerrarPacote:()=>confirmar('Encerrar este pacote?','As sessões que sobraram deixam de poder ser usadas.','Encerrar',()=>encerrarPacote(id)),fidConfig:()=>formFid(),fidResgatar:()=>confirmar('Resgatar o prêmio?','Isso registra que a cliente já recebeu o prêmio.','Resgatar',()=>resgatarPremio(id)),novaEspera:()=>formEspera(),esAvisada:()=>{esMarcar(id,'avisada').catch(x=>toast(falha(x),true))},esRemover:()=>confirmar('Remover da lista de espera?','A cliente deixa de aparecer na lista.','Remover',()=>esMarcar(id,'remover')),retDias:()=>{S.retDias=Number(id)||60;LS.set('salao_ret_dias',String(S.retDias));render()},retChamei:()=>{const c=retContatos();c[id]=hoje();LS.set('salao_ret_contato',JSON.stringify(c));setTimeout(render,50)},mais:()=>{S.lim[id]=(S.lim[id]||100)+200;render()},voltar:()=>{S.sel=null;render()},estAba:()=>{S.estAba=id;render()},novoProd:()=>formProd(),editProd:()=>formProd(id),delProd:()=>pedirDelProd(id),movProd:()=>formMov(id),histProd:()=>histProd(id),novaFicha:()=>formFicha(id),editFicha:()=>formFicha(null,id),delFicha:()=>pedirDelFicha(id),exportJson,exportCsv,exportXlsx,novaDesp:()=>formDesp(),editDesp:()=>formDesp(id),delDesp:()=>pedirDelDesp(id),fechar:()=>$('dlg').close(),
@@ -4811,7 +4852,7 @@ function tempoTxt(sg){return sg>=60?Math.ceil(sg/60)+' min':sg+' s'}
 
 document.addEventListener('submit',async e=>{
   const f=e.target,k=f.dataset&&f.dataset.form;
-  if(!['criar','recuperar','novasenha','salao','config','mensagens','horarios','online','pub','mpconectar','waconectar','plsite','plcupom'].includes(k))return;
+  if(!['criar','recuperar','novasenha','salao','config','mensagens','horarios','salas','online','pub','mpconectar','waconectar','plsite','plcupom'].includes(k))return;
   e.preventDefault();if(S.busy||!sb)return;
   const d=Object.fromEntries(new FormData(f)),bt=f.querySelector('button'),er=$('a-erro');
   const ver=(c,m)=>{if(c){er.textContent=m;return true}return false};
@@ -4850,6 +4891,8 @@ document.addEventListener('submit',async e=>{
       try{const j=await chamaApi('mp-conectar',{token:d.token});S.onl.mp=true;S.sig='';render();toast('Mercado Pago conectado.')}catch(x){er.textContent=String((x&&(x.aviso||x.message))||'Não foi possível conectar.')}
     }else if(k==='online'){
       try{await salvarOnline(d)}catch(x){er.textContent=String((x&&(x.aviso||x.message))||'Não foi possível salvar.')}
+    }else if(k==='salas'){
+      try{await salvarSalas(d)}catch(x){er.textContent=String((x&&x.message)||'Não foi possível salvar.')}
     }else if(k==='horarios'){
       try{await salvarHorarios(d)}catch(x){er.textContent=String((x&&x.message)||'Não foi possível salvar.')}
     }else if(k==='mensagens'){
