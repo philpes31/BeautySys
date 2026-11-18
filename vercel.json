@@ -25,6 +25,14 @@
   ],
   "rewrites": [
     {
+      "source": "/api/clube-webhook",
+      "destination": "/api/x?a=clube-webhook"
+    },
+    {
+      "source": "/api/clube-cobrar",
+      "destination": "/api/x?a=clube-cobrar"
+    },
+    {
       "source": "/api/wa-conectar",
       "destination": "/api/x?a=wa-conectar"
     },
