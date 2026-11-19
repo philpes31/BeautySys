@@ -41,6 +41,10 @@
       "destination": "/api/x?a=clube-cobrar"
     },
     {
+      "source": "/api/agenda-ics",
+      "destination": "/api/x?a=agenda-ics"
+    },
+    {
       "source": "/api/wa-conectar",
       "destination": "/api/x?a=wa-conectar"
     },

@@ -9,6 +9,7 @@ const H = {
   'atend-webhook': (rq, rs) => require('./_atend-cob').webhook(rq, rs),
   'clube-cobrar': (rq, rs) => require('./_clube-cob').cobrar(rq, rs),
   'clube-webhook': (rq, rs) => require('./_clube-cob').webhook(rq, rs),
+  'agenda-ics': (rq, rs) => require('./_agenda-ics').feed(rq, rs),
   'mp-config': require('./_mp-config'),
   'mp-conectar': require('./_mp-conectar'),
   'push-chave': require('./_push-api'),
