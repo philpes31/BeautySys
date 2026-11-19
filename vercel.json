@@ -25,6 +25,14 @@
   ],
   "rewrites": [
     {
+      "source": "/api/atend-webhook",
+      "destination": "/api/x?a=atend-webhook"
+    },
+    {
+      "source": "/api/atend-cobrar",
+      "destination": "/api/x?a=atend-cobrar"
+    },
+    {
       "source": "/api/clube-webhook",
       "destination": "/api/x?a=clube-webhook"
     },

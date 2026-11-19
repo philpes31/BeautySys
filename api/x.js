@@ -5,6 +5,8 @@ const H = {
   'wa-config': require('./_wa-config'),
   'wa-signup': require('./_wa-signup'),
   'email-teste': require('./_email-teste'),
+  'atend-cobrar': (rq, rs) => require('./_atend-cob').cobrar(rq, rs),
+  'atend-webhook': (rq, rs) => require('./_atend-cob').webhook(rq, rs),
   'clube-cobrar': (rq, rs) => require('./_clube-cob').cobrar(rq, rs),
   'clube-webhook': (rq, rs) => require('./_clube-cob').webhook(rq, rs),
   'mp-config': require('./_mp-config'),
