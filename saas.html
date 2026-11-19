@@ -703,6 +703,7 @@ function agendar(){clearTimeout(tmr);tmr=setTimeout(recarregar,500)}
 async function iniciar(){
   if(S.iniciado||!sb||!S.sessao)return;
   S.iniciado=true;
+  if(!(await checaMfa())){S.iniciado=false;return}
   await carregarCtx();
   if(!temSalao()&&ehAdmin()){S.view='plataforma'}
   render();
@@ -713,7 +714,7 @@ async function iniciar(){
   try{S.canal=sb.channel('salao-mudancas').on('postgres_changes',{event:'*',schema:'public'},agendar).subscribe()}catch(_){}
 }
 function parar(){
-  S.iniciado=false;S.got=false;S.push=null;S.anams=[];S.fotos=null;S.fotosUrl=null;S.fotosTs=null;S.semFotos=false;S.emCfg=undefined;S.clube=undefined;S.caixaDias=undefined;S.cxEsp=null;S.galeria=undefined;S.satisf=undefined;S.etqFiltro='';S.indic=undefined;S.contas=[];S.promos=[];S.cb={ativo:false,pct:5,desde:''};S.pvs=[];S.vendas=[];S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
+  S.iniciado=false;S.mfaPed=false;S.mfaInfo=undefined;S.hist=undefined;S.got=false;S.push=null;S.anams=[];S.fotos=null;S.fotosUrl=null;S.fotosTs=null;S.semFotos=false;S.emCfg=undefined;S.clube=undefined;S.caixaDias=undefined;S.cxEsp=null;S.galeria=undefined;S.satisf=undefined;S.etqFiltro='';S.indic=undefined;S.contas=[];S.promos=[];S.cb={ativo:false,pct:5,desde:''};S.pvs=[];S.vendas=[];S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
   if(S.canal&&sb){try{sb.removeChannel(S.canal)}catch(_){}}
   S.canal=null;
 }
@@ -787,7 +788,7 @@ function render(){
   if(fid){const e=$(fid);if(e){e.focus();if(pos!=null&&e.setSelectionRange){try{e.setSelectionRange(pos,pos)}catch(_){}}}}
 }
 function renderTop(){
-  const logado=!!S.sessao&&!S.recuperando&&S.ctxPronto&&temAcesso();
+  const logado=!!S.sessao&&!S.recuperando&&!S.mfaPed&&S.ctxPronto&&temAcesso();
   document.body.classList.toggle('logado',logado);
   const t=[['inicio','Início'],['agenda','Agenda'],['clientes','Clientes'],['atendimentos','Atendimentos'],['vendas','Vendas'],['promocoes','Promoções'],['retornos','Retornos'],['despesas','Despesas'],['estoque','Estoque'],['relatorios','Relatórios'],['equipe','Equipe'],['mensagens','Mensagens'],['salao','Salão'],['horarios','Horários'],['plataforma','Plataforma'],['backup','Backup'],['ajuda','Ajuda']];
   $('tabs').hidden=!logado;
@@ -818,6 +819,7 @@ function conteudo(){
   if(S.semLib)return aviso('Não foi possível carregar o sistema','Verifique a conexão com a internet e recarregue a página.');
   if(!S.sessao)return telaLogin();
   if(S.recuperando)return telaNovaSenha();
+  if(S.mfaPed)return telaMfaCodigo();
   if(!S.ctxPronto)return '<p class="muted">Carregando…</p>';
   if(S.ctxErro)return telaCtxErro();
   if(!temSalao()){
@@ -1717,13 +1719,79 @@ async function excluirSalao(nome){
   S.auth='entrar';try{await sb.auth.signOut()}catch(_){}
   toast('Salão excluído.');
 }
+/* ---------- Segurança (2 etapas) e histórico ---------- */
+function mfaCarrega(){
+  if(S.mfaInfo!==undefined||!sb||!sb.auth||!sb.auth.mfa)return;
+  S.mfaInfo=null;
+  sb.auth.mfa.listFactors().then(r=>{const t=r&&r.data&&r.data.totp||[];S.mfaInfo={ativo:t.length>0,id:t[0]&&t[0].id||''};if(S.view==='salao')render()},()=>{S.mfaInfo={erro:true};if(S.view==='salao')render()});
+}
+function blocoSeguranca(){
+  mfaCarrega();
+  const m=S.mfaInfo;let corpo;
+  if(!m)corpo='<p class="muted">Verificando…</p>';
+  else if(m.erro)corpo='<p class="muted">Não foi possível verificar agora. Recarregue a página.</p>';
+  else if(m.ativo)corpo='<p><b>Ativada.</b> Ao entrar, o sistema pede o código do aplicativo no seu celular.</p><div class="row-actions"><button class="btn ghost" data-act="mfaDesligar">Desativar</button></div>';
+  else corpo='<p class="muted">Além da senha, o sistema pede um código de 6 números do seu celular (Google Authenticator, Microsoft Authenticator ou parecido). Protege o seu salão se alguém descobrir a sua senha.</p><div class="row-actions"><button class="btn" data-act="mfaLigar">Ativar verificação em 2 etapas</button></div>';
+  return `<div class="panel" style="max-width:640px;margin-bottom:16px"><b>Verificação em 2 etapas</b>${corpo}</div>`;
+}
+const HIST_TAB={clientes:'cliente',atendimentos:'atendimento',despesas:'despesa',produtos:'produto',tenant_users:'pessoa da equipe',bloqueios:'bloqueio da agenda',lista_espera:'lista de espera',vales:'vale',contas_pagar:'conta a pagar',caixa_dias:'caixa do dia',promocoes:'promoção',satisfacao:'avaliação',anamneses:'ficha de anamnese',fotos_cliente:'foto de cliente',galeria_salao:'foto da galeria',atend_cobrancas:'cobrança',clube_cobrancas:'cobrança do clube',agenda_feeds:'agenda no celular'};
+const HIST_ACAO={insert:'criou',update:'alterou',delete:'apagou'};
+function histCarrega(){
+  if(S.hist!==undefined)return;
+  S.hist=null;
+  sb.rpc('historico_salao',{p_limite:100}).then(r=>{S.hist=r.error?{erro:true}:{itens:r.data||[]};if(S.view==='salao')render()},()=>{S.hist={erro:true};if(S.view==='salao')render()});
+}
+function blocoHistorico(){
+  if(!S.ctx||S.ctx.role!=='proprietario')return '';
+  histCarrega();
+  const h=S.hist;let corpo;
+  if(!h)corpo='<p class="muted">Carregando…</p>';
+  else if(h.erro)corpo='<p class="muted">Não foi possível carregar o histórico agora.</p>';
+  else if(!h.itens.length)corpo='<p class="muted">Ainda não há alterações registradas.</p>';
+  else corpo='<div class="hist-l" style="max-height:340px;overflow:auto">'+h.itens.map(x=>{
+    const q=new Date(x.quando),dt=isNaN(q)?'':q.toLocaleDateString('pt-BR')+' '+q.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    const cols=(x.acao==='update'&&Array.isArray(x.colunas)?x.colunas.filter(c=>!/^(atualizado_em|criado_em)$/.test(c)).slice(0,4).join(', '):'');
+    return `<div style="padding:7px 0;border-bottom:1px solid var(--line,#ddd)"><b>${esc(x.quem)}</b> ${esc(HIST_ACAO[x.acao]||x.acao)} ${esc(HIST_TAB[x.tabela]||x.tabela)}${cols?` <span class="muted">(${esc(cols)})</span>`:''}<br><span class="muted" style="font-size:12px">${esc(dt)}</span></div>`}).join('')+'</div>';
+  return `<div class="panel" style="max-width:640px;margin-bottom:16px"><b>Histórico de alterações</b><p class="muted">Quem criou, alterou ou apagou dados no sistema (últimas 100). Só você vê. Guarda os nomes dos campos, nunca o conteúdo.</p>${corpo}<div class="row-actions"><button class="btn ghost sm" data-act="histAtualiza">Atualizar</button></div></div>`;
+}
+async function checaMfa(){
+  try{
+    const r=await sb.auth.mfa.getAuthenticatorAssuranceLevel(),d=r&&r.data;
+    if(d&&d.nextLevel==='aal2'&&d.currentLevel!=='aal2'){if(!S.mfaPed){S.mfaPed=true;S.mfaErro='';render()}return false}
+  }catch(_){}
+  S.mfaPed=false;return true;
+}
+function telaMfaCodigo(){
+  return telaMarca(false,`<h2>Código de verificação</h2><p class="muted">Abra o aplicativo de códigos no seu celular e digite os 6 números do Agendio.</p>
+  <form data-form="mfacod"><label for="mf-cod">Código</label><input id="mf-cod" name="codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required>
+  <p class="erro" id="a-erro" role="alert">${esc(S.mfaErro||'')}</p><div class="acts"><button class="btn">Entrar</button><button type="button" class="btn ghost" data-act="sair">Sair</button></div></form>`);
+}
+async function mfaLigar(){
+  try{
+    const l=await sb.auth.mfa.listFactors();
+    for(const f of (l.data&&l.data.all||[]))if(f.status!=='verified'){try{await sb.auth.mfa.unenroll({factorId:f.id})}catch(_){}}
+    const r=await sb.auth.mfa.enroll({factorType:'totp',friendlyName:'Agendio '+Date.now().toString(36)});
+    if(r.error)throw r.error;
+    const t=r.data.totp;S.mfaNovo=r.data.id;
+    abrir(`<h2>Ativar verificação em 2 etapas</h2><p>1. No celular, abra o Google Authenticator (ou Microsoft Authenticator) e escolha adicionar conta.</p><p>2. Leia este QR code:</p><div style="text-align:center"><img src="${esc(t.qr_code)}" alt="QR code" width="190" height="190"></div><p class="muted" style="font-size:12px">Sem câmera? Digite esta chave no aplicativo: <b style="word-break:break-all">${esc(t.secret)}</b></p><p>3. Digite aqui o código de 6 números que aparece:</p><input id="mf-conf" inputmode="numeric" maxlength="6" autocomplete="one-time-code" aria-label="Código de 6 números"><p class="erro" id="mf-erro" role="alert"></p><div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button type="button" class="btn" data-act="mfaConfirmar">Confirmar</button></div>`);
+  }catch(e){falha(e)}
+}
+async function mfaConfirmar(){
+  const c=String(($('mf-conf')||{}).value||'').replace(/\D/g,''),er=$('mf-erro');
+  if(c.length!==6){if(er)er.textContent='Digite os 6 números.';return}
+  try{
+    const r=await sb.auth.mfa.challengeAndVerify({factorId:S.mfaNovo,code:c});
+    if(r.error){if(er)er.textContent='Código errado ou vencido. Confira o celular e tente de novo.';return}
+    S.mfaInfo=undefined;const dl=$('dlg');if(dl&&dl.open)dl.close();render();toast('Verificação em 2 etapas ativada.');
+  }catch(e){if(er)er.textContent='Não foi possível confirmar agora. Tente de novo.'}
+}
 function telaSalao(){
   if(S.salao===null)return '<p class="muted">Carregando…</p>';
   if(!S.salao)return aviso('Não foi possível carregar os dados do salão','Verifique a conexão e tente de novo.','<div class="row-actions"><button class="btn" data-go="salao">Tentar de novo</button></div>');
   const t=S.salao,ro=NV('config')!=='escrita'?'disabled':'';
   const f=(id,rot,extra,v)=>`<div><label for="cf-${id}">${rot}</label><input id="cf-${id}" name="${id}" value="${esc(v!==undefined?v:(t[id]||''))}" ${ro} ${extra||''}></div>`;
   const logo=S.logoNovo!==undefined?S.logoNovo:t.logo_url;
-  return blocoApp()+blocoAssinatura()+blocoIndicacao()+blocoLgpd()+`<form data-form="config" class="panel" style="max-width:640px">
+  return blocoApp()+blocoAssinatura()+blocoIndicacao()+blocoSeguranca()+blocoHistorico()+blocoLgpd()+`<form data-form="config" class="panel" style="max-width:640px">
   <h3 style="margin:0 0 10px;font-size:16px">Marca</h3>
   <div class="logo-linha"><div class="logo-prev" id="cf-prev">${logo?`<img src="${esc(logo)}" alt="Logotipo">`:'<span class="muted">Sem logotipo</span>'}</div>
   <div><input id="cf-logo" type="file" accept="image/png,image/jpeg,image/webp" ${ro}> ${logo&&!ro?'<button type="button" class="btn ghost sm" data-act="tiraLogo">Remover logotipo</button>':''}<p class="muted" style="font-size:12.5px;margin:6px 0 0">A imagem é reduzida automaticamente.</p></div></div>
@@ -4528,6 +4596,21 @@ async function calLink(prof,renovar){
 const pcN=(n,d)=>d>0?Math.round(n*1000/d)/10:0;
 const pcT=v=>String(v).replace('.',',')+'%';
 const difTxt=(a,b)=>{if(!(b>0))return '';const v=Math.round((a-b)*100/b);return `<span class="muted" style="display:block;font-size:12px">${v>0?'+':''}${v}% vs. período anterior</span>`};
+/* Horas de trabalho de uma profissional no período (expediente menos almoço e bloqueios) e horas já agendadas */
+function capacidade(nome,ini,fim){
+  const c=((S.agCfg&&S.agCfg.profissionais)||{})[nome];if(!c||!c.d)return null;
+  let cap=0;
+  for(let d=ini;d<=fim;d=addDia(d,1)){
+    const j=c.d[new Date(d+'T12:00:00').getDay()];if(!j)continue;
+    const i=hmin(j[0]),f=hmin(j[1]);if(i===null||f===null||f<=i)continue;
+    let m=f-i;
+    if(c.a&&hmin(c.a[0])!==null&&hmin(c.a[1])!==null)m-=Math.max(0,Math.min(f,hmin(c.a[1]))-Math.max(i,hmin(c.a[0])));
+    (S.bloq||[]).filter(b=>b.data===d&&(!b.profissional||b.profissional===nome)).forEach(b=>{const bi=b.inicio?hmin(b.inicio):i,bf=b.inicio?hmin(b.fim):f;if(bi!==null&&bf!==null)m-=Math.max(0,Math.min(f,bf)-Math.max(i,bi))});
+    cap+=Math.max(0,m);
+  }
+  return cap;
+}
+const hmTxt=m=>{const h=Math.floor(m/60),r=Math.round(m%60);return h+'h'+(r?String(r).padStart(2,'0'):'')};
 function relInd(){
   const per=[30,90,365].includes(S.indPer)?S.indPer:90,h=hoje(),ini=addDia(h,-(per-1)),iniAnt=addDia(ini,-per);
   const dentro=(a,i,f)=>a.data>=i&&a.data<=f;
@@ -4545,19 +4628,26 @@ function relInd(){
   todos.forEach(a=>{const k=a.profissional||'Sem profissional';(grupos[k]=grupos[k]||[]).push(a)});
   const linhas=Object.keys(grupos).map(nome=>{
     const L=grupos[nome],F=L.filter(a=>!inativo(a)),fl=L.filter(a=>a.status==='faltou').length,c=clientes(F),f=soma(F);
-    return {nome,n:F.length,fat:f,tk:F.length?f/F.length:0,fl,pfl:pcN(fl,F.length+fl),cli:c.size,ret:pcN(voltaram(c),c.size)};
-  }).filter(x=>x.n||x.fl).sort((a,b)=>b.fat-a.fat);
+    const cap=capacidade(nome,ini,h),ag=F.reduce((t,a)=>t+(hmin(a.hora)!==null?(Number(a.duracao)||60):0),0);
+    return {nome,n:F.length,fat:f,tk:F.length?f/F.length:0,fl,pfl:pcN(fl,F.length+fl),cli:c.size,ret:pcN(voltaram(c),c.size),cap,ag,ocup:cap>0?Math.min(100,pcN(ag,cap)):null};
+  }).filter(x=>x.n||x.fl);
+  Object.keys((S.agCfg&&S.agCfg.profissionais)||{}).forEach(nome=>{
+    if(grupos[nome])return;const cap=capacidade(nome,ini,h);
+    if(cap>0)linhas.push({nome,n:0,fat:0,tk:0,fl:0,pfl:0,cli:0,ret:0,cap,ag:0,ocup:0});
+  });
+  linhas.sort((a,b)=>b.fat-a.fat||b.cap-a.cap);
   const maxF=Math.max(1,...linhas.map(x=>x.fat));
-  const porProf=linhas.length?'<div class="list">'+linhas.map(x=>`<div class="item"><div class="grow"><div class="t">${esc(x.nome)}</div><div class="muted num">${x.n} ${x.n===1?'atendimento':'atendimentos'} · ${brl(x.fat)} · ticket médio ${brl(x.tk)}</div><div class="muted num">${x.cli} ${x.cli===1?'cliente':'clientes'} · ${pcT(x.ret)} já voltaram · ${x.fl} ${x.fl===1?'falta':'faltas'} (${pcT(x.pfl)})</div><div style="height:6px;border-radius:4px;background:var(--line-2);margin-top:6px"><div style="height:6px;border-radius:4px;background:var(--accent);width:${Math.round(x.fat*100/maxF)}%"></div></div></div></div>`).join('')+'</div>':'<div class="empty"><p>Nenhum atendimento neste período.</p></div>';
+  const porProf=linhas.length?'<div class="list">'+linhas.map(x=>`<div class="item"><div class="grow"><div class="t">${esc(x.nome)}</div><div class="muted num">${x.n} ${x.n===1?'atendimento':'atendimentos'} · ${brl(x.fat)} · ticket médio ${brl(x.tk)}</div><div class="muted num">${x.cli} ${x.cli===1?'cliente':'clientes'} · ${pcT(x.ret)} já voltaram · ${x.fl} ${x.fl===1?'falta':'faltas'} (${pcT(x.pfl)})</div>${x.ocup!==null?`<div class="muted num">Agenda ocupada em ${pcT(x.ocup)} (${hmTxt(x.ag)} de ${hmTxt(x.cap)} de trabalho)</div>`:`<div class="muted num">Agenda: cadastre o horário de trabalho dela em Horários para ver a ocupação.</div>`}<div style="height:6px;border-radius:4px;background:var(--line-2);margin-top:6px"><div style="height:6px;border-radius:4px;background:var(--accent);width:${Math.round(x.fat*100/maxF)}%"></div></div></div></div>`).join('')+'</div>':'<div class="empty"><p>Nenhum atendimento neste período.</p></div>';
   const ds=[0,0,0,0,0,0,0];feitos.forEach(a=>{ds[new Date(a.data+'T12:00:00').getDay()]++});
   const maxD=Math.max(1,...ds),ordem=[1,2,3,4,5,6,0];
   const dias=`<div class="panel" style="margin-bottom:14px">${ordem.map(n=>`<div style="display:flex;align-items:center;gap:10px;margin:6px 0"><span style="width:84px">${DIAS_SEM[n]}</span><div style="flex:1;height:10px;border-radius:5px;background:var(--line-2)"><div style="height:10px;border-radius:5px;background:var(--accent);width:${Math.round(ds[n]*100/maxD)}%"></div></div><span class="num" style="width:32px;text-align:right">${ds[n]}</span></div>`).join('')}</div>`;
+  const comCap=linhas.filter(x=>x.cap>0),capT=comCap.reduce((t,x)=>t+x.cap,0),agT=comCap.reduce((t,x)=>t+x.ag,0);
   const st=(v,t,x)=>`<div class="stat"><b>${v}</b><span>${t}${x||''}</span></div>`;
   return segRel()+`<h2 style="margin:6px 0 2px">Indicadores do negócio</h2><p class="muted" style="margin:0 0 10px;max-width:640px">Últimos ${per===365?'12 meses':per+' dias'} (${fd(ini)} a ${fd(h)}).</p>${seg}`+
     `<div class="stats">${st(brl(fat),'faturado',difTxt(fat,fatAnt))}${st(feitos.length,'atendimentos',difTxt(feitos.length,ant.length))}${st(brl(tk),'ticket médio',difTxt(tk,tkAnt))}</div>`+
-    `<div class="stats">${st(cs.size,'clientes atendidas',novas?` (${novas} ${novas===1?'nova':'novas'})`:'')}${st(pcT(pcN(voltaram(cs),cs.size)),'já voltaram pelo menos uma vez')}${st(pcT(pcN(faltas.length,base)),'de faltas',` (${faltas.length}${canc.length?` · ${canc.length} cancelou`:''})`)}</div>`+
+    `<div class="stats">${st(cs.size,'clientes atendidas',novas?` (${novas} ${novas===1?'nova':'novas'})`:'')}${st(pcT(pcN(voltaram(cs),cs.size)),'já voltaram pelo menos uma vez')}${st(pcT(pcN(faltas.length,base)),'de faltas',` (${faltas.length}${canc.length?` · ${canc.length} cancelou`:''})`)}${capT>0?st(pcT(Math.min(100,pcN(agT,capT))),'da agenda ocupada',` (${hmTxt(agT)} de ${hmTxt(capT)})`):''}</div>`+
     `<h3>Por profissional</h3>${porProf}<h3>Dias mais movimentados</h3>${dias}`+
-    `<p class="muted" style="max-width:640px;font-size:13px">Faturado = valor dos atendimentos do período (sem contar faltas e cancelamentos). "Já voltaram" = clientes atendidas no período que têm 2 ou mais visitas no total. Taxa de faltas = faltas ÷ (atendimentos + faltas).</p>`;
+    `<p class="muted" style="max-width:640px;font-size:13px">Faturado = valor dos atendimentos do período (sem contar faltas e cancelamentos). "Já voltaram" = clientes atendidas no período que têm 2 ou mais visitas no total. Taxa de faltas = faltas ÷ (atendimentos + faltas). Ocupação = horas agendadas ÷ horas de trabalho (expediente sem almoço e sem bloqueios), só para quem tem horário cadastrado.</p>`;
 }
 const hm2=m=>{const x=Math.floor(m/60),y=m%60;return x+'h'+(y?String(y).padStart(2,'0'):'')};
 function vagasDia(dia,minD){
@@ -5073,7 +5163,9 @@ document.addEventListener('click',e=>{
     listaCompras:()=>listaCompras(),
     indCopiar:async()=>{const t=$('ind-l');try{await navigator.clipboard.writeText(t.value);toast('Link copiado.')}catch(_){t.select();toast('Selecione e copie o link.')}},copiaConvite:async()=>{const t=$('cv-txt');try{await navigator.clipboard.writeText(t.value);toast('Mensagem copiada.')}catch(_){t.select();toast('Selecione e copie a mensagem.')}},
     tiraLogo:()=>{S.logoNovo=null;const pv=$('cf-prev');if(pv)pv.innerHTML='<span class="muted">Sem logotipo</span>';a.remove()},liberaSuporte:()=>formSuporte(),
-    sair:async()=>{const dl=$('dlg');if(dl&&dl.open)dl.close();S.auth='entrar';S.recuperando=false;try{await sb.auth.signOut()}catch(_){}}
+    mfaLigar:()=>mfaLigar(),mfaConfirmar:()=>mfaConfirmar(),histAtualiza:()=>{S.hist=undefined;render()},
+    mfaDesligar:()=>confirmar('Desativar verificação em 2 etapas?','O sistema volta a pedir só a senha para entrar.','Desativar',async()=>{try{const r=await sb.auth.mfa.unenroll({factorId:S.mfaInfo&&S.mfaInfo.id});if(r.error)throw r.error;S.mfaInfo=undefined;render();toast('Verificação em 2 etapas desativada.')}catch(e){falha(e)}}),
+    sair:async()=>{const dl=$('dlg');if(dl&&dl.open)dl.close();S.auth='entrar';S.recuperando=false;S.mfaPed=false;try{await sb.auth.signOut()}catch(_){}}
   }[a.dataset.act];
   if(f){if(!(a.tagName==='A'&&a.getAttribute('href')))e.preventDefault();f()}
 });
@@ -5208,7 +5300,7 @@ function tempoTxt(sg){return sg>=60?Math.ceil(sg/60)+' min':sg+' s'}
 
 document.addEventListener('submit',async e=>{
   const f=e.target,k=f.dataset&&f.dataset.form;
-  if(!['criar','recuperar','novasenha','salao','config','mensagens','horarios','salas','lembemail','online','pub','mpconectar','waconectar','plsite','plcupom'].includes(k))return;
+  if(!['criar','recuperar','novasenha','salao','config','mensagens','horarios','salas','lembemail','online','pub','mpconectar','waconectar','plsite','plcupom','mfacod'].includes(k))return;
   e.preventDefault();if(S.busy||!sb)return;
   const d=Object.fromEntries(new FormData(f)),bt=f.querySelector('button'),er=$('a-erro');
   const ver=(c,m)=>{if(c){er.textContent=m;return true}return false};
@@ -5235,6 +5327,14 @@ document.addEventListener('submit',async e=>{
       if(r.error){er.textContent=msgAuth(r.error.message,r.error.status);return}
       S.recuperando=false;try{history.replaceState(null,'',location.pathname)}catch(_){}
       render();toast('Senha alterada.');
+    }else if(k==='mfacod'){
+      const c=String(d.codigo||'').replace(/\D/g,'');
+      if(c.length!==6){er.textContent='Digite os 6 números.';return}
+      const l=await sb.auth.mfa.listFactors(),fa=l.data&&l.data.totp&&l.data.totp[0];
+      if(!fa){S.mfaPed=false;S.iniciado=false;iniciar();return}
+      const r=await sb.auth.mfa.challengeAndVerify({factorId:fa.id,code:c});
+      if(r.error){S.mfaErro='Código errado ou vencido. Confira o celular e tente de novo.';er.textContent=S.mfaErro;return}
+      S.mfaPed=false;S.mfaErro='';S.iniciado=false;render();iniciar();
     }else if(k==='plcupom'){
       await criarCupom(f);
     }else if(k==='plsite'){
