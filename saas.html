@@ -553,6 +553,15 @@ dialog::backdrop{background:rgba(18,48,42,.55)}
 #balcao .bc-hora{font-size:26px;font-weight:700;min-width:84px}
 #balcao .bc-nome{font-size:24px;font-weight:600}
 #balcao .bc-btn{margin-left:auto;font-size:22px;padding:16px 26px;min-height:60px;border-radius:14px}
+#cols{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;-webkit-overflow-scrolling:touch}
+#cols .col{flex:1 0 170px;min-width:170px}
+#cols .col-h{position:sticky;top:0;z-index:2;background:var(--bg);font-weight:700;padding:6px 4px;border-bottom:2px solid var(--line);text-align:center}
+#cols .col-b{position:relative;border-left:1px solid var(--line);border-right:1px solid var(--line);background:repeating-linear-gradient(to bottom,transparent 0,transparent calc(var(--h60) - 1px),var(--line) calc(var(--h60) - 1px),var(--line) var(--h60))}
+#cols .hr{position:absolute;left:4px;font-size:11px;color:var(--muted);pointer-events:none}
+#cols .blk{position:absolute;left:3px;right:3px;border-radius:8px;padding:4px 6px;font-size:12px;line-height:1.25;overflow:hidden;cursor:grab;background:var(--side);border:1px solid var(--line);touch-action:none;user-select:none}
+#cols .blk.conf{background:#d6efe0}#cols .blk.pag{border-left:4px solid #1a7f4b}#cols .blk.arr{outline:2px solid var(--accent)}
+#cols .blk.drag{opacity:.75;z-index:5;box-shadow:0 6px 18px rgba(0,0,0,.25);cursor:grabbing}
+#cols .alvo{position:absolute;left:0;right:0;background:rgba(200,90,134,.18);border-top:2px solid var(--accent);pointer-events:none}
 </style>
 </head>
 <body>
@@ -2958,7 +2967,7 @@ function telaAtend(){
 }
 function formAtend(id,clienteId,data){
   if(!S.clientes.length){toast('Cadastre uma cliente primeiro.',true);return}
-  const a=id?S.atendTodos.find(x=>x.id===id):{data:data||hoje(),clienteId:clienteId||''};if(id&&!a)return;
+  const pre=S.preAg;S.preAg=null;const a=id?S.atendTodos.find(x=>x.id===id):{data:data||hoje(),clienteId:clienteId||'',hora:(pre&&pre.hora)||'',profissional:(pre&&pre.prof)||''};if(id&&!a)return;
   const cat=servicosCat(),procs=cat.length?cat.map(x=>x.nome):[...PROCS];if(a.procedimento&&!procs.includes(a.procedimento))procs.push(a.procedimento);const procs2=[...procs];if(a.procedimento2&&!procs2.includes(a.procedimento2))procs2.push(a.procedimento2);
   const profs=listaProfs();if(a.profissional&&!profs.includes(a.profissional))profs.push(a.profissional);
   const profSel=a.profissional||profPadrao(),parcSel=PARC(a.parcelas),credito=a.pagamento==='Cartão de crédito',cartao=credito||a.pagamento==='Cartão de débito';
@@ -4064,13 +4073,13 @@ async function salvarPub(d,er){
   b.ok=r.data;render();window.scrollTo(0,0);
 }
 
-S.agVis=['mes','lista'].includes(LS.get('salao_ag_vis','sem'))?LS.get('salao_ag_vis','sem'):'sem';
+S.agVis=['mes','lista','dia'].includes(LS.get('salao_ag_vis','sem'))?LS.get('salao_ag_vis','sem'):'sem';
 const SEMNOM=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
 function blocoDiaAg(d){
   const h=hoje(),l=S.atendTodos.filter(a=>a.data===d).sort(byHora);
   return `<h3 style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${esc(diaTxt(d))}${d===h?' <span class="tag ok">Hoje</span>':''}<button class="btn ghost sm" data-act="novoAtend" data-data="${d}">Agendar</button>${podeBloq()?`<button class="btn ghost sm" data-act="novoBloq" data-data="${d}">Bloquear</button>`:''}</h3>`+bloqDia(d)+(l.length?`<div class="list">${l.map(linhaAg).join('')}</div>`:'<p class="muted" style="margin:0">Sem atendimentos.</p>');
 }
-const agToggle=()=>`<div class="seg" role="group" aria-label="Modo de visualização">${[['sem','Semana'],['mes','Mês'],['lista','Lista do mês'],['fila','Fila de hoje']].map(([k,l])=>`<button class="btn sm ${(S.agVis||'sem')===k?'':'ghost'}" data-act="agVis" data-id="${k}" aria-pressed="${(S.agVis||'sem')===k}">${l}</button>`).join('')}</div>`;
+const agToggle=()=>`<div class="seg" role="group" aria-label="Modo de visualização">${[['sem','Semana'],['dia','Dia por profissional'],['mes','Mês'],['lista','Lista do mês'],['fila','Fila de hoje']].map(([k,l])=>`<button class="btn sm ${(S.agVis||'sem')===k?'':'ghost'}" data-act="agVis" data-id="${k}" aria-pressed="${(S.agVis||'sem')===k}">${l}</button>`).join('')}</div>`;
 function telaAgendaLista(){
   const h=hoje(),base=addMes(h.slice(0,7),S.agMes||0),[y,m]=base.split('-').map(Number),nd=new Date(y,m,0).getDate();
   const dias=Array.from({length:nd},(_,i)=>base+'-'+String(i+1).padStart(2,'0'));
@@ -4145,6 +4154,67 @@ function balcaoSair(){const b=document.getElementById('balcao');if(b)b.remove();
 function balcaoAtualiza(){const l=document.getElementById('bc-lista');if(l)l.innerHTML=balcaoLista()}
 document.addEventListener('input',e=>{if(e.target&&e.target.id==='bc-q'){S.balcaoQ=e.target.value;balcaoAtualiza()}});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('balcao'))balcaoSair()});
+/* ===== Agenda em colunas por profissional + arrastar para remarcar ===== */
+const DP={ini:7*60,fim:21*60,k:1.1}; /* minutos de início/fim e pixels por minuto */
+const minHm=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
+function telaDiaProf(){
+  const h=hoje(),dia=S.agDiaCol||h,pode=!S.legado&&NV('agenda')==='escrita';
+  const L=S.atendTodos.filter(a=>a.data===dia&&!inativo(a)).sort(byHora);
+  let profs=[...new Set([...(S.agCfg&&S.agCfg.profissionais?Object.keys(S.agCfg.profissionais):[]),...listaProfs(),...L.map(a=>a.profissional)].filter(Boolean))];
+  if(L.some(a=>!a.profissional))profs.push('');
+  if(!profs.length)profs=[''];
+  const ini=Math.min(DP.ini,...L.map(a=>hmin(a.hora)).filter(x=>x!==null).map(x=>Math.floor(x/60)*60)),fim=Math.max(DP.fim,...L.map(a=>{const i=hmin(a.hora);return i===null?0:Math.ceil((i+(a.duracao||60))/60)*60}));
+  const alt=Math.round((fim-ini)*DP.k),h60=Math.round(60*DP.k);
+  const horas=[];for(let m=ini;m<fim;m+=60)horas.push(m);
+  const col=p=>{const lp=L.filter(a=>(a.profissional||'')===p);
+    const blocos=lp.map(a=>{const i=hmin(a.hora);if(i===null)return '';const c=cli(a.clienteId)||{nome:'—'};
+      return `<div class="blk${a.status==='confirmado'?' conf':''}${!aberto(a)?' pag':''}" data-bid="${esc(a.id)}" data-act="editAtend" data-id="${esc(a.id)}" role="button" tabindex="0" aria-label="${esc(a.hora)} ${esc(c.nome)}" style="top:${Math.round((i-ini)*DP.k)}px;height:${Math.max(22,Math.round((a.duracao||60)*DP.k)-2)}px"><b>${esc(a.hora)}</b> ${esc(c.nome)}<br><span class="muted">${esc(procTxt(a))}</span></div>`}).join('');
+    const sem=lp.filter(a=>hmin(a.hora)===null);
+    return `<div class="col" data-prof="${esc(p)}"><div class="col-h">${esc(p||'Sem profissional')}${sem.length?` <span class="muted" style="font-weight:400">(+${sem.length} sem hora)</span>`:''}</div><div class="col-b" style="height:${alt}px;--h60:${h60}px" data-ini="${ini}">${horas.map(m=>`<span class="hr" style="top:${Math.round((m-ini)*DP.k)+2}px">${minHm(m)}</span>`).join('')}${blocos}</div></div>`};
+  return `<div class="bar">${agToggle()}<button class="btn ghost" data-act="diaCol" data-id="-1">‹ Dia anterior</button><button class="btn ghost" data-act="diaCol" data-id="0">Hoje</button><button class="btn ghost" data-act="diaCol" data-id="1">Próximo dia ›</button></div>`+
+    `<h2 style="margin:6px 0 2px">${esc(diaTxt(dia))}${dia===h?' <span class="tag ok">Hoje</span>':''}</h2><p class="muted" style="margin:0 0 10px">${L.length} ${L.length===1?'atendimento':'atendimentos'}. ${pode?'Toque num horário vazio para agendar. Arraste um cartão para mudar o horário ou a profissional (no celular, segure um instante antes de arrastar).':''}</p>`+
+    `<div id="cols" data-dia="${esc(dia)}">${profs.map(col).join('')}</div>`;
+}
+async function moverAtend(id,prof,hora){
+  const a=S.atendTodos.find(x=>x.id===id);if(!a)return;
+  if((a.profissional||'')===prof&&a.hora===hora)return;
+  const av=avisosAgenda({data:a.data,hora,duracao:a.duracao,profissional:prof,sala:a.sala},id);
+  if(av.length&&!window.confirm('Atenção:\n\n- '+av.join('\n- ')+'\n\nMover mesmo assim?'))return;
+  const o={hora};if((a.profissional||'')!==prof)o.profissional=prof;
+  const r=await sb.from('atendimentos').update(o).eq('id',id);if(r.error)throw r.error;
+  await recarregar();render();toast('Horário alterado para '+hora+(prof?' com '+prof:'')+'.');
+}
+(function(){
+  let dr=null;
+  const alvo=(x,y)=>{const els=document.elementsFromPoint(x,y),cb=els.find(e=>e.classList&&e.classList.contains('col-b'));if(!cb)return null;
+    const r=cb.getBoundingClientRect(),ini=+cb.dataset.ini,m=Math.round((ini+(y-r.top)/DP.k)/15)*15;return {cb,prof:cb.parentElement.dataset.prof||'',m:Math.max(0,Math.min(23*60+45,m)),r}};
+  const limpa=()=>{if(dr){clearTimeout(dr.t);if(dr.el){dr.el.classList.remove('drag');dr.el.style.transform='';dr.el.style.pointerEvents=''}document.querySelectorAll('#cols .alvo').forEach(e=>e.remove())}dr=null};
+  document.addEventListener('pointerdown',e=>{
+    const b=e.target.closest&&e.target.closest('#cols .blk');if(!b||S.legado||NV('agenda')!=='escrita'||e.button>0)return;
+    dr={el:b,id:b.dataset.bid,x:e.clientX,y:e.clientY,on:false,pid:e.pointerId,touch:e.pointerType!=='mouse'};
+    if(dr.touch){dr.t=setTimeout(()=>{if(dr){dr.on=true;b.classList.add('drag');if(navigator.vibrate)try{navigator.vibrate(15)}catch(_){}}},350)}
+  });
+  document.addEventListener('pointermove',e=>{
+    if(!dr)return;const dx=e.clientX-dr.x,dy=e.clientY-dr.y;
+    if(!dr.on){if(dr.touch){if(Math.hypot(dx,dy)>8){clearTimeout(dr.t);dr=null}return}if(Math.hypot(dx,dy)<6)return;dr.on=true;dr.el.classList.add('drag')}
+    e.preventDefault();dr.el.style.transform=`translate(${dx}px,${dy}px)`;dr.el.style.pointerEvents='none';
+    document.querySelectorAll('#cols .alvo').forEach(x=>x.remove());
+    const t=alvo(e.clientX,e.clientY);if(t){const a=S.atendTodos.find(x=>x.id===dr.id),ini=+t.cb.dataset.ini,d=document.createElement('div');d.className='alvo';d.style.top=Math.round((t.m-ini)*DP.k)+'px';d.style.height=Math.max(22,Math.round(((a&&a.duracao)||60)*DP.k))+'px';t.cb.appendChild(d)}
+  },{passive:false});
+  const fim=async e=>{
+    if(!dr)return;const d=dr;
+    if(!d.on){clearTimeout(d.t);dr=null;return}
+    const t=alvo(e.clientX,e.clientY);limpa();window.__arrastou=Date.now();
+    if(t){try{await moverAtend(d.id,t.prof,minHm(t.m))}catch(x){falha(x)}}
+  };
+  document.addEventListener('pointerup',fim);document.addEventListener('pointercancel',()=>limpa());
+  document.addEventListener('click',e=>{if(window.__arrastou&&Date.now()-window.__arrastou<400){e.stopPropagation();e.preventDefault()}},true);
+  document.addEventListener('click',e=>{
+    const cb=e.target.closest&&e.target.closest('#cols .col-b');if(!cb||e.target.closest('.blk')||S.legado||NV('agenda')!=='escrita')return;
+    const r=cb.getBoundingClientRect(),m=Math.floor((+cb.dataset.ini+(e.clientY-r.top)/DP.k)/15)*15;
+    S.preAg={hora:minHm(Math.max(0,m)),prof:cb.parentElement.dataset.prof||''};formAtend(null,'',($('cols')||{dataset:{}}).dataset.dia||hoje());
+  });
+})();
 function telaFila(){
   const pode=!S.legado&&NV('agenda')==='escrita';
   const h=hoje(),L=S.atendTodos.filter(a=>a.data===h&&!inativo(a)).sort(byHora);
@@ -4162,6 +4232,7 @@ function telaAgenda(){
   if(S.agVis==='mes')return telaAgendaMes();
   if(S.agVis==='lista')return telaAgendaLista();
   if(S.agVis==='fila')return telaFila();
+  if(S.agVis==='dia')return telaDiaProf();
   const h=hoje(),ini=addDia(segunda(h),7*(S.agSem||0)),dias=Array.from({length:7},(_,i)=>addDia(ini,i)),am=addDia(h,1);
   const pend=S.atend.filter(a=>a.data===am).sort(byHora),env=enviados();
   const total=S.atend.filter(a=>a.data>=ini&&a.data<=dias[6]).length;
@@ -4800,7 +4871,7 @@ document.addEventListener('click',e=>{
     ocultaPassos:()=>{LS.set('salao_passos_off','1');render();toast('Primeiros passos ocultados. Para ver de novo, use o botão no cartão Agendamento online.')},
     mostraPassos:()=>{LS.set('salao_passos_off','');render()},
     novoServico:()=>formServico(''),editServico:()=>formServico(id),delServico:()=>removerServico(id).catch(x=>toast(falha(x),true)),novoBloq:()=>formBloq(a.dataset.data),delBloq:()=>confirmar('Remover este bloqueio?','O horário volta a ficar livre.','Remover',async()=>{const r=await sb.from('bloqueios').delete().eq('id',id);if(r.error)throw r.error;await recarregar();toast('Bloqueio removido.')}),
-    metaProf:()=>formMetaProf(id),cobrarLink:()=>cobrarLink(id),balcao:()=>balcaoAbrir(),balcaoSair:()=>balcaoSair(),balcaoChegou:async()=>{const x=S.atendTodos.find(y=>y.id===id),c=x&&cli(x.clienteId);try{await filaMarca(id,'aguardando');toast('Chegada registrada'+(c?': '+c.nome:'')+'.')}catch(e){falha(e)}balcaoAtualiza()},novoAtend:()=>formAtend(null,a.dataset.cliente,a.dataset.data),receber:()=>formReceber(id),agVis:()=>{S.agVis=['mes','lista','fila'].includes(id)?id:'sem';if(id!=='fila')LS.set('salao_ag_vis',S.agVis);render()},filaMarca:()=>filaMarca(id,a.dataset.st),reciboCom:()=>reciboCom(id),etqFiltro:()=>{S.etqFiltro=id||'';render()},galRemover:()=>confirmar('Remover esta foto?','Ela deixa de aparecer na página de agendamento.','Remover',()=>galRemover(id)),agMes:()=>{S.agMes=id==='0'?0:(S.agMes||0)+Number(id);S.agDia=null;render()},agDia:()=>{S.agDia=id;render()},agSem:()=>{S.agSem=id==='0'?0:(S.agSem||0)+Number(id);render()},meta:()=>formMeta(),imprimir:()=>window.print(),editAtend:()=>formAtend(id),delAtend:()=>pedirDelAtend(id),
+    metaProf:()=>formMetaProf(id),diaCol:()=>{const b=S.agDiaCol||hoje();S.agDiaCol=id==='0'?hoje():addDia(b,+id);render()},cobrarLink:()=>cobrarLink(id),balcao:()=>balcaoAbrir(),balcaoSair:()=>balcaoSair(),balcaoChegou:async()=>{const x=S.atendTodos.find(y=>y.id===id),c=x&&cli(x.clienteId);try{await filaMarca(id,'aguardando');toast('Chegada registrada'+(c?': '+c.nome:'')+'.')}catch(e){falha(e)}balcaoAtualiza()},novoAtend:()=>formAtend(null,a.dataset.cliente,a.dataset.data),receber:()=>formReceber(id),agVis:()=>{S.agVis=['mes','lista','fila','dia'].includes(id)?id:'sem';if(id!=='fila')LS.set('salao_ag_vis',S.agVis);render()},filaMarca:()=>filaMarca(id,a.dataset.st),reciboCom:()=>reciboCom(id),etqFiltro:()=>{S.etqFiltro=id||'';render()},galRemover:()=>confirmar('Remover esta foto?','Ela deixa de aparecer na página de agendamento.','Remover',()=>galRemover(id)),agMes:()=>{S.agMes=id==='0'?0:(S.agMes||0)+Number(id);S.agDia=null;render()},agDia:()=>{S.agDia=id;render()},agSem:()=>{S.agSem=id==='0'?0:(S.agSem||0)+Number(id);render()},meta:()=>formMeta(),imprimir:()=>window.print(),editAtend:()=>formAtend(id),delAtend:()=>pedirDelAtend(id),
     abrir:()=>{S.view='clientes';S.sel=id;render();window.scrollTo(0,0)},
     novoVale:()=>formVale(),delVale:()=>confirmar('Excluir este vale?','O valor volta a entrar na comissão a pagar.','Excluir',async()=>{const r=await sb.from('vales').delete().eq('id',id);if(r.error)throw r.error;await recarregar();toast('Vale excluído.')}),
     relAba:()=>{S.relAba=id;render()},caixaFechar:caixaFechar,diaRel:()=>{S.diaRel=id==='0'?hoje():addDia(S.diaRel||hoje(),Number(id));render()},juntarVer:()=>dlgRepetidas(),juntarManter:()=>confirmar('Juntar estes cadastros?','Os atendimentos das outras passam para a cliente escolhida e o cadastro repetido é removido. Não dá para desfazer.','Juntar',()=>juntarClientes(id,String(a.dataset.outras||'').split(',').filter(Boolean))),novoPacote:()=>formPacote(a.dataset.cliente),usarSessao:()=>{usarSessao(id).catch(x=>toast(falha(x),true))},encerrarPacote:()=>confirmar('Encerrar este pacote?','As sessões que sobraram deixam de poder ser usadas.','Encerrar',()=>encerrarPacote(id)),fidConfig:()=>formFid(),fidResgatar:()=>confirmar('Resgatar o prêmio?','Isso registra que a cliente já recebeu o prêmio.','Resgatar',()=>resgatarPremio(id)),novaEspera:()=>formEspera(),esAvisada:()=>{esMarcar(id,'avisada').catch(x=>toast(falha(x),true))},esRemover:()=>confirmar('Remover da lista de espera?','A cliente deixa de aparecer na lista.','Remover',()=>esMarcar(id,'remover')),retDias:()=>{S.retDias=Number(id)||60;LS.set('salao_ret_dias',String(S.retDias));render()},retChamei:()=>{const c=retContatos();c[id]=hoje();LS.set('salao_ret_contato',JSON.stringify(c));setTimeout(render,50)},mais:()=>{S.lim[id]=(S.lim[id]||100)+200;render()},voltar:()=>{S.sel=null;render()},estAba:()=>{S.estAba=id;render()},novoProd:()=>formProd(),editProd:()=>formProd(id),delProd:()=>pedirDelProd(id),movProd:()=>formMov(id),histProd:()=>histProd(id),novaFicha:()=>formFicha(id),editFicha:()=>formFicha(null,id),delFicha:()=>pedirDelFicha(id),exportJson,exportCsv,exportXlsx,novaDesp:()=>formDesp(),editDesp:()=>formDesp(id),delDesp:()=>pedirDelDesp(id),fechar:()=>$('dlg').close(),
