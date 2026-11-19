@@ -678,9 +678,10 @@ async function recarregar(){
         let wa=null,mpc=null;
         try{const r2=await sb.from('tenants').select('whatsapp_auto').eq('id',S.ctx.tenant.id);if(!r2.error&&r2.data&&r2.data[0])wa=!!r2.data[0].whatsapp_auto}catch(_){}
         try{const r3=await sb.rpc('mp_conectado');if(!r3.error)mpc=!!r3.data}catch(_){}
+        let gw='';try{const r3b=await sb.rpc('gw_provedor');if(!r3b.error)gw=String(r3b.data||'')}catch(_){}
         let uso=null;try{const r4=await sb.rpc('whatsapp_uso');if(!r4.error&&r4.data)uso=r4.data}catch(_){}
         let wp=null;try{const r5=await sb.rpc('meu_whatsapp');if(!r5.error&&r5.data)wp=r5.data}catch(_){}
-        return Object.assign({},x,{agenda_config:x.agenda_config||{},_wa:wa,_mp:mpc,_uso:uso,_wp:wp})}catch(_){S.semAg=true;return null}})(),
+        return Object.assign({},x,{agenda_config:x.agenda_config||{},_wa:wa,_mp:mpc,_gw:gw||(mpc?'mercadopago':''),_uso:uso,_wp:wp})}catch(_){S.semAg=true;return null}})(),
       S.legado?Promise.resolve([]):todos('vales').catch(()=>[]),
       S.legado?Promise.resolve([]):todos('cartoes_presente').catch(()=>{semC=true;return []}),
       S.legado?Promise.resolve([]):todos('cartao_movs').catch(()=>{semC=true;return []}),
@@ -694,7 +695,7 @@ async function recarregar(){
     const sig=JSON.stringify([c,a,g,pr,fi,mv,bq,pd,es,pk,rs,ag,vl,cp,cmv,pvd,vnd,anm,prm,cpg,cbc]);
     const mudou=sig!==S.sig||tinhaErro||!S.got;
     S.sig=sig;S.erro='';
-    if(mudou){S.contas=(cpg||[]).map(cpRow2);S.promos=(prm||[]).map(pmRow);S.cb=cbc&&cbc[0]?{ativo:!!cbc[0].ativo,pct:Number(cbc[0].percentual)||0,desde:cbc[0].ativado_em||''}:{ativo:false,pct:5,desde:''};S.anams=(anm||[]).map(anRow);S.pvs=(pvd||[]).map(pvRow);S.vendas=(vnd||[]).map(vdRow);S.cartoes=(cp||[]).map(cpRow);S.cmovs=(cmv||[]).map(cpMov);S.vales=(vl||[]).map(r=>({id:r.id,prof:r.profissional||'',data:r.data,valor:Number(r.valor)||0,obs:r.obs||''}));S.clientes=c.map(rowC);S.atendTodos=a.map(rowA);S.atend=S.atendTodos.filter(x=>!inativo(x));S.gastos=g.map(rowD);S.produtos=pr.map(rowP);S.fichas=fi.map(rowF);S.movs=mv.map(rowM);S.bloq=bq.map(b=>({id:b.id,profissional:b.profissional||'',data:b.data,inicio:b.inicio?String(b.inicio).slice(0,5):'',fim:b.fim?String(b.fim).slice(0,5):'',motivo:b.motivo||''}));S.pedidos=pd.filter(x=>x.status==='pendente'||(x.status==='recusado'&&x.sinal_status==='pago')).map(x=>({id:x.id,nome:x.nome,telefone:x.telefone,servico:x.servico,profissional:x.profissional,data:x.data,hora:String(x.hora||'').slice(0,5),obs:x.obs||'',duracao:x.duracao,status:x.status,sinalValor:Number(x.sinal_valor)||0,sinalStatus:x.sinal_status||'nenhum'})).sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora));S.pacotes=pk.map(x=>({id:x.id,clienteId:x.cliente_id,nome:x.nome,servico:x.servico||'',total:Number(x.total_sessoes)||0,usadas:Number(x.usadas)||0,preco:Number(x.preco)||0,validade:x.validade||'',status:x.status||'ativo',criado:x.criado_em||''}));S.resgates=rs.map(x=>({id:x.id,clienteId:x.cliente_id,premio:x.premio||'',criado:x.criado_em||''}));S.espera=es.filter(x=>x.status==='aguardando'||x.status==='avisada').map(x=>({id:x.id,nome:x.nome,telefone:x.telefone,servico:x.servico,profissional:x.profissional||'',data:x.data,periodo:x.periodo||'qualquer',obs:x.obs||'',status:x.status,origem:x.origem||'salao',avisadaEm:x.avisada_em||''})).sort((a,b)=>(a.data+a.status).localeCompare(b.data+b.status));S.agCfg=(ag&&ag.agenda_config)||{};S.onl=ag?{slug:ag.slug||'',on:!!ag.online_ativo,wa:ag._wa,mp:ag._mp,uso:ag._uso||null,wp:ag._wp||null}:{slug:'',on:false,wa:null,mp:null,uso:null,wp:null};S.got=true;render()}
+    if(mudou){S.contas=(cpg||[]).map(cpRow2);S.promos=(prm||[]).map(pmRow);S.cb=cbc&&cbc[0]?{ativo:!!cbc[0].ativo,pct:Number(cbc[0].percentual)||0,desde:cbc[0].ativado_em||''}:{ativo:false,pct:5,desde:''};S.anams=(anm||[]).map(anRow);S.pvs=(pvd||[]).map(pvRow);S.vendas=(vnd||[]).map(vdRow);S.cartoes=(cp||[]).map(cpRow);S.cmovs=(cmv||[]).map(cpMov);S.vales=(vl||[]).map(r=>({id:r.id,prof:r.profissional||'',data:r.data,valor:Number(r.valor)||0,obs:r.obs||''}));S.clientes=c.map(rowC);S.atendTodos=a.map(rowA);S.atend=S.atendTodos.filter(x=>!inativo(x));S.gastos=g.map(rowD);S.produtos=pr.map(rowP);S.fichas=fi.map(rowF);S.movs=mv.map(rowM);S.bloq=bq.map(b=>({id:b.id,profissional:b.profissional||'',data:b.data,inicio:b.inicio?String(b.inicio).slice(0,5):'',fim:b.fim?String(b.fim).slice(0,5):'',motivo:b.motivo||''}));S.pedidos=pd.filter(x=>x.status==='pendente'||(x.status==='recusado'&&x.sinal_status==='pago')).map(x=>({id:x.id,nome:x.nome,telefone:x.telefone,servico:x.servico,profissional:x.profissional,data:x.data,hora:String(x.hora||'').slice(0,5),obs:x.obs||'',duracao:x.duracao,status:x.status,sinalValor:Number(x.sinal_valor)||0,sinalStatus:x.sinal_status||'nenhum'})).sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora));S.pacotes=pk.map(x=>({id:x.id,clienteId:x.cliente_id,nome:x.nome,servico:x.servico||'',total:Number(x.total_sessoes)||0,usadas:Number(x.usadas)||0,preco:Number(x.preco)||0,validade:x.validade||'',status:x.status||'ativo',criado:x.criado_em||''}));S.resgates=rs.map(x=>({id:x.id,clienteId:x.cliente_id,premio:x.premio||'',criado:x.criado_em||''}));S.espera=es.filter(x=>x.status==='aguardando'||x.status==='avisada').map(x=>({id:x.id,nome:x.nome,telefone:x.telefone,servico:x.servico,profissional:x.profissional||'',data:x.data,periodo:x.periodo||'qualquer',obs:x.obs||'',status:x.status,origem:x.origem||'salao',avisadaEm:x.avisada_em||''})).sort((a,b)=>(a.data+a.status).localeCompare(b.data+b.status));S.agCfg=(ag&&ag.agenda_config)||{};S.onl=ag?{slug:ag.slug||'',on:!!ag.online_ativo,wa:ag._wa,mp:ag._mp,gw:ag._gw||'',uso:ag._uso||null,wp:ag._wp||null}:{slug:'',on:false,wa:null,mp:null,uso:null,wp:null};S.got=true;render()}
   }catch(e){S.erro=(e&&(e.code||e.message))||'erro';render()}
 }
 let tmr;
@@ -2114,7 +2115,7 @@ function pedirExcluirPlano(id){
 const SITE_FAQ=[
   {p:'Preciso pagar para começar?',r:'Não. Você cria a conta e usa o sistema durante o período de teste sem pagar. Se precisar de mais tempo para decidir, é possível pedir uma extensão do teste.'},
   {p:'Minha cliente precisa baixar algum aplicativo?',r:'Não. Ela abre o seu link no navegador do celular, escolhe o dia e o horário e pronto. Para você, o Agendio também pode ser instalado na tela inicial do celular, como um aplicativo.'},
-  {p:'Como funciona a cobrança do sinal?',r:'Você escolhe entre um valor fixo ou uma porcentagem do serviço. A cliente vê o QR code e o Pix copia e cola, e o dinheiro cai direto na sua conta. Se o salão preferir, o sinal também pode ser cobrado pelo Mercado Pago, com confirmação automática. O sinal é opcional e você liga ou desliga quando quiser.'},
+  {p:'Como funciona a cobrança do sinal?',r:'Você escolhe entre um valor fixo ou uma porcentagem do serviço. A cliente vê o QR code e o Pix copia e cola, e o dinheiro cai direto na sua conta. Se o salão preferir, o sinal também pode ser cobrado automaticamente pelo Mercado Pago ou PagBank, com confirmação automática. O sinal é opcional e você liga ou desliga quando quiser.'},
   {p:'O WhatsApp tem custo?',r:'Enviar mensagens pelo botão, uma a uma, é grátis. O envio automático de lembretes faz parte do plano com WhatsApp automático e cada mensagem enviada é cobrada, conforme o valor do plano. O envio automático usa a API oficial do WhatsApp Business, que exige configuração própria.'},
   {p:'Os dados do meu salão ficam seguros?',r:'Cada salão enxerga apenas os seus próprios dados, e cada pessoa da equipe acessa só o que o perfil dela permite. Você também pode apagar os dados pessoais de uma cliente quando ela pedir, de acordo com a LGPD.'},
   {p:'Posso usar no computador e no celular?',r:'Sim. O sistema se adapta à tela e funciona no celular, no tablet e no computador, com a mesma conta.'}];
@@ -2608,7 +2609,7 @@ async function clubeCobrar(id){
   abrir(`<h2>Link de cobrança</h2><p>Envie para ${esc((c&&c.nome)||'a cliente')}. Quando ela pagar, a mensalidade é registrada sozinha e as sessões do mês são liberadas.</p>
   <input readonly value="${esc(j.url)}" aria-label="Link de pagamento" onfocus="this.select()">
   <div class="acts"><button type="button" class="btn ghost" data-act="fechar">Fechar</button><a class="btn" target="_blank" rel="noopener" href="${c&&c.telefone?zap(c.telefone):'https://wa.me/'}?text=${encodeURIComponent(msg)}">Enviar no WhatsApp</a></div>
-  <p class="muted" style="margin:8px 0 0">O pagamento cai direto na conta Mercado Pago do salão. Se não aparecer o registro, toque em "Mensalidade paga" depois de conferir.</p>`);
+  <p class="muted" style="margin:8px 0 0">O pagamento cai direto na conta do salão (${gwNome()}). Se não aparecer o registro, toque em "Mensalidade paga" depois de conferir.</p>`);
 }
 async function clubeChama(nome,args){
   const r=await sb.rpc(nome,args);
@@ -3542,7 +3543,7 @@ async function cobrarLink(id){
   abrir(`<h2>Link de pagamento</h2><p>${esc((c&&c.nome)||'Cliente')} · ${esc(procTxt(a))} · <b>${brl(a.valor)}</b></p><p class="muted" style="margin-top:0">Quando ela pagar, este atendimento é marcado como pago sozinho. O link cobra o valor total.</p>
   <input readonly value="${esc(j.url)}" aria-label="Link de pagamento" onfocus="this.select()">
   <div class="acts"><button type="button" class="btn ghost" data-act="fechar">Fechar</button><a class="btn" target="_blank" rel="noopener" href="${telOk(c)?esc(linkZap(c,msg)):'https://wa.me/?text='+encodeURIComponent(msg)}">Enviar no WhatsApp</a></div>
-  <p class="muted" style="margin:8px 0 0">O dinheiro cai direto na conta Mercado Pago do salão. Se a cliente pagar de outro jeito, use "Recebi".</p>`);
+  <p class="muted" style="margin:8px 0 0">O dinheiro cai direto na conta do salão (${gwNome()}). Se a cliente pagar de outro jeito, use "Recebi".</p>`);
 }
 function formReceber(id){
   const a=S.atend.find(x=>x.id===id);if(!a)return;const c=cli(a.clienteId)||{nome:''};
@@ -3617,7 +3618,7 @@ function telaInicio(){
   const al=[],ub=LS.get('salao_ultimo_backup','');
   const dono=!!S.ctx&&S.ctx.role==='proprietario',tn0=(S.ctx&&S.ctx.tenant)||{};
   {const np=(S.pedidos||[]).filter(x=>x.status==='pendente').length,dev=(S.pedidos||[]).filter(x=>x.status==='recusado').length;
-    if(dev)al.unshift([`${dev} sinal(is) recebido(s) de horário que não está mais livre. Devolva pelo Mercado Pago.`,'agenda','Ver']);
+    if(dev)al.unshift([`${dev} sinal(is) recebido(s) de horário que não está mais livre. Devolva pelo ${gwNome()}.`,'agenda','Ver']);
     if(np)al.unshift([`${np} ${np===1?'pedido de agendamento online aguardando':'pedidos de agendamento online aguardando'} resposta.`,'agenda','Ver pedidos'])}
   {const fut=S.atend.filter(a=>String(a.data)>=h&&!inativo(a)),rep=[...new Set(fut.map(a=>a.clienteId))].filter(id=>cli(id)&&faltasDe(id)>=2);
     if(rep.length)al.push([`${rep.length} ${rep.length===1?'cliente que já faltou 2 vezes ou mais tem':'clientes que já faltaram 2 vezes ou mais têm'} horário marcado. Confirme com ${rep.length===1?'ela':'elas'}.`,'agenda','Ver agenda']);
@@ -3824,7 +3825,7 @@ function blocoOnline(pode){
   <label class="chk"><input type="checkbox" id="on-sa" name="sinal_ativo" ${sgAtivo?'checked':''} ${pode?'':'disabled'}> Cobrar sinal das clientes que agendam online</label>
   <p class="muted" style="margin:2px 0 8px">Desligado, a cliente agenda sem pagar nada. Os valores abaixo ficam guardados para quando você ligar de novo.</p>
   <div id="sinal-campos" ${sgAtivo?'':'hidden'}>
-  <label for="on-sm">Como cobrar</label><select id="on-sm" name="sinal_modo" ${pode?'':'disabled'}>${[['pix','Pix: a cliente vê o QR code e o código copia e cola'],['mp','Mercado Pago automático (a cliente paga na hora)']].map(([v,t])=>`<option value="${v}" ${v===sgModo?'selected':''}>${t}</option>`).join('')}</select>
+  <label for="on-sm">Como cobrar</label><select id="on-sm" name="sinal_modo" ${pode?'':'disabled'}>${[['pix','Pix: a cliente vê o QR code e o código copia e cola'],['mp','Automático pelo Mercado Pago ou PagBank (a cliente paga na hora)']].map(([v,t])=>`<option value="${v}" ${v===sgModo?'selected':''}>${t}</option>`).join('')}</select>
   <div class="grid2"><div><label for="on-st">Tipo</label><select id="on-st" name="sinal_tipo" ${pode?'':'disabled'}><option value="fixo" ${sg.tipo!=='percentual'?'selected':''}>Valor fixo (R$)</option><option value="percentual" ${sg.tipo==='percentual'?'selected':''}>% do valor do serviço</option></select></div>
   <div><label for="on-sv">Valor</label><input id="on-sv" name="sinal_valor" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(sg.valor||'')}" ${pode?'':'disabled'}></div>
   <div><label for="on-se">Prazo para pagar (min)</label><input id="on-se" name="sinal_exp" type="number" min="10" max="240" value="${esc(sg.expira_min||30)}" ${pode?'':'disabled'}></div></div>
@@ -3834,14 +3835,14 @@ function blocoOnline(pode){
   <div><label for="on-pn">Nome que aparece no Pix</label><input id="on-pn" name="pix_nome" maxlength="25" placeholder="Seu nome ou do salão" value="${esc(px.nome||String((S.ctx&&S.ctx.tenant&&S.ctx.tenant.nome)||'').slice(0,25))}" ${pode?'':'disabled'}></div>
   <div><label for="on-pd">Cidade</label><input id="on-pd" name="pix_cidade" maxlength="15" placeholder="Ex.: Blumenau" value="${esc(px.cidade||(S.ctx&&S.ctx.tenant&&S.ctx.tenant.cidade)||'')}" ${pode?'':'disabled'}></div></div>
   <p class="muted" style="margin:6px 0 0">A cliente recebe o QR code e o código copia e cola já com o valor do sinal. O dinheiro cai direto na sua conta, sem taxa do Agendio. Depois de pagar, ela avisa você pelo WhatsApp.</p></div>
-  <p class="muted" style="margin:6px 0 0" id="sinal-mp-nota" ${sgModo==='mp'?'':'hidden'}>No Mercado Pago, o horário fica reservado só durante o prazo; se a cliente não pagar, ele é liberado sozinho. O dinheiro cai direto na conta do seu Mercado Pago.</p></div>
+  <p class="muted" style="margin:6px 0 0" id="sinal-mp-nota" ${sgModo==='mp'?'':'hidden'}>No pagamento automático, o horário fica reservado só durante o prazo; se a cliente não pagar, ele é liberado sozinho. O dinheiro cai direto na conta do seu Mercado Pago ou PagBank (o que você conectar logo abaixo).</p></div>
   <label class="chk"><input type="checkbox" name="cliente_pode" ${oc.cliente_pode===false?'':'checked'} ${pode?'':'disabled'}> A cliente pode remarcar ou cancelar pelo link do lembrete</label>
   <label class="chk"><input type="checkbox" name="area_cliente" ${oc.area_cliente===true?'checked':''} ${pode?'':'disabled'}> Ligar a área da cliente</label>
   <p class="muted" style="margin:2px 0 8px">Cada cliente recebe um link pessoal (você envia pelo WhatsApp, na ficha dela) para ver os próximos horários, cashback, pacotes e fidelidade, e remarcar sozinha. Desligando aqui, todos os links param de mostrar dados na hora.</p>
   <label for="on-sb">Sobre o salão, aparece na página de agendamento (opcional)</label><textarea id="on-sb" name="sobre" rows="3" maxlength="400" ${pode?'':'disabled'} placeholder="Ex.: Aberto de terça a sábado, das 9h às 19h. Estacionamento na porta.">${esc(oc.sobre||'')}</textarea>
   <label class="chk"><input type="checkbox" name="mostrar_endereco" ${oc.mostrar_endereco===false?'':'checked'} ${pode?'':'disabled'}> Mostrar o endereço do salão na página de agendamento</label>
   <label for="on-av">Recado extra para a cliente, depois do pedido (opcional)</label><textarea id="on-av" name="aviso" rows="3" maxlength="400" ${pode?'':'disabled'} placeholder="Ex.: Chegue 10 minutos antes. Cancelamentos até 24 h antes.">${esc(oc.aviso||'')}</textarea>
-  <p class="erro" id="a-erro" role="alert"></p>${pode?'<div class="acts" style="justify-content:flex-start"><button class="btn">Salvar</button></div>':''}</form><div id="mp-bloco" ${sgModo==='mp'?'':'hidden'}>${blocoMp(pode)}</div>${blocoGaleria(pode)}`;
+  <p class="erro" id="a-erro" role="alert"></p>${pode?'<div class="acts" style="justify-content:flex-start"><button class="btn">Salvar</button></div>':''}</form><div id="mp-bloco">${blocoMp(pode)}</div>${blocoGaleria(pode)}`;
 }
 function carregaFb(cfg){return new Promise((ok,err)=>{
   if(window.FB){ok();return}
@@ -3891,7 +3892,12 @@ function blocoWaProprio(pode){
 }
 function blocoMp(pode){
   const o=S.onl||{};if(o.mp===null||o.mp===undefined)return '';
-  return `<div class="panel" style="margin-bottom:16px"><b>Mercado Pago do salão (para receber o sinal)</b>${o.mp?`<p style="margin:6px 0">Conectado. O sinal cai direto na sua conta.</p>${pode?'<button type="button" class="btn ghost sm" data-act="mpDesconectar">Desconectar</button>':''}`:`<p class="muted" style="margin:6px 0">Cole o <b>Access Token de produção</b> da sua conta do Mercado Pago (Mercado Pago Developers, Suas integrações, Credenciais de produção). Ele fica guardado em cofre e ninguém consegue ler depois, nem você.</p>${pode?'<form data-form="mpconectar"><label for="mp-tk">Access Token</label><input id="mp-tk" name="token" type="password" autocomplete="off" spellcheck="false" placeholder="APP_USR-..."><p class="erro" id="a-erro" role="alert"></p><div class="acts" style="justify-content:flex-start"><button class="btn">Conectar</button></div></form>':'<p class="muted">Só a proprietária conecta.</p>'}`}</div>`;
+  const gwAtual=o.gw||(o.mp?'mercadopago':''),sel=S.gwSel||gwAtual||'mercadopago',NOMES={mercadopago:'Mercado Pago',pagbank:'PagBank'};
+  const esc2=sel==='pagbank'?`<p class="muted" style="margin:6px 0">Cole o <b>token da API</b> da sua conta PagBank (no site do PagBank, entre como vendedor e abra a área de <b>Integrações</b> ou <b>Credenciais</b> para gerar o token de produção). Ele fica guardado em cofre e ninguém consegue ler depois, nem você.</p>`:`<p class="muted" style="margin:6px 0">Cole o <b>Access Token de produção</b> da sua conta do Mercado Pago (Mercado Pago Developers, Suas integrações, Credenciais de produção). Ele fica guardado em cofre e ninguém consegue ler depois, nem você.</p>`;
+  const seg2=`<div class="seg" role="group" aria-label="Onde receber">${['mercadopago','pagbank'].map(g=>`<button type="button" class="btn sm ${g===sel?'':'ghost'}" data-act="gwSel" data-id="${g}" aria-pressed="${g===sel}">${NOMES[g]}${g===gwAtual?' (conectado)':''}</button>`).join('')}</div>`;
+  const aviso2=gwAtual&&gwAtual!==sel?`<p class="muted" style="margin:6px 0">Hoje o salão recebe pelo <b>${NOMES[gwAtual]}</b>. Ao conectar o ${NOMES[sel]}, o ${NOMES[gwAtual]} deixa de ser usado (links já enviados continuam valendo na conta antiga).</p>`:'';
+  const conectado=gwAtual&&gwAtual===sel;
+  return `<div class="panel" style="margin-bottom:16px"><b>Receber das clientes (sinal, link de pagamento e clube)</b><p class="muted" style="margin:4px 0 8px">Escolha onde o dinheiro cai: na sua conta do Mercado Pago ou do PagBank. A mensalidade do Agendio continua sendo paga pelo Mercado Pago.</p>${seg2}${conectado?`<p style="margin:6px 0">Conectado ao ${NOMES[sel]}. O dinheiro cai direto na sua conta.</p>${pode?'<button type="button" class="btn ghost sm" data-act="mpDesconectar">Desconectar</button>':''}`:`${aviso2}${esc2}${pode?`<form data-form="mpconectar"><input type="hidden" name="provedor" value="${sel}"><label for="mp-tk">${sel==='pagbank'?'Token do PagBank':'Access Token'}</label><input id="mp-tk" name="token" type="password" autocomplete="off" spellcheck="false" placeholder="${sel==='pagbank'?'Cole o token aqui':'APP_USR-...'}"><p class="erro" id="a-erro" role="alert"></p><div class="acts" style="justify-content:flex-start"><button class="btn">Conectar ${NOMES[sel]}</button></div></form>`:'<p class="muted">Só a proprietária conecta.</p>'}`}</div>`;
 }
 async function chamaApi(rota,corpo){
   const ses=await sb.auth.getSession(),tk=ses&&ses.data&&ses.data.session&&ses.data.session.access_token;
@@ -3951,7 +3957,7 @@ async function salvarOnline(d){
   if(sm!=='nenhum'&&!(sv>0))throw erroUi('Informe o valor do sinal.');
   if(sm!=='nenhum'&&st==='percentual'&&sv>100)throw erroUi('A porcentagem do sinal não pode passar de 100.');
   if(sm!=='nenhum'&&sv>0&&st==='fixo'&&sv<1)throw erroUi('O sinal mínimo é R$ 1,00.');
-  if(sm==='mp'&&!(S.onl&&S.onl.mp))throw erroUi('Para cobrar o sinal automático, conecte antes o Mercado Pago do salão (logo abaixo).');
+  if(sm==='mp'&&!(S.onl&&S.onl.mp))throw erroUi('Para cobrar o sinal automático, conecte antes o Mercado Pago ou o PagBank do salão (logo abaixo).');
   let pixCfg={};const chaveBruta=String(d.pix_chave||'').trim();
   if(chaveBruta){const nk=window.AgendioPix?AgendioPix.normalizaChave(d.pix_tipo,chaveBruta):{ok:true,chave:chaveBruta};if(!nk.ok)throw erroUi(nk.erro);
     pixCfg={tipo:d.pix_tipo||'celular',chave:nk.chave,nome:String(d.pix_nome||'').trim().slice(0,25),cidade:String(d.pix_cidade||'').trim().slice(0,15)}}
@@ -4493,6 +4499,7 @@ function telaRel(){
 }
 
 /* ---------- Agenda no celular (link de calendário) ---------- */
+const gwNome=()=>{const g=S.onl&&S.onl.gw;return g==='pagbank'?'PagBank':g==='mercadopago'?'Mercado Pago':'Mercado Pago ou PagBank'};
 const calUrl=t=>location.origin+'/api/agenda-ics?t='+t;
 function blocoCalendario(pode){
   if(S.legado||!pode)return '';
@@ -5031,7 +5038,7 @@ document.addEventListener('click',e=>{
     cpCancela:()=>{const c=(S.cartoes||[]).find(x=>x.id===id);if(c)confirmar('Cancelar o cartão '+c.codigo+'?','O saldo de '+brl(c.saldo)+' é devolvido e sai do caixa de hoje. O cartão deixa de poder ser usado.','Cancelar cartão',async()=>{const j=await cpChama('cartao_cancelar',{p_cartao:id});await recarregar();toast('Cartão cancelado.')})},
     cpDesfaz:()=>confirmar('Desfazer este uso?','O saldo volta para o cartão e, se foi o pagamento de um atendimento, ele volta para “não pago”.','Desfazer',async()=>{await cpChama('cartao_desfazer_uso',{p_mov:id});await recarregar();toast('Uso desfeito.')}),
     waDesconectar:()=>confirmar('Desconectar o WhatsApp do salão?','Os lembretes voltam a sair do número do Agendio (com a cobrança por mensagem do seu plano). As mensagens já na fila seguem por ele.','Desconectar',async()=>{await chamaApi('wa-conectar',{remover:true});S.onl.wp={conectado:false};S.sig='';render();toast('WhatsApp do salão desconectado.')}),
-    mpDesconectar:()=>confirmar('Desconectar o Mercado Pago?','O sinal automático deixa de funcionar. Pedidos com sinal pendente continuam, mas a cliente não conseguirá pagar.','Desconectar',async()=>{await chamaApi('mp-conectar',{remover:true});S.onl.mp=false;if(S.agCfg&&S.agCfg.online&&S.agCfg.online.sinal&&S.agCfg.online.sinal.modo==='mp'){const c=Object.assign({},S.agCfg);c.online=Object.assign({},c.online,{sinal:Object.assign({},c.online.sinal,{modo:'nenhum'})});await salvarAgCfg(c)}render();toast('Mercado Pago desconectado.')}),
+    gwSel:()=>{S.gwSel=id;render()},mpDesconectar:()=>confirmar('Desconectar o recebimento online?','O sinal automático, o link de pagamento e a cobrança do clube deixam de funcionar. Pedidos com sinal pendente continuam, mas a cliente não conseguirá pagar.','Desconectar',async()=>{await chamaApi('mp-conectar',{remover:true});S.onl.mp=false;S.onl.gw='';if(S.agCfg&&S.agCfg.online&&S.agCfg.online.sinal&&S.agCfg.online.sinal.modo==='mp'){const c=Object.assign({},S.agCfg);c.online=Object.assign({},c.online,{sinal:Object.assign({},c.online.sinal,{modo:'nenhum'})});await salvarAgCfg(c)}render();toast('Recebimento online desconectado.')}),
     ocultaPassos:()=>{LS.set('salao_passos_off','1');render();toast('Primeiros passos ocultados. Para ver de novo, use o botão no cartão Agendamento online.')},
     mostraPassos:()=>{LS.set('salao_passos_off','');render()},
     novoServico:()=>formServico(''),editServico:()=>formServico(id),delServico:()=>removerServico(id).catch(x=>toast(falha(x),true)),novoBloq:()=>formBloq(a.dataset.data),delBloq:()=>confirmar('Remover este bloqueio?','O horário volta a ficar livre.','Remover',async()=>{const r=await sb.from('bloqueios').delete().eq('id',id);if(r.error)throw r.error;await recarregar();toast('Bloqueio removido.')}),
@@ -5109,7 +5116,7 @@ document.addEventListener('change',e=>{
     atualizaParc()}
   else if(t.id==='bq-dia'){$('bq-h').hidden=t.checked}
   else if(t.id==='on-sa'){const c=$('sinal-campos');if(c)c.hidden=!t.checked}
-  else if(t.id==='on-sm'){const a=$('pix-campos'),b=$('sinal-mp-nota'),m=$('mp-bloco');if(m)m.hidden=t.value!=='mp';if(a)a.hidden=t.value!=='pix';if(b)b.hidden=t.value!=='mp'}
+  else if(t.id==='on-sm'){const a=$('pix-campos'),b=$('sinal-mp-nota'),m=$('mp-bloco');if(a)a.hidden=t.value!=='pix';if(b)b.hidden=t.value!=='mp'}
   else if(t.id==='wa-auto'){const v=t.checked;sb.from('tenants').update({whatsapp_auto:v}).eq('id',S.ctx.tenant.id).then(r=>{if(r.error){t.checked=!v;toast(falha(r.error),true)}else{S.onl.wa=v;toast(v?'Envio automático ligado.':'Envio automático desligado.')}})}
   else if(t.id==='pb-sv'){S.pb.sv=t.value;buscaSlots()}
   else if(t.id==='pb-pf'){S.pb.pf=t.value;buscaSlots()}
@@ -5231,7 +5238,7 @@ document.addEventListener('submit',async e=>{
     }else if(k==='waconectar'){
       try{const j=await chamaApi('wa-conectar',{phone_id:d.phone_id,token:d.token});S.onl.wp={conectado:true,numero:j.numero||'',nome:j.nome||''};S.sig='';render();toast('WhatsApp do salão conectado.')}catch(x){er.textContent=String((x&&(x.aviso||x.message))||'Não foi possível conectar.')}
     }else if(k==='mpconectar'){
-      try{const j=await chamaApi('mp-conectar',{token:d.token});S.onl.mp=true;S.sig='';render();toast('Mercado Pago conectado.')}catch(x){er.textContent=String((x&&(x.aviso||x.message))||'Não foi possível conectar.')}
+      try{const pv=d.provedor==='pagbank'?'pagbank':'mercadopago',j=await chamaApi('mp-conectar',{token:d.token,provedor:pv});S.onl.mp=true;S.onl.gw=pv;S.gwSel=pv;S.sig='';render();toast((pv==='pagbank'?'PagBank':'Mercado Pago')+' conectado.')}catch(x){er.textContent=String((x&&(x.aviso||x.message))||'Não foi possível conectar.')}
     }else if(k==='online'){
       try{await salvarOnline(d)}catch(x){er.textContent=String((x&&(x.aviso||x.message))||'Não foi possível salvar.')}
     }else if(k==='lembemail'){

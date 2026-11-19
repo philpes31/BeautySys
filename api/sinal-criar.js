@@ -1,6 +1,7 @@
 // POST /api/sinal-criar  { pedido_id }   (público: quem chama é a cliente, sem login)
 // Cria o checkout do Mercado Pago do SALÃO para pagar o sinal de um pedido. O valor vem do banco.
 const L = require('./_lib');
+const PB = require('./_pagbank');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return L.json(res, 405, { erro: 'Método não permitido.' }); }
@@ -22,6 +23,15 @@ module.exports = async (req, res) => {
   if (!(valor >= 1)) return L.json(res, 409, { erro: 'Pedido sem sinal.' });
   const site = L.siteUrl(req);
   const volta = site + '/a/' + encodeURIComponent(c.slug || '') + '?p=' + id;
+  if (c.provedor === 'pagbank') {
+    const notificar = site + '/api/sinal-webhook?p=' + id + '&g=pb';
+    if (notificar.length > 100) return L.json(res, 500, { erro: 'O endereço do site é longo demais para o PagBank.' });
+    const r = await PB.criarCheckout(c.token, { ref: id, titulo: 'Sinal - ' + c.salao + ' (' + c.servico + ')', valor, notificar, volta: volta + '&sinal=ok', expira: fim, descritor: c.salao });
+    if (r.status === 401 || r.status === 403) return L.json(res, 409, { erro: 'O salão precisa reconectar o PagBank. Fale com ele pelo WhatsApp.' });
+    if (!r.ok || !r.url) return L.json(res, 502, { erro: 'O PagBank não respondeu. Tente de novo em instantes.' });
+    try { await L.rpcServico('sinal_gravar_link', { p_id: id, p_link: r.url }); } catch (_) { /* o link continua válido */ }
+    return L.json(res, 200, { url: r.url });
+  }
   const pref = {
     items: [{ id, title: String('Sinal - ' + c.salao + ' (' + c.servico + ')').slice(0, 120), quantity: 1, currency_id: 'BRL', unit_price: valor }],
     external_reference: id,
