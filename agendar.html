@@ -101,7 +101,7 @@ input,textarea{border-width:1px;border-radius:8px;background:#fffefb}
 .btn2{border-width:1px}
 .preco{font-family:var(--serif);font-size:1.05rem}
 [hidden]{display:none!important}
-.sobre{margin:12px 0 0;white-space:pre-line}.end{margin-top:6px}.gal{display:flex;gap:8px;overflow-x:auto;margin:14px 0 0;padding-bottom:4px;-webkit-overflow-scrolling:touch}.gal a{flex:0 0 auto}.gal img{display:block;height:120px;width:auto;max-width:200px;object-fit:cover;border-radius:10px}
+.sobre{margin:12px 0 0;white-space:pre-line}.end{margin-top:6px}.gal{display:flex;gap:8px;overflow-x:auto;margin:14px 0 0;padding-bottom:4px;-webkit-overflow-scrolling:touch}.gal a{flex:0 0 auto}.gal img{display:block;height:120px;width:auto;max-width:200px;object-fit:cover;border-radius:10px}.ig{display:inline-block;margin-top:8px;font-weight:600;color:inherit;text-decoration:underline;text-underline-offset:3px}.dep{margin:18px 0 0}.dep h2{margin:0 0 8px}.dep-l{display:grid;gap:10px}.dep-i{margin:0;padding:12px 14px;border:1px solid var(--ln,#e6dde1);border-radius:12px}.dep-i p{margin:4px 0 6px}.dep-i footer{font-size:.9em;opacity:.75}.est-d{letter-spacing:2px;color:var(--ac)}
 </style>
 </head>
 <body>
@@ -160,6 +160,13 @@ function dias(n){
   return out;
 }
 function dataExtensa(iso){var p=iso.split('-');return new Date(+p[0],+p[1]-1,+p[2]).toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'})}
+function igHTML(u){u=String(u||'');return /^[A-Za-z0-9._]{1,30}$/.test(u)?'<p><a class="ig" target="_blank" rel="noopener noreferrer" href="https://www.instagram.com/'+esc(u)+'/">Instagram @'+esc(u)+'</a></p>':''}
+function depHTML(d){
+  if(!d||!d.length)return '';
+  return '<section class="dep" aria-labelledby="h-dep"><h2 id="h-dep">O que as clientes dizem</h2><div class="dep-l">'+d.slice(0,6).map(function(x){
+    var n=Math.max(1,Math.min(5,parseInt(x.nota,10)||5)),t=String(x.texto||'').slice(0,300);if(!t)return '';
+    return '<figure class="dep-i" style="margin:0"><div class="est-d" role="img" aria-label="Nota '+n+' de 5">'+'★★★★★'.slice(0,n)+'</div><blockquote style="margin:4px 0 6px;padding:0">'+esc(t)+'</blockquote><figcaption style="font-size:.9em;opacity:.75">'+esc(String(x.nome||'Cliente').slice(0,20))+'</figcaption></figure>'}).join('')+'</div></section>';
+}
 function galHTML(g){
   if(!g||!g.length)return '';
   return '<div class="gal" aria-label="Fotos do salão">'+g.slice(0,12).map(function(x){
@@ -170,7 +177,7 @@ function galHTML(g){
 function montar(){
   var s=S.salao;
   var profs=s.profissionais||[];
-  A.innerHTML='<header>'+(/^https:\/\//.test(s.logo||'')?'<img class="logo" alt="" src="'+esc(s.logo)+'">':'')+'<h1>'+esc(s.nome)+'</h1><p class="sub">Escolha o serviço e o horário. O salão confirma o seu pedido pelo WhatsApp.</p>'+(s.endereco?'<p class="sub end">'+esc(s.endereco)+'</p>':'')+(s.sobre?'<p class="sobre">'+esc(s.sobre)+'</p>':'')+(s.aviso?'<p class="aviso">'+esc(s.aviso)+'</p>':'')+galHTML(s.galeria)+'</header>'+
+  A.innerHTML='<header>'+(/^https:\/\//.test(s.logo||'')?'<img class="logo" alt="" src="'+esc(s.logo)+'">':'')+'<h1>'+esc(s.nome)+'</h1><p class="sub">Escolha o serviço e o horário. O salão confirma o seu pedido pelo WhatsApp.</p>'+(s.endereco?'<p class="sub end">'+esc(s.endereco)+'</p>':'')+(s.sobre?'<p class="sobre">'+esc(s.sobre)+'</p>':'')+(s.aviso?'<p class="aviso">'+esc(s.aviso)+'</p>':'')+igHTML(s.instagram)+galHTML(s.galeria)+'</header>'+
   '<section aria-labelledby="h-serv"><h2 id="h-serv">Serviço</h2><div class="opcoes" id="serv">'+
     (s.servicos.length?s.servicos.map(function(x,i){return '<button type="button" class="op" data-i="'+i+'" aria-pressed="false"><span>'+esc(x.nome)+'<small>'+(Number(x.duracao)||60)+' min</small>'+(x.sinal&&x.sinal.modo!=='nenhum'?'<span class="sinal-tag">Sinal de '+brl(x.sinal.valor)+'</span>':'')+'</span>'+(Number(x.preco)>0?'<span class="preco">'+brl(x.preco)+'</span>':'')+'</button>'}).join(''):'<p class="vazio">Este salão ainda não cadastrou serviços para agendar online.</p>')+
   '</div></section>'+
@@ -191,7 +198,7 @@ function montar(){
   '<label for="obs">Recado (opcional)</label><textarea id="obs" rows="2" maxlength="200"></textarea>'+
   '<input class="hp" id="site" tabindex="-1" autocomplete="off" aria-hidden="true">'+
   '<p class="leg">Usamos seu nome e telefone só para este agendamento. Ao enviar, você concorda com isso.</p>'+
-  '<p class="erro" id="erro" role="alert"></p><button class="enviar" id="env">Enviar pedido</button></section></form>';
+  '<p class="erro" id="erro" role="alert"></p><button class="enviar" id="env">Enviar pedido</button></section></form>'+depHTML(s.depoimentos);
 }
 function resumo(){
   var x=S.salao.servicos[S.serv];

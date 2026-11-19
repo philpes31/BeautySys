@@ -187,6 +187,7 @@ function avalTela(L){
   var x=L[0],st=[1,2,3,4,5].map(function(n){return '<button type="button" class="est" data-n="'+n+'" aria-label="Nota '+n+' de 5" aria-pressed="false">★</button>'}).join('');
   B.innerHTML='<section><h2>Como foi o seu atendimento?</h2><div class="cartao"><div class="t">'+esc(x.servico)+'</div><div class="d">'+esc(dmy(x.data))+'</div>'+
     '<div class="estrelas" role="group" aria-label="Sua nota">'+st+'</div><textarea id="av-c" rows="2" maxlength="300" placeholder="Quer contar mais? (opcional)" style="width:100%;margin-top:10px;font:inherit;padding:10px;border:1px solid var(--ln);border-radius:10px"></textarea>'+
+    '<p class="leg" style="margin:6px 0 0">Se for um elogio, o salão pode pedir a sua permissão para mostrar o comentário na página dele, só com o seu primeiro nome.</p>'+
     '<div class="acoes"><button type="button" class="btn1" id="av-ok" disabled>Enviar minha nota</button></div><p class="leg" id="av-msg" role="status" style="margin:8px 0 0"></p></div></section>';
   var nota=0,bs=B.querySelectorAll('.est');
   bs.forEach(function(b){b.addEventListener('click',function(){nota=+b.dataset.n;bs.forEach(function(o){var on=+o.dataset.n<=nota;o.classList.toggle('on',on);o.setAttribute('aria-pressed',+o.dataset.n===nota?'true':'false')});document.getElementById('av-ok').disabled=false})});
