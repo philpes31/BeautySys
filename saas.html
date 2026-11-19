@@ -4099,13 +4099,27 @@ async function filaMarca(id,st){
   await recarregar();render();
 }
 /* ===== Modo balcão (tela grande para a recepção marcar a chegada) ===== */
+function balcaoPorque(q){
+  const h=hoje(),FL={aguardando:'aguardando atendimento',atendendo:'em atendimento',finalizado:'já finalizada'};
+  const cs=S.clientes.filter(c=>nomeNorm(c.nome).includes(q)).slice(0,5);
+  if(!cs.length)return `Nenhuma cliente cadastrada com "${esc(S.balcaoQ)}". Confira o nome ou cadastre a cliente em Clientes.`;
+  const out=cs.map(c=>{
+    const L=S.atendTodos.filter(a=>a.clienteId===c.id).sort((x,y)=>String(x.data).localeCompare(String(y.data))||byHora(x,y));
+    const hj=L.filter(a=>a.data===h);
+    if(hj.some(a=>a.fila))return `<b>${esc(c.nome)}</b> já chegou hoje (${FL[hj.find(a=>a.fila).fila]||'na fila'}). Veja em Agenda, Fila.`;
+    if(hj.length&&hj.every(inativo))return `<b>${esc(c.nome)}</b> tem horário hoje, mas ele está como ${STATUS_ROT[hj[0].status].toLowerCase()}.`;
+    const prox=L.find(a=>a.data>h&&!inativo(a));
+    return `<b>${esc(c.nome)}</b> está cadastrada, mas não tem horário hoje.${prox?' Próximo horário: '+esc(fd(prox.data))+(prox.hora?' às '+esc(prox.hora):'')+'.':' Crie um horário em Agenda, Agendar.'}`;
+  });
+  return out.join('<br>');
+}
 function balcaoLista(){
   const h=hoje(),q=nomeNorm(S.balcaoQ||'');
   const L=S.atendTodos.filter(a=>a.data===h&&!inativo(a)&&!a.fila).sort(byHora).filter(a=>{const c=cli(a.clienteId);return !q||nomeNorm(c?c.nome:'').includes(q)});
   const esp=S.atendTodos.filter(a=>a.data===h&&!inativo(a)&&a.fila==='aguardando').length;
   const cards=L.map(a=>{const c=cli(a.clienteId)||{nome:'(cliente removida)'};
     return `<div class="bc-card"><div class="bc-hora">${esc(a.hora||'—')}</div><div><div class="bc-nome">${esc(c.nome)}</div><div class="muted">${esc(procTxt(a))}${a.profissional?' · '+esc(a.profissional):''}</div></div><button type="button" class="btn bc-btn" data-act="balcaoChegou" data-id="${esc(a.id)}">Cheguei</button></div>`}).join('');
-  return `<p class="muted" style="font-size:18px;margin:0 0 12px">${esp} ${esp===1?'cliente aguardando':'clientes aguardando'} atendimento</p>`+(cards||`<div class="empty"><p>${q?'Nenhum horário de hoje com esse nome.':'Todas as clientes de hoje já chegaram ou não há horários marcados.'}</p></div>`);
+  return `<p class="muted" style="font-size:18px;margin:0 0 12px">${esp} ${esp===1?'cliente aguardando':'clientes aguardando'} atendimento</p>`+(cards||`<div class="empty"><p>${q?balcaoPorque(q):'Todas as clientes de hoje já chegaram ou não há horários marcados.'}</p></div>`);
 }
 function balcaoAbrir(){
   S.balcaoQ='';let b=document.getElementById('balcao');if(b)b.remove();
