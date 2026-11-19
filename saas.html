@@ -1140,7 +1140,8 @@ const pmEstado=p=>!p.ativo?'Desativado':(p.validade&&p.validade<hoje())?'Vencido
 function telaPromocoes(){
   if(S.semPromo)return aviso('Falta ativar as Promoções','Rode o arquivo 43-promocoes.sql (ou o agendio-TUDO.sql) no Supabase e atualize a página.');
   const ab=S.pmAba||'cupons',pode=pmPode(),cb=S.cb||{ativo:false,pct:5};
-  const seg=`<div class="seg" role="group" aria-label="Promoções"><button type="button" class="btn sm ${ab==='cupons'?'':'ghost'}" data-act="pmAba" data-id="cupons" aria-pressed="${ab==='cupons'}">Cupons</button><button type="button" class="btn sm ${ab==='cash'?'':'ghost'}" data-act="pmAba" data-id="cash" aria-pressed="${ab==='cash'}">Cashback</button></div>`;
+  const seg=`<div class="seg" role="group" aria-label="Promoções"><button type="button" class="btn sm ${ab==='cupons'?'':'ghost'}" data-act="pmAba" data-id="cupons" aria-pressed="${ab==='cupons'}">Cupons</button><button type="button" class="btn sm ${ab==='cash'?'':'ghost'}" data-act="pmAba" data-id="cash" aria-pressed="${ab==='cash'}">Cashback</button><button type="button" class="btn sm ${ab==='camp'?'':'ghost'}" data-act="pmAba" data-id="camp" aria-pressed="${ab==='camp'}">Campanhas</button></div>`;
+  if(ab==='camp')return seg+telaCampanha();
   if(ab==='cash'){
     return seg+`<div class="panel"><h3 style="margin-top:0">Cashback ${cb.ativo?'<span class="tag ok">Ligado</span>':'<span class="tag">Desligado</span>'}</h3>
     <p class="muted" style="max-width:640px">${cb.ativo?`A cliente ganha <b>${String(cb.pct).replace('.',',')}%</b> de volta de tudo que paga em atendimentos e produtos, desde ${fd(cb.desde)}. O saldo aparece na ficha dela e você desconta quando ela quiser usar.`:'Com o cashback, a cliente ganha uma porcentagem de volta em cada atendimento ou produto pago e usa esse saldo como desconto depois. É um jeito simples de fazer ela voltar.'}</p>
@@ -4590,6 +4591,47 @@ function vgCopiar(){
   try{navigator.clipboard.writeText(t).then(()=>toast('Mensagem copiada.'),()=>toast('Não deu para copiar. Selecione o texto e copie.',true))}catch(_){toast('Não deu para copiar. Selecione o texto e copie.',true)}
 }
 
+/* ---------- Campanhas por grupo (WhatsApp, um toque por cliente) ---------- */
+const cpEnv=()=>{try{return JSON.parse(LS.get('salao_camp','{}'))||{}}catch(_){return {}}};
+const CP_MODELOS={
+  volta:()=>`Olá, {nome}! Sentimos sua falta no ${nomeDoSalao()}. Que tal marcar um horário?${S.onl&&S.onl.on&&S.onl.slug?' '+linkPub(S.onl.slug):''}`,
+  aniv:()=>`Parabéns, {nome}! 🎉 O ${nomeDoSalao()} deseja um dia lindo. Venha comemorar com a gente!${S.onl&&S.onl.on&&S.onl.slug?' Agende: '+linkPub(S.onl.slug):''}`,
+  promo:()=>`Olá, {nome}! Novidade no ${nomeDoSalao()}: [escreva aqui a sua promoção].${S.onl&&S.onl.on&&S.onl.slug?' Agende: '+linkPub(S.onl.slug):''}`
+};
+function cpMembros(g){
+  const h=hoje();
+  if(g==='s30'||g==='s60'||g==='s90')return sumidas(+g.slice(1)).map(x=>({c:x.c,info:'Último atendimento: '+fd(x.ult)}));
+  if(g==='aniv'){const mm=h.slice(5,7);return S.clientes.filter(c=>c.nascimento&&String(c.nascimento).slice(5,7)===mm).sort((a,b)=>String(a.nascimento).slice(8).localeCompare(String(b.nascimento).slice(8))).map(c=>({c,info:'Aniversário: '+String(c.nascimento).slice(8)+'/'+mm}))}
+  if(g==='top')return S.clientes.map(c=>({c,t:atends(c.id).reduce((s,a)=>s+(Number(a.valor)||0),0)})).filter(x=>x.t>0).sort((a,b)=>b.t-a.t).slice(0,20).map(x=>({c:x.c,info:brl(x.t)+' no total'}));
+  if(g.startsWith('e:')){const t=g.slice(2).toLowerCase();return S.clientes.filter(c=>(c.etiquetas||[]).some(x=>x.toLowerCase()===t)).map(c=>({c,info:''}))}
+  return S.clientes.map(c=>({c,info:''}));
+}
+function cpLeMsg(){const e=$('cp-msg');if(e)S.cpMsg=String(e.value||'')}
+function telaCampanha(){
+  const g=S.cpGrupo||'s60',etq=todasEtiquetas();
+  const grupos=[['s30','Sem voltar há 30 dias'],['s60','Sem voltar há 60 dias'],['s90','Sem voltar há 90 dias'],['aniv','Aniversariantes do mês'],['top','As 20 que mais gastaram'],['todas','Todas as clientes'],...etq.map(t=>['e:'+t,'Etiqueta: '+t])];
+  if(!grupos.some(x=>x[0]===g))S.cpGrupo='s60';
+  const gr=grupos.some(x=>x[0]===g)?g:'s60';
+  if(S.cpMsg===undefined)S.cpMsg=CP_MODELOS[gr==='aniv'?'aniv':gr[0]==='s'?'volta':'promo']();
+  const env=cpEnv(),lim=addDia(hoje(),-14),todos=cpMembros(gr),sem=todos.filter(x=>!telOk(x.c)).length;
+  const L=todos.filter(x=>telOk(x.c)),feita=x=>env[x.c.id]&&String(env[x.c.id])>=lim;
+  const pend=L.filter(x=>!feita(x)),ok=L.filter(feita);
+  const linha=(x,f)=>`<div class="item"${f?' style="opacity:.62"':''}><div class="grow"><div class="t">${esc(x.c.nome)}${f?` <span class="tag ok">Enviada em ${fd(env[x.c.id])}</span>`:''}</div>${x.info?`<div class="muted num">${esc(x.info)}</div>`:''}</div><div class="item-acts"><button type="button" class="btn sm ${f?'ghost':''}" data-act="cpZap" data-id="${esc(x.c.id)}">${f?'Enviar de novo':'WhatsApp'}</button></div></div>`;
+  return `<h2 style="margin:6px 0 2px">Campanha no WhatsApp</h2><p class="muted" style="max-width:640px;margin:0 0 12px">Escolha um grupo, ajuste a mensagem e toque em <b>WhatsApp</b> em cada cliente. A mensagem sai do seu próprio WhatsApp, uma por vez.</p>`+
+    `<label for="cp-grupo">Grupo</label><select id="cp-grupo" aria-label="Grupo de clientes">${grupos.map(([k,t])=>`<option value="${esc(k)}" ${k===gr?'selected':''}>${esc(t)}</option>`).join('')}</select>`+
+    `<div class="seg" style="margin-top:12px" role="group" aria-label="Modelo de mensagem"><button type="button" class="btn sm ghost" data-act="cpModelo" data-id="volta">Saudade</button><button type="button" class="btn sm ghost" data-act="cpModelo" data-id="aniv">Aniversário</button><button type="button" class="btn sm ghost" data-act="cpModelo" data-id="promo">Promoção</button></div>`+
+    `<label for="cp-msg">Mensagem</label><textarea id="cp-msg" rows="5" maxlength="900">${esc(S.cpMsg)}</textarea><p class="muted" style="margin:4px 0 10px;font-size:13px"><b>{nome}</b> vira o primeiro nome de cada cliente.</p>`+
+    `<p class="muted num" style="margin:14px 0 6px"><b>${pend.length}</b> para chamar${ok.length?` · ${ok.length} já receberam nos últimos 14 dias`:''}${sem?` · ${sem} sem telefone cadastrado`:''}</p>`+
+    (L.length?`<div class="list">${pend.slice(0,60).map(x=>linha(x,false)).join('')}${ok.slice(0,40).map(x=>linha(x,true)).join('')}</div>`:'<div class="empty"><p>Nenhuma cliente com telefone neste grupo.</p></div>')+
+    `<p class="muted" style="max-width:640px;font-size:13px;margin-top:14px">Dica: mande para poucas clientes por dia (até 20) e só para quem já é cliente do salão. Mensagens em massa para quem não conhece o salão podem fazer o WhatsApp bloquear o seu número.</p>`;
+}
+function cpZap(id){
+  cpLeMsg();const c=cli(id);if(!c||!String(S.cpMsg||'').trim())return;
+  const nome=String(c.nome||'').trim().split(/\s+/)[0]||'';
+  window.open(linkZap(c,S.cpMsg.replace(/\{nome\}/g,nome)),'_blank','noopener');
+  const e=cpEnv();e[id]=hoje();LS.set('salao_camp',JSON.stringify(e));setTimeout(render,50);
+}
+
 /* ---------- Backup ---------- */
 function telaBackup(){
   return `<div class="panel"><p>Os dados ficam guardados na nuvem e aparecem para todas as pessoas que têm login. Aqui você baixa uma cópia em planilha ou em arquivo de backup.</p>
@@ -4963,7 +5005,7 @@ document.addEventListener('click',e=>{
     areaEnviar:()=>areaEnviar(id,false).catch(falha),areaRenovar:()=>confirmar('Gerar novo link?','O link que a cliente já recebeu deixa de funcionar. Você terá de enviar o novo link para ela.','Gerar novo link',async()=>{await areaEnviar(id,true);throw Object.assign(new Error('mantem'),{mantem:true})}),fotoNova:()=>formFoto(id),fotoVer:()=>verFoto(id),fotoBaixar:()=>fotoBaixar(id).catch(falha),fotoComp:()=>fotoComparativo(id).catch(falha),fotoExcluir:()=>confirmar('Excluir esta foto?','A foto é apagada definitivamente do armazenamento do salão.','Excluir',async()=>{const f=fotoAcha(id),cid=f&&f.clienteId;const r=await sb.rpc('foto_excluir',{p_id:id});if(r.error)throw r.error;if(r.data)await sb.storage.from('fotos').remove([r.data]);if(cid){await fotosCarrega(cid,true);fotosPinta(cid)}toast('Foto excluída.')}),anNova:()=>formAnamnese(id),anLimpa:()=>window.anLimpaSig(),anExcluir:()=>confirmar('Excluir esta ficha?','A ficha de anamnese e a assinatura são apagadas definitivamente.','Excluir',async()=>{const r=await sb.rpc('anamnese_excluir',{p_id:id});if(r.error)throw r.error;if(!r.data||r.data.ok!==true)throw erroUi((r.data&&r.data.erro)||'Não foi possível excluir.');await recarregar();toast('Ficha excluída.')}),
     pvCat:()=>{S.pvCat=id;render()},vdAba:()=>{S.vdAba=id;render()},vdNova:()=>formVenda(),vdMais:()=>{S.vdLim=(S.vdLim||60)+60;render()},vdVer:()=>vdVer(id).catch(x=>toast(falha(x),true)),pvNovo:()=>formProdutoVenda(),pvEdit:()=>formProdutoVenda(id),pvAjusta:()=>formAjustePv(id),
     pvExcluir:()=>{const p=(S.pvs||[]).find(x=>x.id===id);if(p)confirmar('Excluir '+p.nome+'?','O produto sai da lista. As vendas antigas continuam no histórico.','Excluir',async()=>{await vdChama('pv_excluir',{p_id:id});await recarregar();toast('Produto excluído.')})},
-    periodoPagar:()=>periodoPagar(Number(id)).catch(x=>toast(falha(x),true)),dpAba:()=>{S.dpAba=id;render()},fxSem:()=>{S.fxSem=Number(id);render()},cpNova:()=>formConta(),cpEdit:()=>formConta(id),cpPagar:()=>formContaPaga(id),cpExcluir:()=>confirmar('Excluir esta conta?','Ela deixa de aparecer nas contas a pagar.',async()=>{await cpChama('conta_excluir',{p_id:id});await recarregar();toast('Conta excluída.')}),instalarNao:()=>{LS.set('salao_inst_ok','1');render()},pushLigar:()=>pushLigar().catch(x=>toast(falha(x),true)),pushDesliga:()=>pushDesliga().catch(x=>toast(falha(x),true)),pushTeste:()=>pushTeste().catch(x=>toast(falha(x),true)),pmAba:()=>{S.pmAba=id;render()},pmNovo:()=>formPromo(),pmEdit:()=>formPromo(id),pmAlterna:()=>pmAlterna(id).catch(x=>toast(falha(x),true)),pmExcluir:()=>confirmar('Excluir este cupom?','O cupom deixa de existir. As vendas já feitas não mudam.',async()=>{await vdChama('promo_excluir',{p_id:id});await recarregar();toast('Cupom excluído.')}),cbConfig:()=>formCashback(),cbVer:()=>cbVer(id).catch(x=>toast(falha(x),true)),
+    periodoPagar:()=>periodoPagar(Number(id)).catch(x=>toast(falha(x),true)),dpAba:()=>{S.dpAba=id;render()},fxSem:()=>{S.fxSem=Number(id);render()},cpNova:()=>formConta(),cpEdit:()=>formConta(id),cpPagar:()=>formContaPaga(id),cpExcluir:()=>confirmar('Excluir esta conta?','Ela deixa de aparecer nas contas a pagar.',async()=>{await cpChama('conta_excluir',{p_id:id});await recarregar();toast('Conta excluída.')}),instalarNao:()=>{LS.set('salao_inst_ok','1');render()},pushLigar:()=>pushLigar().catch(x=>toast(falha(x),true)),pushDesliga:()=>pushDesliga().catch(x=>toast(falha(x),true)),pushTeste:()=>pushTeste().catch(x=>toast(falha(x),true)),pmAba:()=>{S.pmAba=id;render()},cpModelo:()=>{cpLeMsg();S.cpMsg=CP_MODELOS[id]();render()},cpZap:()=>cpZap(id),pmNovo:()=>formPromo(),pmEdit:()=>formPromo(id),pmAlterna:()=>pmAlterna(id).catch(x=>toast(falha(x),true)),pmExcluir:()=>confirmar('Excluir este cupom?','O cupom deixa de existir. As vendas já feitas não mudam.',async()=>{await vdChama('promo_excluir',{p_id:id});await recarregar();toast('Cupom excluído.')}),cbConfig:()=>formCashback(),cbVer:()=>cbVer(id).catch(x=>toast(falha(x),true)),
     vdCancela:()=>confirmar('Cancelar esta venda?','Os produtos voltam para o estoque. Se foi paga com cartão-presente, o saldo volta para o cartão.','Cancelar venda',async()=>{await vdChama('venda_cancelar',{p_venda:id});await recarregar();toast('Venda cancelada.')}),
     cpVender:()=>formCartao(),cpUsar:()=>formUsarCartao(id),cpWpp:()=>cpWpp(id),cpImp:()=>cpImprimir(id),
     cpCancela:()=>{const c=(S.cartoes||[]).find(x=>x.id===id);if(c)confirmar('Cancelar o cartão '+c.codigo+'?','O saldo de '+brl(c.saldo)+' é devolvido e sai do caixa de hoje. O cartão deixa de poder ser usado.','Cancelar cartão',async()=>{const j=await cpChama('cartao_cancelar',{p_cartao:id});await recarregar();toast('Cartão cancelado.')})},
@@ -5029,6 +5071,7 @@ document.addEventListener('change',e=>{
   if(t.id==='gal-f'){if(t.files&&t.files.length)galEnviar(t.files).then(()=>{t.value=''});return}
   if(t.id==='mesFiltro'){S.mesFiltro=t.value;render()}
   else if(t.id==='mesRel'){S.mesRel=t.value;render()}
+  else if(t.id==='cp-grupo'){cpLeMsg();const v=t.value;S.cpGrupo=v;S.cpMsg=CP_MODELOS[v==='aniv'?'aniv':v[0]==='s'?'volta':'promo']();render()}
   else if(t.id==='agLivres'){S.agLivres=t.checked;render()}
   else if(t.id==='diaRelData'){if(/^\d{4}-\d{2}-\d{2}$/.test(t.value)){S.diaRel=t.value;render()}}
   else if(t.classList&&t.classList.contains('com-srv'))salvarComissaoSrv(t.dataset.prof,t.dataset.srv,t.value).catch(x=>toast(falha(x)));
