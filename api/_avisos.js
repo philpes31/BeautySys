@@ -43,4 +43,23 @@ async function avisarAdmin(assunto, linhas) {
   const x = await E.enviar({ para, assunto, html: E.layout(assunto, linhas.map(l => '<p>' + E.esc(l) + '</p>').join('')), texto: assunto + '\n\n' + linhas.join('\n') });
   return x.ok;
 }
-module.exports = { processar, resumoAdmin, avisarAdmin };
+
+// Lembrete por e-mail para as clientes (24 h antes). O salão liga em Horários; só vai para quem tem e-mail na ficha. Um lembrete por atendimento.
+async function lembretesClientes(site) {
+  const r = { enviados: 0, falhas: 0 };
+  if (!E.configurado()) return Object.assign(r, { desligado: true });
+  const lista = await L.rpcServico('cron_lembretes_email', {});
+  for (const it of (Array.isArray(lista) ? lista : []).slice(0, 100)) {
+    const nome = E.esc(it.cliente || ''), salao = E.esc(it.salao || 'seu salão');
+    const titulo = 'Lembrete: seu horário é amanhã' + (it.hora ? ' às ' + it.hora : '');
+    const corpo = '<p>Olá' + (nome ? ', ' + nome : '') + '! Passando para lembrar do seu horário no <b>' + salao + '</b>.</p>'
+      + '<p><b>' + E.esc(it.data) + (it.hora ? ' às ' + E.esc(it.hora) : '') + '</b><br>' + E.esc(it.servico || '') + '</p>'
+      + '<p>Precisa remarcar? Fale com o salão' + (it.whatsapp ? ' pelo WhatsApp ' + E.esc(it.whatsapp) : ' respondendo este e-mail') + '.</p>';
+    const x = await E.enviar({ para: it.email, assunto: titulo + ' - ' + (it.salao || ''), html: E.layout(titulo, corpo, null).replace('porque é responsável por um salão no Agendio', 'porque você tem um horário marcado em ' + salao), responder: it.salao_email, texto: titulo + '\n' + (it.data || '') + ' ' + (it.hora || '') + ' - ' + (it.servico || '') + '\n' + (it.salao || '') });
+    if (!x.ok) { r.falhas++; console.error('lembrete cliente falhou:', x.erro); continue; }
+    try { await L.rpcServico('cron_marcar_email', { p_tenant: it.tenant_id, p_tipo: 'lembrete_cli', p_chave: it.chave }); } catch (e) { console.error('marcar lembrete:', e.message); }
+    r.enviados++;
+  }
+  return r;
+}
+module.exports = { processar, resumoAdmin, avisarAdmin, lembretesClientes };
