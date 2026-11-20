@@ -2753,7 +2753,7 @@ async function encerrarPacote(id){
 /* ---------- Clube de assinatura da cliente ---------- */
 async function clubeCarrega(){
   if(S.clube!==undefined)return;S.clube=null;
-  try{const [p,a]=await Promise.all([todos('clube_planos'),todos('clube_assinaturas')]);S.clube={planos:p||[],ass:a||[]};render()}
+  try{const [p,a,dd]=await Promise.all([todos('clube_planos'),todos('clube_assinaturas'),todos('clube_debitos').catch(()=>[])]);S.clube={planos:p||[],ass:a||[],deb:dd||[]};render()}
   catch(e){S.clube=false}
 }
 const clubeRecarrega=async()=>{S.clube=undefined;await clubeCarrega()};
@@ -2775,7 +2775,7 @@ function blocoClube(c){
   const it=x=>{const [cls,txt]=clubeSituacao(x),vivo=x.status==='ativa',emDia=vivo&&x.ciclo_fim&&x.ciclo_fim>=hoje();
     return `<div class="item"><div class="grow"><div class="t">${esc(x.nome)} <span class="tag ${cls}">${esc(txt)}</span></div>
     <div class="muted num">${brl(Number(x.valor))} por mês · ${x.sessoes_mes} ${x.sessoes_mes===1?'sessão':'sessões'}${x.servico?' de '+esc(x.servico):''}${emDia?` · restam ${x.sessoes_restantes} neste ciclo`:''}</div></div>
-    ${pode&&x.status!=='cancelada'?`<div class="item-acts">${vivo?`<button class="btn sm" data-act="clubePagar" data-id="${esc(x.id)}">Mensalidade paga</button>`:''}${vivo&&Number(x.valor)>=1?`<button class="btn ghost sm" data-act="clubeCobrar" data-id="${esc(x.id)}">Cobrar por link</button>`:''}${emDia&&x.sessoes_restantes>0?`<button class="btn ghost sm" data-act="clubeUsar" data-id="${esc(x.id)}">Usar 1 sessão</button>`:''}<button class="btn ghost sm" data-act="clubeStatus" data-id="${esc(x.id)}" data-st="${vivo?'pausada':'ativa'}">${vivo?'Pausar':'Reativar'}</button><button class="btn ghost sm" data-act="clubeStatus" data-id="${esc(x.id)}" data-st="cancelada">Cancelar</button></div>`:''}</div>`};
+    ${pode&&x.status!=='cancelada'?`<div class="item-acts">${vivo?`<button class="btn sm" data-act="clubePagar" data-id="${esc(x.id)}">Mensalidade paga</button>`:''}${vivo&&Number(x.valor)>=1?`<button class="btn ghost sm" data-act="clubeCobrar" data-id="${esc(x.id)}">Cobrar por link</button>`:''}${vivo?debBotoes(x):''}${emDia&&x.sessoes_restantes>0?`<button class="btn ghost sm" data-act="clubeUsar" data-id="${esc(x.id)}">Usar 1 sessão</button>`:''}<button class="btn ghost sm" data-act="clubeStatus" data-id="${esc(x.id)}" data-st="${vivo?'pausada':'ativa'}">${vivo?'Pausar':'Reativar'}</button><button class="btn ghost sm" data-act="clubeStatus" data-id="${esc(x.id)}" data-st="cancelada">Cancelar</button></div>`:''}</div>`};
   return `<div class="panel"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><b>Clube de assinatura</b>${pode?`<span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost sm" data-act="clubeAssinar" data-cliente="${esc(c.id)}">Entrar no clube</button><button class="btn ghost sm" data-act="clubePlanos">Planos do clube</button></span>`:''}</div>`+
     (l.length?`<div class="list" style="margin-top:12px">${l.map(it).join('')}</div>`:'<p class="muted" style="margin:8px 0 0">Esta cliente ainda não está no clube. Crie um plano (ex.: 4 escovas por mês) e coloque ela nele. A mensalidade é paga no balcão e você registra aqui.</p>')+'</div>';
 }
@@ -2791,6 +2791,41 @@ function formClubePlanos(editId){
   <label class="chk"><input type="checkbox" name="ativo" ${!e||e.ativo?'checked':''}> Plano ativo (aparece para novas assinaturas)</label>
   <p class="muted" style="margin:2px 0 8px">Mudar o valor ou as sessões vale só para quem entrar depois. Quem já está no clube mantém o combinado.</p>
   <p class="erro" id="a-erro" role="alert"></p><div class="acts"><button type="button" class="btn ghost" data-act="fechar">Fechar</button><button class="btn">${e?'Salvar plano':'Criar plano'}</button></div></form>`);
+}
+const debDe=ass=>((S.clube&&S.clube.deb)||[]).find(d=>d.assinatura_id===ass&&d.status!=='cancelado');
+function debBotoes(x){
+  if(S.clube&&S.clube.deb===undefined)return '';
+  const d=debDe(x.id);
+  if(d&&d.status==='ativo')return `<span class="tag ok" title="O cartão da cliente é cobrado todo mês">Débito automático ativo</span><button class="btn ghost sm" data-act="clubeDebCancelar" data-id="${esc(x.id)}">Cancelar débito</button>`;
+  if(d&&d.status==='pausado')return `<span class="tag">Débito pausado</span><button class="btn ghost sm" data-act="clubeDebCancelar" data-id="${esc(x.id)}">Cancelar débito</button>`;
+  if(d)return `<span class="tag">Aguardando a cliente autorizar</span><button class="btn ghost sm" data-act="clubeDebitar" data-id="${esc(x.id)}">Ver link</button><button class="btn ghost sm" data-act="clubeDebCancelar" data-id="${esc(x.id)}">Cancelar débito</button>`;
+  if(Number(x.valor)<1||(S.onl&&S.onl.gw==='pagbank'))return '';
+  return `<button class="btn ghost sm" data-act="clubeDebitar" data-id="${esc(x.id)}">Débito automático</button>`;
+}
+async function clubeDebitar(id){
+  const x=(S.clube&&S.clube.ass||[]).find(y=>y.id===id);if(!x)return;const c=cli(x.cliente_id);
+  if(!(S.onl&&(S.onl.mp||S.onl.gw)))return falha(erroUi('Conecte o Mercado Pago do salão primeiro (Mais, Agendamento online).'));
+  if(S.onl&&S.onl.gw==='pagbank')return falha(erroUi('O débito automático funciona só com o Mercado Pago. Este salão está conectado ao PagBank.'));
+  if(!c||!String(c.email||'').trim())return falha(erroUi('Cadastre o e-mail da cliente antes: o Mercado Pago exige para o débito automático.'));
+  let did;try{did=await clubeChama('clube_debito_criar',{p_ass:id})}catch(e){return falha(e)}
+  let j=null;
+  try{const r=await fetch('/api/clube-debitar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({debito_id:did})});j=await r.json().catch(()=>null);if(!r.ok||!j||!j.url)return falha(erroUi((j&&j.erro)||'Não foi possível gerar o link agora.'))}
+  catch(e){return falha(erroUi('Sem conexão para gerar o link. Tente de novo.'))}
+  await clubeRecarrega();render();
+  const nome=String(c.nome||'').split(' ')[0],msg='Olá'+(nome?', '+nome:'')+'! Para pagar a mensalidade do clube ('+x.nome+', '+brl(Number(x.valor))+') no cartão, sem se preocupar todo mês, autorize o débito automático neste link: '+j.url;
+  abrir(`<h2>Débito automático</h2><p>Envie o link para ${esc(c.nome||'a cliente')}. Ela cadastra o cartão uma vez no Mercado Pago, e a mensalidade de ${brl(Number(x.valor))} é cobrada todo mês sozinha. Cada cobrança aprovada registra a mensalidade e libera as sessões.</p>
+  <input readonly value="${esc(j.url)}" aria-label="Link do débito automático" onfocus="this.select()">
+  <div class="acts"><button type="button" class="btn ghost" data-act="fechar">Fechar</button><a class="btn" target="_blank" rel="noopener" href="${c.telefone?zap(c.telefone):'https://wa.me/'}?text=${encodeURIComponent(msg)}">Enviar no WhatsApp</a></div>
+  <p class="muted" style="margin:8px 0 0">O dinheiro cai direto na conta do salão. A cliente pode cancelar pelo Mercado Pago, e você também pode cancelar aqui.</p>`);
+}
+async function debCancelaDaAss(ass){
+  const d=debDe(ass);if(!d)return;
+  let j=null;
+  try{const r=await fetch('/api/clube-debito-cancelar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({debito_id:d.id})});j=await r.json().catch(()=>null);if(!r.ok||!j||!j.ok)throw 0}
+  catch(_){throw erroUi((j&&j.erro)||'Não foi possível cancelar o débito automático agora. Tente de novo.')}
+}
+function clubeDebCancelar(id){
+  confirmar('Cancelar o débito automático?','O cartão da cliente deixa de ser cobrado todo mês. A assinatura continua, e você pode cobrar por link ou marcar "Mensalidade paga".','Cancelar débito',async()=>{await debCancelaDaAss(id);await clubeRecarrega();render();toast('Débito automático cancelado.')});
 }
 async function clubeCobrar(id){
   const x=(S.clube&&S.clube.ass||[]).find(y=>y.id===id);if(!x)return;const c=cli(x.cliente_id);
@@ -2849,7 +2884,7 @@ async function clubeUsar(id){
   S.sig='';await recarregar();await clubeRecarrega();render();toast(Number(r)>0?'Sessão usada. Restam '+r+'.':'Sessão usada. Acabaram as sessões deste mês.');
 }
 async function clubeStatus(id,st){
-  const go=async()=>{await clubeChama('clube_status',{p_ass:id,p_status:st});await clubeRecarrega();render();toast(st==='cancelada'?'Assinatura cancelada.':st==='pausada'?'Assinatura pausada.':'Assinatura reativada.')};
+  const go=async()=>{if(st!=='ativa')await debCancelaDaAss(id);await clubeChama('clube_status',{p_ass:id,p_status:st});await clubeRecarrega();render();toast(st==='cancelada'?'Assinatura cancelada.':st==='pausada'?'Assinatura pausada.':'Assinatura reativada.')};
   if(st==='cancelada')confirmar('Cancelar a assinatura?','A cliente sai do clube e perde as sessões que sobraram. Não dá para desfazer.','Cancelar assinatura',go);else await go();
 }
 const fidCfg=()=>{const f=(S.agCfg&&S.agCfg.fidelidade)||{};return {ativo:!!f.ativo,visitas:Math.min(50,Math.max(2,Math.round(Number(f.visitas)||10))),premio:String(f.premio||'1 atendimento grátis'),desde:String(f.desde||'')}};
@@ -5332,7 +5367,7 @@ document.addEventListener('click',e=>{
   const a=e.target.closest('[data-act]');if(!a)return;
   const id=a.dataset.id;
   const f={
-    novaCliente:()=>formCliente(),impAbrir:impAbrir,impConferir:impConferir,impIr:impIr,editCliente:()=>formCliente(id),delCliente:()=>pedirDelCliente(id),maisMenu:menuMais,plSalvaBloqueio:()=>salvarBloqueio(a),plCupomAtivo:async()=>{const r=await sb.rpc('plataforma_cupom_ativo',{p_id:id,p_ativo:a.dataset.v==='1'});if(r.error)return toast(falha(r.error),true);await carregarPlataforma()},pgCupom:()=>aplicarCupom(id,a),instalarApp:()=>instalarApp(),reciboAtend:()=>reciboAtend(id),reciboPag:()=>reciboPag(id),reciboImprime:()=>imprimeRecibo(),pagarMP:()=>abrirPagamento(id),pagarMPantigo:()=>pagarCobranca(id,a),pgAba:()=>pgAba(id),pgPix:()=>gerarPix(id,a),pgCopia:()=>{const i=$('pg-copia');if(i){i.select();try{navigator.clipboard.writeText(i.value)}catch(_){try{document.execCommand('copy')}catch(_){}}toast('Código Pix copiado.')}},pgCartao:()=>enviarCartao('cobranca',id,a),pgDebito:()=>enviarCartao('debito','',a),debitoAtivar:()=>abrirDebito(),debitoAtivarMP:()=>chamaAssinar('criar',a),debitoParar:()=>confirmar('Cancelar o débito automático?','O cartão deixa de ser cobrado todo mês. Você poderá pagar cada mensalidade à mão ou ativar de novo.','Cancelar débito',()=>chamaAssinar('cancelar')),setStatus:()=>mudarStatus(id,a.dataset.st).catch(x=>toast(falha(x))),anonCliente:()=>pedirAnonCliente(id),exportaSalao:()=>exportarSalao().catch(x=>toast(falha(x))),clubePlanos:()=>formClubePlanos(),clubePlanoEdit:()=>formClubePlanos(id),clubeAssinar:()=>formClubeAssinar(a.dataset.cliente),clubeCobrar:()=>clubeCobrar(id),clubePagar:()=>formClubePagar(id),clubeUsar:()=>clubeUsar(id).catch(x=>toast(falha(x),true)),clubeStatus:()=>clubeStatus(id,a.dataset.st).catch(x=>toast(falha(x),true)),excluiSalao:formExcluirSalao,
+    novaCliente:()=>formCliente(),impAbrir:impAbrir,impConferir:impConferir,impIr:impIr,editCliente:()=>formCliente(id),delCliente:()=>pedirDelCliente(id),maisMenu:menuMais,plSalvaBloqueio:()=>salvarBloqueio(a),plCupomAtivo:async()=>{const r=await sb.rpc('plataforma_cupom_ativo',{p_id:id,p_ativo:a.dataset.v==='1'});if(r.error)return toast(falha(r.error),true);await carregarPlataforma()},pgCupom:()=>aplicarCupom(id,a),instalarApp:()=>instalarApp(),reciboAtend:()=>reciboAtend(id),reciboPag:()=>reciboPag(id),reciboImprime:()=>imprimeRecibo(),pagarMP:()=>abrirPagamento(id),pagarMPantigo:()=>pagarCobranca(id,a),pgAba:()=>pgAba(id),pgPix:()=>gerarPix(id,a),pgCopia:()=>{const i=$('pg-copia');if(i){i.select();try{navigator.clipboard.writeText(i.value)}catch(_){try{document.execCommand('copy')}catch(_){}}toast('Código Pix copiado.')}},pgCartao:()=>enviarCartao('cobranca',id,a),pgDebito:()=>enviarCartao('debito','',a),debitoAtivar:()=>abrirDebito(),debitoAtivarMP:()=>chamaAssinar('criar',a),debitoParar:()=>confirmar('Cancelar o débito automático?','O cartão deixa de ser cobrado todo mês. Você poderá pagar cada mensalidade à mão ou ativar de novo.','Cancelar débito',()=>chamaAssinar('cancelar')),setStatus:()=>mudarStatus(id,a.dataset.st).catch(x=>toast(falha(x))),anonCliente:()=>pedirAnonCliente(id),exportaSalao:()=>exportarSalao().catch(x=>toast(falha(x))),clubePlanos:()=>formClubePlanos(),clubePlanoEdit:()=>formClubePlanos(id),clubeAssinar:()=>formClubeAssinar(a.dataset.cliente),clubeDebitar:()=>clubeDebitar(id).catch(x=>toast(falha(x),true)),clubeDebCancelar:()=>clubeDebCancelar(id),clubeCobrar:()=>clubeCobrar(id),clubePagar:()=>formClubePagar(id),clubeUsar:()=>clubeUsar(id).catch(x=>toast(falha(x),true)),clubeStatus:()=>clubeStatus(id,a.dataset.st).catch(x=>toast(falha(x),true)),excluiSalao:formExcluirSalao,
     pubHora:()=>{S.pb.hora=a.dataset.hora;S.pb.prof=a.dataset.prof;render()},pubNovo:()=>{S.pb={sv:'',pf:'',dt:'',slots:null,hora:'',prof:'',nome:'',tel:'',obs:'',ok:null};render()},pubRecarrega:()=>carregarPublico(),linkWpp:()=>linkWpp(),linkQr:()=>linkQr(),instQr:()=>instQr(),qrImprime:()=>imprimeQr(),copiaLink:()=>{try{navigator.clipboard.writeText(a.dataset.link).then(()=>toast('Link copiado.'),()=>toast('Copie o link manualmente.',true))}catch(_){toast('Copie o link manualmente.',true)}},
     sinalOk:()=>sb.rpc('pedido_sinal_confirmar',{p_id:id}).then(async r=>{if(r.error)throw r.error;S.sig='';await recarregar();toast('Sinal marcado como recebido.')}).catch(x=>toast(falha(x),true)),aceitaPedido:()=>responderPedido(id,true).catch(x=>toast(falha(x),true)),recusaPedido:()=>{const go=()=>responderPedido(id,false).catch(x=>toast(falha(x),true));if(a.dataset.sinal)confirmar('Recusar pedido com sinal pago?','A cliente já pagou o sinal. Você precisa devolver o valor a ela (pelo Pix ou pelo app do Mercado Pago).','Recusar',go);else go()},
     waFb:()=>conectarFb(),

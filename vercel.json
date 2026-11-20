@@ -103,6 +103,18 @@
     {
       "source": "/divulgacao",
       "destination": "/divulgacao.html"
+    },
+    {
+      "source": "/api/clube-debitar",
+      "destination": "/api/x?a=clube-debitar"
+    },
+    {
+      "source": "/api/clube-debito-cancelar",
+      "destination": "/api/x?a=clube-debito-cancelar"
+    },
+    {
+      "source": "/api/clube-debito-webhook",
+      "destination": "/api/x?a=clube-debito-webhook"
     }
   ],
   "headers": [
