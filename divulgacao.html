@@ -307,7 +307,7 @@ footer{background:var(--foot);color:var(--foot-ink);padding-block:26px;font-size
           <li><b>Agendamento online com link próprio</b><span>Calendário do mês inteiro, horários livres por profissional e respeito ao almoço e às folgas.</span></li>
           <li><b>Sinal por Pix com QR code</b><span>A cliente vê o QR e o Pix copia e cola com o valor já preenchido. Você liga ou desliga quando quiser.</span></li>
           <li><b>Lista de espera</b><span>Se o horário que ela queria está cheio, ela entra na fila e você chama quando abrir uma vaga.</span></li>
-          <li><b>Lembrete e confirmação</b><span>Aviso por WhatsApp no dia anterior, com confirmação de presença, remarcação e cancelamento pelo link.</span></li>
+          <li><b>Lembrete e confirmação</b><span id="lemb-txt">Aviso por WhatsApp no dia anterior, com confirmação de presença, remarcação e cancelamento pelo link.</span></li>
         </ul>
       </div>
       <div class="bloco b2">
@@ -403,7 +403,8 @@ footer{background:var(--foot);color:var(--foot-ink);padding-block:26px;font-size
   ];
   var REC={estoque:'Estoque e fichas técnicas',financeiro:'Despesas e relatórios',comissoes:'Comissão por profissional e vales',mensagens:'Textos das mensagens editáveis',vendas:'Venda de produtos com controle de estoque',promocoes:'Cupons de desconto e cashback para clientes',whatsapp_auto:'WhatsApp automático: lembretes e avisos enviados sozinhos'};
   var BASE=['Agenda e cadastro de clientes','Agendamento online com link próprio','Sinal por Pix com QR code','Lista de espera','Pacotes e fidelidade'];
-  var temRec=function(p,k){var r=p.recursos||{};return k==='whatsapp_auto'?r[k]===true:r[k]!==false};
+  var WAOFF=false;
+  var temRec=function(p,k){var r=p.recursos||{};if(k==='whatsapp_auto'&&WAOFF)return false;return k==='whatsapp_auto'?r[k]===true:r[k]!==false};
   var linkOk=function(u){return /^(https:\/\/|#|\/)[^\s<>"']*$/.test(u||'')};
   function planos(L){
     var box=$('planos-lista');LISTA=L||[];if(L&&L.length)barraPeriodo(L);
@@ -417,7 +418,7 @@ footer{background:var(--foot);color:var(--foot-ink);padding-block:26px;font-size
       if(ant)li.push('<li class="mais">Tudo do '+esc(ant.nome)+'</li>');else BASE.forEach(function(x){li.push(x)});
       var extra=Object.keys(REC).filter(function(k){return temRec(p,k)&&(!ant||!temRec(ant,k))});
       extra.forEach(function(k){li.push(REC[k])});
-      if(temRec(p,'whatsapp_auto')&&Number(p.preco_mensagem)>0)li.push(brl(p.preco_mensagem)+' por mensagem enviada, cobrado no mês seguinte');
+      if(!WAOFF&&temRec(p,'whatsapp_auto')&&Number(p.preco_mensagem)>0)li.push(brl(p.preco_mensagem)+' por mensagem enviada, cobrado no mês seguinte');
       var lis=li.map(function(x){return x.indexOf('<li')===0?x:'<li>'+esc(x)+'</li>'}).join('');
       var d=i===iDest;
       return '<article class="plano'+(d?' dest':'')+'"><span class="tag'+(d?'':' vz')+'">'+(d?'Lembretes automáticos':'.')+'</span><h3>'+esc(p.nome)+'</h3><div class="preco">'+precoPer(p)+'<ul>'+lis+'</ul><a class="btn'+(d?'':' ghost')+'" data-cta href="'+esc(ENTRAR)+'">Testar grátis</a></article>';
@@ -445,6 +446,7 @@ footer{background:var(--foot);color:var(--foot-ink);padding-block:26px;font-size
   document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-per]');if(!b)return;PERIODO=Number(b.getAttribute('data-per'))||1;if(LISTA.length){barraPeriodo(LISTA);planos(LISTA)}});
   function faq(L){
     var f=(L&&L.length)?L:FAQ_PADRAO;
+    if(WAOFF)f=f.map(function(x){return /WhatsApp tem custo/i.test(x.p||'')?{p:x.p,r:'Enviar mensagens pelo botão, uma a uma, é grátis.'}:x});
     $('faq-lista').innerHTML=f.map(function(x){return '<details><summary>'+esc(x.p)+'</summary><p>'+esc(x.r)+'</p></details>'}).join('');
   }
   var textoCta='Testar grátis',linkCta=ENTRAR;
@@ -467,7 +469,11 @@ footer{background:var(--foot);color:var(--foot-ink);padding-block:26px;font-size
   }
   aplica(null);planos([]);
   if(C.url&&C.anonKey){
-    fetch(C.url+'/rest/v1/rpc/publico_site',{method:'POST',headers:{'Content-Type':'application/json',apikey:C.anonKey,Authorization:'Bearer '+C.anonKey},body:'{}'})
+    var H={'Content-Type':'application/json',apikey:C.anonKey,Authorization:'Bearer '+C.anonKey};
+    fetch(C.url+'/rest/v1/rpc/whatsapp_geral_ligado',{method:'POST',headers:H,body:'{}'})
+      .then(function(r){return r.ok?r.json():true}).catch(function(){return true})
+      .then(function(v){WAOFF=(v===false);if(WAOFF){var t=$('lemb-txt');if(t)t.textContent='Aviso por e-mail no dia anterior, com confirmação de presença, remarcação e cancelamento pelo link.'}
+        return fetch(C.url+'/rest/v1/rpc/publico_site',{method:'POST',headers:H,body:'{}'})})
       .then(function(r){if(!r.ok)throw 0;return r.json()}).then(aplica).catch(function(){$('planos-lista').innerHTML='<p class="vazio">Não foi possível carregar os planos agora. <a href="'+esc(ENTRAR)+'">Entre no sistema</a> para ver todos.</p>'});
   }else $('planos-lista').innerHTML='<p class="vazio">Entre no sistema para ver os planos disponíveis.</p>';
 
