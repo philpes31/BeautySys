@@ -2709,7 +2709,10 @@ function formPacote(cid){
   <div><label for="pk-p">Valor do pacote (R$)</label><input id="pk-p" name="preco" type="number" min="0" step="0.01" inputmode="decimal" value="0"></div></div>
   <label for="pk-v">Validade (opcional)</label><input id="pk-v" name="validade" type="date" min="${hoje()}">
   <label class="chk"><input type="checkbox" name="registrar" checked> Somar o valor no faturamento de hoje</label>
-  <label for="pk-f">Forma de pagamento</label><select id="pk-f" name="pagamento">${['Pix','Dinheiro','Cartão de débito','Cartão de crédito','Outro'].map(x=>`<option>${x}</option>`).join('')}</select>
+  <label for="pk-r">Pagamento</label><select id="pk-r" name="recebido"><option value="1">Já recebi</option>${S.semPago?'':'<option value="0">Ainda não recebi: cobrar pelo link (cartão em até 12x)</option>'}</select>
+  <div id="pk-fw"><label for="pk-f">Forma de pagamento</label><select id="pk-f" name="pagamento">${['Pix','Dinheiro','Cartão de débito','Cartão de crédito','Outro'].map(x=>`<option>${x}</option>`).join('')}</select></div>
+  <div id="pk-pw" hidden><label for="pk-pc">Parcelas no cartão de crédito</label><select id="pk-pc" name="parcelas">${Array.from({length:12},(_,i)=>i+1).map(n=>`<option value="${n}">${n}x</option>`).join('')}</select><p class="muted" style="margin:4px 0 0;font-size:13px">O valor entra no faturamento mês a mês, conforme as parcelas caem.</p></div>
+  <p id="pk-dica" class="muted" hidden style="font-size:13px">Depois de vender, abra o atendimento do pacote e toque em <b>Cobrar pelo link</b>. A cliente escolhe as parcelas na hora de pagar e o pacote fica como pago sozinho.</p>
   <div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Vender pacote</button></div></form>`);
 }
 async function salvarPacote(cid,d){
@@ -2722,11 +2725,14 @@ async function salvarPacote(cid,d){
   let aviso='';
   if(d.registrar==='on'&&preco>0){
     const o={id:novoId(),cliente_id:cid,data:hoje(),procedimento:('Pacote: '+nome).slice(0,100),profissional:'',valor:preco,pagamento:d.pagamento||'Pix',parcelas:1,gasto_produtos:0,taxa_maquina:0,obs:'Venda de pacote de '+total+' sessões.'};
+    const receber=d.recebido==='0'&&!S.semPago;
+    if(receber){o.pago=false;o.pago_em=null;o.pagamento='';o.valor2=0}
+    else if(o.pagamento==='Cartão de crédito')o.parcelas=PARC(d.parcelas);
     if(!S.semStatus)o.status='agendado';
     const r2=await sb.from('atendimentos').insert(o);
     if(r2.error)aviso=' O pacote foi criado, mas o valor não entrou no faturamento: registre um atendimento manualmente.';
   }
-  $('dlg').close();S.sig='';await recarregar();render();toast('Pacote vendido.'+aviso,!!aviso);
+  $('dlg').close();S.sig='';await recarregar();render();toast('Pacote vendido.'+(d.recebido==='0'&&!aviso?' Falta cobrar: use Cobrar pelo link no atendimento do pacote.':'')+aviso,!!aviso);
 }
 async function usarSessao(id){
   const x=(S.pacotes||[]).find(p=>p.id===id);if(!x)return;
@@ -5412,6 +5418,7 @@ document.addEventListener('change',e=>{
   else if(t.classList&&t.classList.contains('com-pct'))salvarComissao(t.dataset.prof,t.value).catch(x=>toast(falha(x)));
   else if(t.id==='mesDesp'){S.mesDesp=t.value;S.lim.gasto=100;render()}
   else if(t.id==='a-pag'||t.id==='a-parc'||t.id==='a-pago')atualizaParc();
+  else if(t.id==='pk-r'||t.id==='pk-f'){const r=$('pk-r'),f=$('pk-f');if(r&&f){const rc=r.value==='0';$('pk-fw').hidden=rc;$('pk-pw').hidden=rc||f.value!=='Cartão de crédito';$('pk-dica').hidden=!rc}}
   else if(t.id==='a-cli'){const w=$('a-falta');if(w)w.textContent=avisoFaltas(t.value)}
   else if(t.id==='d-cat'||t.id==='cp-c'){const n=$(t.id==='d-cat'?'d-cn':'cp-cn');if(n){n.hidden=t.value!=='__nova';if(!n.hidden)n.focus()}}
   else if(t.id==='pv-c'){const n=$('pv-cn');if(n){n.hidden=t.value!=='__nova';if(!n.hidden)n.focus()}}
