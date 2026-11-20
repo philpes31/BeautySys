@@ -3062,6 +3062,8 @@ function pedirDelCliente(id){
 /* ---------- Atendimentos ---------- */
 /* ---------- Lembrete de WhatsApp (envio manual: a pessoa aperta Enviar no WhatsApp) ---------- */
 const MSG_DEF={
+  confirmacao:{t:'Agendamento feito',q:'Enviado pela Agenda, no botão Avisar agendamento, logo depois de marcar o horário.',v:['nome','nome_completo','salao','data','hora','procedimento','profissional','remarcar'],
+    d:'Olá, {nome}! \u{1F495}\n\nSeu horário no {salao} está agendado! ✨\n\n\u{1F4C5} Data: {data}\n⏰ Horário: {hora}\n\u{1F487}‍♀️ Procedimento: {procedimento}\n\nPrecisa remarcar ou cancelar? {remarcar}\n\nTe esperamos com muito carinho! \u{1F337}'},
   lembrete:{t:'Lembrete do atendimento',q:'Enviado pela Agenda e pelos lembretes de amanhã.',v:['nome','salao','data','hora','procedimento','profissional','remarcar'],
     d:'✨ Olá! Tudo bem? \u{1F495}\n\nPassando para lembrar que você tem um horário agendado conosco!\n\n\u{1F4C5} Data: {data}\n⏰ Horário: {hora}\n\u{1F487}‍♀️ Procedimento: {procedimento}\n\nPrecisa remarcar ou cancelar? {remarcar}\n\nEstamos esperando você com muito carinho para proporcionar um momento especial de cuidado e beleza! ❤️\n\nAté breve!\n{salao} \u{1F337}'},
   retorno:{t:'Retorno (saudade)',q:'Enviado na aba Retornos, para quem está sem voltar.',v:['nome','nome_completo','salao'],
@@ -3103,6 +3105,12 @@ function btnLembrete(a){
   if(tel.length<10){const m=tel?'telefone sem DDD':'cliente sem telefone';return `<button class="btn ghost sm" disabled title="${m==='telefone sem DDD'?'O telefone da cliente está sem DDD. Edite o cadastro dela.':'Esta cliente não tem telefone cadastrado'}">Lembrete WhatsApp</button><div class="muted" style="font-size:12px">${m}</div>`}
   const prox=String(a.data)>=hoje(),env=enviados()[a.id]?'<span class="tag ok" title="Você abriu o WhatsApp para esta cliente">Enviado</span> ':'';
   return env+`<a class="btn sm wa-btn ${prox?'':'ghost'}" data-lem="${esc(a.id)}" href="${esc(zap(c.telefone)+'?text='+encodeURIComponent(msgLembrete(a)))}" target="_blank" rel="noopener" title="Abre o WhatsApp com a mensagem pronta; você só aperta Enviar">Lembrete WhatsApp</a>`;
+}
+function btnAgendado(a){
+  const c=cli(a.clienteId),tel=c?String(c.telefone||'').replace(/\D/g,'').replace(/^0+/,''):'';
+  if(tel.length<10||String(a.data)<hoje())return '';
+  const msg=montaMsg('confirmacao',Object.assign(vCli(c),{data:fd(a.data),hora:a.hora||'',procedimento:procTxt(a),profissional:a.profissional||'',remarcar:linkGerir(a)}));
+  return `<a class="btn ghost sm wa-btn" href="${esc(zap(c.telefone)+'?text='+encodeURIComponent(msg))}" target="_blank" rel="noopener" title="Abre o WhatsApp avisando a cliente que o horário foi agendado">Avisar agendamento</a>`;
 }
 function btnTaxa(a){
   const m=msgsSalvas(),c=cli(a.clienteId),tel=c?String(c.telefone||'').replace(/\D/g,'').replace(/^0+/,''):'';
@@ -3800,7 +3808,7 @@ function linhaAg(a){
   const c=cli(a.clienteId)||{nome:'(cliente removida)'};
   const tag=a.status==='confirmado'?' <span class="tag ok">Confirmado</span>':inativo(a)?` <span class="tag late">${a.cancCli&&a.status==='cancelado'?'Cancelado pela cliente':STATUS_ROT[a.status]}</span>`:(a.remarcadoEm?' <span class="tag ok">Remarcado pela cliente</span>':'');
   return `<div class="item"${inativo(a)?' style="opacity:.62"':''}><div class="side-val" style="min-width:56px">${esc(a.hora||'—')}</div>${avatar(c.nome)}<div class="grow"><div class="t">${esc(c.nome)}${tag}</div><div class="muted">${esc(procTxt(a))}${a.profissional?' · '+esc(a.profissional):''}</div></div>
-  <div class="item-acts">${inativo(a)?'':btnLembrete(a)+btnTaxa(a)+btnAvalia(a)}${btnStatus(a)}<button class="btn ghost sm" data-act="editAtend" data-id="${esc(a.id)}">Editar</button></div></div>`;
+  <div class="item-acts">${inativo(a)?'':btnAgendado(a)+btnLembrete(a)+btnTaxa(a)+btnAvalia(a)}${btnStatus(a)}<button class="btn ghost sm" data-act="editAtend" data-id="${esc(a.id)}">Editar</button></div></div>`;
 }
 
 function cartaoSumidas(){
