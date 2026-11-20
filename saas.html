@@ -717,7 +717,7 @@ async function iniciar(){
   try{S.canal=sb.channel('salao-mudancas').on('postgres_changes',{event:'*',schema:'public'},agendar).subscribe()}catch(_){}
 }
 function parar(){
-  S.iniciado=false;S.mfaPed=false;S.mfaInfo=undefined;S.hist=undefined;S.got=false;S.push=null;S.anams=[];S.fotos=null;S.fotosUrl=null;S.fotosTs=null;S.semFotos=false;S.emCfg=undefined;S.clube=undefined;S.caixaDias=undefined;S.cxEsp=null;S.galeria=undefined;S.satisf=undefined;S.etqFiltro='';S.indic=undefined;S.contas=[];S.promos=[];S.cb={ativo:false,pct:5,desde:''};S.pvs=[];S.vendas=[];S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
+  S.iniciado=false;S.coms=undefined;S.mfaPed=false;S.mfaInfo=undefined;S.hist=undefined;S.got=false;S.push=null;S.anams=[];S.fotos=null;S.fotosUrl=null;S.fotosTs=null;S.semFotos=false;S.emCfg=undefined;S.clube=undefined;S.caixaDias=undefined;S.cxEsp=null;S.galeria=undefined;S.satisf=undefined;S.etqFiltro='';S.indic=undefined;S.contas=[];S.promos=[];S.cb={ativo:false,pct:5,desde:''};S.pvs=[];S.vendas=[];S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
   if(S.canal&&sb){try{sb.removeChannel(S.canal)}catch(_){}}
   S.canal=null;
 }
@@ -1030,10 +1030,101 @@ async function vdChama(nome,args){
   if(!r.data||r.data.ok!==true)throw erroUi((r.data&&r.data.erro)||'Não foi possível concluir.');
   return r.data;
 }
+/* ---------- Comandas e orçamentos (dentro de Vendas) ---------- */
+const comTot=c=>Math.max(0,(c.itens||[]).reduce((t,i)=>t+i.preco*i.qtd,0)-(Number(c.desconto)||0));
+function comCarrega(forca){
+  if(!forca&&S.coms!==undefined)return;
+  S.coms=S.coms||null;
+  Promise.all([sb.from('comandas').select('*').order('criado_em',{ascending:false}).range(0,199),sb.from('comanda_itens').select('*').range(0,2999)]).then(([a,b])=>{
+    if(a.error||b.error){S.coms={semTab:/comandas|comanda_itens/.test(String((a.error||b.error).message||''))||(a.error||b.error).code==='42P01'};if(S.view==='vendas')render();return}
+    const it={};(b.data||[]).forEach(x=>{(it[x.comanda_id]=it[x.comanda_id]||[]).push({tipo:x.tipo,nome:x.nome,produto_id:x.produto_id||'',qtd:Number(x.qtd)||1,preco:Number(x.preco)||0,profissional:x.profissional||''})});
+    S.coms={lista:(a.data||[]).map(c=>({id:c.id,clienteId:c.cliente_id,status:c.status,desconto:Number(c.desconto)||0,forma:c.forma||'',validade:c.validade||'',obs:c.obs||'',criado:c.criado_em,itens:it[c.id]||[]}))};
+    if(S.view==='vendas')render();
+  },()=>{S.coms={semTab:true};if(S.view==='vendas')render()});
+}
+function telaComandas(ab){
+  comCarrega();
+  const m=S.coms;
+  if(!m)return '<p class="muted">Carregando…</p>';
+  if(m.semTab)return aviso('Falta ativar comandas e orçamentos','Rode o arquivo 70-comandas-orcamentos.sql (ou o agendio-TUDO.sql) no Supabase e atualize a página.');
+  const pode=pvPode(),orc=ab==='orc';
+  const L=m.lista.filter(c=>orc?c.status==='orcamento':c.status==='aberta'),F=orc?[]:m.lista.filter(c=>c.status==='fechada').slice(0,8);
+  const lin=c=>{const cl=cli(c.clienteId),venc=c.validade&&c.validade<hoje();
+    const resumo=c.itens.map(i=>esc((i.qtd>1?i.qtd+'x ':'')+i.nome)).join(', ');
+    const bt=c.status==='orcamento'?`<button type="button" class="btn sm" data-act="comAprovar" data-id="${esc(c.id)}">Aprovar</button><button type="button" class="btn ghost sm" data-act="comZap" data-id="${esc(c.id)}">Enviar no WhatsApp</button><button type="button" class="btn ghost sm" data-act="comEdit" data-id="${esc(c.id)}">Editar</button><button type="button" class="btn ghost sm" data-act="comCancelar" data-id="${esc(c.id)}">Recusar</button>`
+      :c.status==='aberta'?`<button type="button" class="btn sm" data-act="comFechar" data-id="${esc(c.id)}">Fechar e receber</button><button type="button" class="btn ghost sm" data-act="comEdit" data-id="${esc(c.id)}">Editar</button><button type="button" class="btn ghost sm" data-act="comCancelar" data-id="${esc(c.id)}">Cancelar</button>`:'';
+    return `<div class="item" style="align-items:flex-start"><div class="grow"><div class="t">${esc(cl?cl.nome:'Cliente')} ${venc?'<span class="tag late">Vencido</span>':''}${c.status==='fechada'?`<span class="tag ok">Paga (${esc(c.forma)})</span>`:''}</div>
+      <div class="muted">${resumo}</div>${c.desconto>0?`<div class="muted num">Desconto ${brl(c.desconto)}</div>`:''}${c.validade&&c.status==='orcamento'?`<div class="muted">Vale até ${esc(fd(c.validade))}</div>`:''}
+      ${pode&&bt?`<div class="row-actions" style="margin-top:8px">${bt}</div>`:''}</div><div class="side-val">${brl(comTot(c))}</div></div>`};
+  const vazio=orc?'<div class="empty"><h2>Nenhum orçamento em aberto</h2><p>Monte um orçamento com serviços e produtos, envie pelo WhatsApp e aprove quando a cliente aceitar.</p></div>':'<div class="empty"><h2>Nenhuma comanda aberta</h2><p>Abra uma comanda quando a cliente chegar: vá somando serviços e produtos e feche tudo de uma vez na hora de receber.</p></div>';
+  return `<div class="bar">${pode?`<button type="button" class="btn" data-act="comNovo" data-id="${orc?'orcamento':'aberta'}">${orc?'Novo orçamento':'Nova comanda'}</button>`:''}</div>`
+    +(L.length?`<div class="list">${L.map(lin).join('')}</div>`:vazio)
+    +(F.length?`<h3 style="margin:20px 0 8px;font-size:15px">Fechadas recentemente</h3><div class="list">${F.map(lin).join('')}</div>`:'');
+}
+function comLer(){
+  const f=$('cm-form');if(!f||!S.cf)return;
+  const d=Object.fromEntries(new FormData(f));
+  if(d.cliente!==undefined)S.cf.clienteId=d.cliente||'';S.cf.validade=d.validade||'';S.cf.obs=d.obs||'';S.cf.desconto=d.desconto||'';
+  S.cf.itens=S.cf.itens.map((it,i)=>Object.assign({},it,{nome:d['n'+i]!==undefined?d['n'+i]:it.nome,produto_id:d['p'+i]!==undefined?d['p'+i]:it.produto_id,qtd:Math.max(1,Math.floor(Number(d['q'+i])||1)),preco:din(d['v'+i]),profissional:d['f'+i]!==undefined?d['f'+i]:it.profissional}));
+}
+function formCom(id,status){
+  const c=id?S.coms.lista.find(x=>x.id===id):null;
+  S.cf=c?{id:c.id,status:c.status,clienteId:c.clienteId,validade:c.validade,obs:c.obs,desconto:String(c.desconto||''),itens:c.itens.map(x=>Object.assign({},x))}:{id:'',status,clienteId:'',validade:'',obs:'',desconto:'',itens:[]};
+  comForm();
+}
+function comForm(){
+  const f=S.cf,orc=f.status==='orcamento',cl=[...S.clientes].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')),profs=listaProfs();
+  const P=(S.pvs||[]).filter(p=>p.ativo).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  const linha=(it,i)=>it.tipo==='produto'
+    ?`<div class="item" style="flex-wrap:wrap;gap:6px"><div class="grow" style="min-width:150px"><select name="p${i}" aria-label="Produto">${P.map(p=>`<option value="${esc(p.id)}" data-preco="${p.preco}" ${p.id===it.produto_id?'selected':''}>${esc(p.nome)}</option>`).join('')}</select></div><input name="q${i}" type="number" min="1" max="1000" value="${it.qtd}" aria-label="Quantidade" style="width:64px"><input name="v${i}" type="number" min="0" step="0.01" value="${it.preco}" aria-label="Preço de cada" style="width:92px"><button type="button" class="btn ghost sm" data-act="comDel" data-id="${i}" aria-label="Tirar item">Tirar</button></div>`
+    :`<div class="item" style="flex-wrap:wrap;gap:6px"><div class="grow" style="min-width:150px"><input name="n${i}" list="cm-serv" value="${esc(it.nome)}" maxlength="80" placeholder="Serviço" aria-label="Serviço" data-cm-serv="${i}"></div><input name="q${i}" type="number" min="1" max="1000" value="${it.qtd}" aria-label="Quantidade" style="width:64px"><input name="v${i}" type="number" min="0" step="0.01" value="${it.preco}" aria-label="Preço de cada" style="width:92px"><select name="f${i}" aria-label="Profissional" style="max-width:140px"><option value="">Quem fez</option>${profs.map(n=>`<option ${n===it.profissional?'selected':''}>${esc(n)}</option>`).join('')}</select><button type="button" class="btn ghost sm" data-act="comDel" data-id="${i}" aria-label="Tirar item">Tirar</button></div>`;
+  const sub=f.itens.reduce((t,i)=>t+i.preco*i.qtd,0),tot=Math.max(0,sub-din(f.desconto));
+  abrir(`<h2>${f.id?'Editar':'Novo'} ${orc?'orçamento':'comanda'}</h2><form data-form="comanda" id="cm-form" data-id="${esc(f.id)}">
+  <label for="cm-c">Cliente *</label><select id="cm-c" name="cliente" ${f.id?'disabled':''}><option value="">Escolha…</option>${cl.map(c=>`<option value="${esc(c.id)}" ${c.id===f.clienteId?'selected':''}>${esc(c.nome)}</option>`).join('')}</select>
+  <datalist id="cm-serv">${servicosCat().map(x=>`<option value="${esc(x.nome)}">`).join('')}</datalist>
+  <div class="list" style="margin-top:10px;max-height:34vh;overflow:auto">${f.itens.length?f.itens.map(linha).join(''):'<p class="muted" style="margin:8px">Adicione serviços e produtos.</p>'}</div>
+  <div class="row-actions" style="margin:8px 0"><button type="button" class="btn ghost sm" data-act="comAddS">+ Serviço</button><button type="button" class="btn ghost sm" data-act="comAddP" ${P.length?'':'disabled'}>+ Produto</button></div>
+  <div class="grid2"><div><label for="cm-d">Desconto (R$)</label><input id="cm-d" name="desconto" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(f.desconto)}" placeholder="0,00"></div>${orc?`<div><label for="cm-v">Vale até</label><input id="cm-v" name="validade" type="date" value="${esc(f.validade)}"></div>`:''}</div>
+  <label for="cm-o">Observação</label><input id="cm-o" name="obs" maxlength="300" value="${esc(f.obs)}">
+  <p class="side-val" style="margin:12px 0 0;font-size:20px">Total: ${brl(tot)}</p>
+  <p class="erro" id="a-erro" role="alert"></p><div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Salvar</button></div></form>`);
+}
+document.addEventListener('change',e=>{
+  const t=e.target;if(!t||!t.closest||!t.closest('#cm-form'))return;
+  if(t.name&&/^p\d+$/.test(t.name)){const o=t.selectedOptions[0],i=t.name.slice(1),v=t.form.elements['v'+i];if(o&&v)v.value=o.dataset.preco}
+  if(t.dataset&&t.dataset.cmServ!==undefined){const x=servicosCat().find(y=>y.nome===t.value),i=t.dataset.cmServ,v=t.form.elements['v'+i];if(x&&v&&!Number(v.value))v.value=Number(x.preco)||0}
+});
+async function salvarComanda(id,d){
+  comLer();const f=S.cf;
+  if(!id&&!f.clienteId)throw erroUi('Escolha a cliente.');
+  if(!f.itens.length)throw erroUi('Adicione pelo menos um item.');
+  if(f.itens.some(i=>i.tipo==='servico'&&!String(i.nome).trim()))throw erroUi('Escreva o nome de cada serviço.');
+  await vdChama('comanda_salvar',{p:{id:id||null,cliente_id:f.clienteId,status:f.status==='orcamento'?'orcamento':'aberta',validade:f.validade||null,obs:f.obs,desconto:din(f.desconto),itens:f.itens}});
+  $('dlg').close();await comCarrega(true);toast(f.status==='orcamento'?'Orçamento salvo.':'Comanda salva.');
+}
+function comZap(id){
+  const c=S.coms.lista.find(x=>x.id===id),cl=c&&cli(c.clienteId);if(!c)return;
+  const t=(S.ctx&&S.ctx.tenant&&S.ctx.tenant.nome)||'nosso salão';
+  const txt=`Olá${cl?', '+String(cl.nome).split(' ')[0]:''}! Segue o seu orçamento no ${t}:\n\n`+c.itens.map(i=>`• ${i.qtd>1?i.qtd+'x ':''}${i.nome}: ${brl(i.preco*i.qtd)}`).join('\n')+(c.desconto>0?`\nDesconto: ${brl(c.desconto)}`:'')+`\n\n*Total: ${brl(comTot(c))}*`+(c.validade?`\nVálido até ${fd(c.validade)}.`:'')+`\n\nQualquer dúvida é só falar. Posso reservar o seu horário?`;
+  window.open((cl&&cl.telefone?zap(cl.telefone):'https://wa.me/')+'?text='+encodeURIComponent(txt),'_blank','noopener');
+}
+function comFechar(id){
+  const c=S.coms.lista.find(x=>x.id===id);if(!c)return;
+  abrir(`<h2>Fechar e receber</h2><p>Total a receber: <b>${brl(comTot(c))}</b></p><p class="muted">Os serviços entram como atendimentos já pagos e os produtos como venda (com baixa no estoque).</p>
+  <label for="cf-f">Forma de pagamento</label><select id="cf-f">${FORMAS_PAG.map(x=>`<option>${x}</option>`).join('')}</select><p class="erro" id="cf-erro" role="alert"></p>
+  <div class="acts"><button type="button" class="btn ghost" data-act="fechar">Voltar</button><button type="button" class="btn" data-act="comFecharOk" data-id="${esc(id)}">Receber ${brl(comTot(c))}</button></div>`);
+}
+async function comFecharOk(id){
+  try{await vdChama('comanda_fechar',{p_id:id,p_forma:$('cf-f').value,p_profissional:''})}
+  catch(e){const er=$('cf-erro');if(er)er.textContent=(e&&e.aviso)||'Não foi possível fechar.';else falha(e);return}
+  $('dlg').close();await comCarrega(true);agendar();toast('Comanda fechada e recebida.');
+}
+async function comMuda(id,st,msg){try{await vdChama('comanda_status',{p_id:id,p_status:st});await comCarrega(true);toast(msg)}catch(e){falha(e)}}
 function telaVendas(){
   if(S.semVendas)return aviso('Falta ativar a aba Vendas','Rode o arquivo 40-vendas.sql (ou o agendio-TUDO.sql) no Supabase e atualize a página.');
   const ab=S.vdAba||'vendas',pode=pvPode();
-  const seg=`<div class="seg" role="group" aria-label="Vendas"><button class="btn sm ${ab==='vendas'?'':'ghost'}" data-act="vdAba" data-id="vendas" aria-pressed="${ab==='vendas'}">Vendas</button><button class="btn sm ${ab==='prod'?'':'ghost'}" data-act="vdAba" data-id="prod" aria-pressed="${ab==='prod'}">Produtos à venda</button></div>`;
+  const seg=`<div class="seg" role="group" aria-label="Vendas"><button class="btn sm ${ab==='vendas'?'':'ghost'}" data-act="vdAba" data-id="vendas" aria-pressed="${ab==='vendas'}">Vendas</button><button class="btn sm ${ab==='prod'?'':'ghost'}" data-act="vdAba" data-id="prod" aria-pressed="${ab==='prod'}">Produtos à venda</button><button class="btn sm ${ab==='com'?'':'ghost'}" data-act="vdAba" data-id="com" aria-pressed="${ab==='com'}">Comandas</button><button class="btn sm ${ab==='orc'?'':'ghost'}" data-act="vdAba" data-id="orc" aria-pressed="${ab==='orc'}">Orçamentos</button></div>`;
+  if(ab==='com'||ab==='orc')return seg+telaComandas(ab);
   const k=(v,l,c)=>`<div class="stat"><b class="${c||''}">${v}</b><span>${l}</span></div>`;
   if(ab==='prod'){
     const TODOS=S.pvs||[],cats=[...new Set(TODOS.map(x=>x.categoria).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR')),fc=cats.includes(S.pvCat)?S.pvCat:'',P=[...TODOS].filter(x=>!fc||x.categoria===fc).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')),val=P.reduce((t,p)=>t+p.estoque*p.custo,0),venda=P.reduce((t,p)=>t+p.estoque*p.preco,0);
@@ -5196,6 +5287,10 @@ document.addEventListener('click',e=>{
     tiraLogo:()=>{S.logoNovo=null;const pv=$('cf-prev');if(pv)pv.innerHTML='<span class="muted">Sem logotipo</span>';a.remove()},liberaSuporte:()=>formSuporte(),
     mfaLigar:()=>mfaLigar(),mfaConfirmar:()=>mfaConfirmar(),histAtualiza:()=>{S.hist=undefined;render()},
     mfaDesligar:()=>confirmar('Desativar verificação em 2 etapas?','O sistema volta a pedir só a senha para entrar.','Desativar',async()=>{try{const r=await sb.auth.mfa.unenroll({factorId:S.mfaInfo&&S.mfaInfo.id});if(r.error)throw r.error;S.mfaInfo=undefined;render();toast('Verificação em 2 etapas desativada.')}catch(e){falha(e)}}),
+    comNovo:()=>formCom('',id),comEdit:()=>formCom(id,''),comAddS:()=>{comLer();S.cf.itens.push({tipo:'servico',nome:'',produto_id:'',qtd:1,preco:0,profissional:''});comForm()},
+    comAddP:()=>{comLer();const p=(S.pvs||[]).filter(x=>x.ativo).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'))[0];if(!p)return;S.cf.itens.push({tipo:'produto',nome:p.nome,produto_id:p.id,qtd:1,preco:p.preco,profissional:''});comForm()},
+    comDel:()=>{comLer();S.cf.itens.splice(Number(id),1);comForm()},comAprovar:()=>comMuda(id,'aberta','Orçamento aprovado: virou comanda aberta.'),comZap:()=>comZap(id),
+    comCancelar:()=>confirmar('Cancelar?','Esta ação tira o item da lista.','Sim, cancelar',()=>comMuda(id,'cancelada','Cancelado.')),comFechar:()=>comFechar(id),comFecharOk:()=>comFecharOk(id),
     sair:async()=>{const dl=$('dlg');if(dl&&dl.open)dl.close();S.auth='entrar';S.recuperando=false;S.mfaPed=false;try{await sb.auth.signOut()}catch(_){}}
   }[a.dataset.act];
   if(f){if(!(a.tagName==='A'&&a.getAttribute('href')))e.preventDefault();f()}
@@ -5301,6 +5396,7 @@ $('dlg').addEventListener('submit',async e=>{
     else if(k==='pvsalvar')await salvarProdutoVenda(id,dados);
     else if(k==='pvajuste')await salvarAjustePv(id,dados);
     else if(k==='venda')await salvarVenda(dados);
+    else if(k==='comanda')await salvarComanda(id,dados);
     else if(k==='cpvender')await salvarCartao(dados);
     else if(k==='cpusar')await usarCartao(id,dados);
     else if(k==='desp')await salvarDesp(id,dados);
