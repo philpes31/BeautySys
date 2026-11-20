@@ -683,6 +683,7 @@ async function recarregar(){
         let gw='';try{const r3b=await sb.rpc('gw_provedor');if(!r3b.error)gw=String(r3b.data||'')}catch(_){}
         let uso=null;try{const r4=await sb.rpc('whatsapp_uso');if(!r4.error&&r4.data)uso=r4.data}catch(_){}
         let wp=null;try{const r5=await sb.rpc('meu_whatsapp');if(!r5.error&&r5.data)wp=r5.data}catch(_){}
+        try{const r6=await sb.rpc('whatsapp_geral_ligado');S.waGeral=r6.error?undefined:!!r6.data}catch(_){S.waGeral=undefined}
         return Object.assign({},x,{agenda_config:x.agenda_config||{},_wa:wa,_mp:mpc,_gw:gw||(mpc?'mercadopago':''),_uso:uso,_wp:wp})}catch(_){S.semAg=true;return null}})(),
       S.legado?Promise.resolve([]):todos('vales').catch(()=>[]),
       S.legado?Promise.resolve([]):todos('cartoes_presente').catch(()=>{semC=true;return []}),
@@ -717,7 +718,7 @@ async function iniciar(){
   try{S.canal=sb.channel('salao-mudancas').on('postgres_changes',{event:'*',schema:'public'},agendar).subscribe()}catch(_){}
 }
 function parar(){
-  S.iniciado=false;S.coms=undefined;S.mfaPed=false;S.mfaInfo=undefined;S.hist=undefined;S.got=false;S.push=null;S.anams=[];S.fotos=null;S.fotosUrl=null;S.fotosTs=null;S.semFotos=false;S.emCfg=undefined;S.clube=undefined;S.caixaDias=undefined;S.cxEsp=null;S.galeria=undefined;S.satisf=undefined;S.etqFiltro='';S.indic=undefined;S.contas=[];S.promos=[];S.cb={ativo:false,pct:5,desde:''};S.pvs=[];S.vendas=[];S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
+  S.iniciado=false;S.waGeral=undefined;S.coms=undefined;S.mfaPed=false;S.mfaInfo=undefined;S.hist=undefined;S.got=false;S.push=null;S.anams=[];S.fotos=null;S.fotosUrl=null;S.fotosTs=null;S.semFotos=false;S.emCfg=undefined;S.clube=undefined;S.caixaDias=undefined;S.cxEsp=null;S.galeria=undefined;S.satisf=undefined;S.etqFiltro='';S.indic=undefined;S.contas=[];S.promos=[];S.cb={ativo:false,pct:5,desde:''};S.pvs=[];S.vendas=[];S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
   if(S.canal&&sb){try{sb.removeChannel(S.canal)}catch(_){}}
   S.canal=null;
 }
@@ -2081,7 +2082,7 @@ async function carregarPlataforma(){
     const e=[i,sl,cr,pl,pg,lg].find(x=>x.error);if(e)throw e.error;
     S.pl=Object.assign(S.pl,{ok:true,erro:false,ind:i.data,saloes:sl.data||[],cresc:cr.data||[],planos:pl.data||[],pags:pg.data||[],logs:lg.data||[]});
   }catch(_){S.pl.erro=true;S.pl.ok=true}
-  try{const [al,cb,cp]=await Promise.all([sb.rpc('plataforma_alertas'),sb.rpc('plataforma_ler_cobranca'),sb.rpc('plataforma_cupons')]);S.pl.alertas=al.error?null:(al.data||[]);S.pl.cob=cb.error?null:cb.data;S.pl.cupons=cp.error?null:(cp.data||[])}catch(_){S.pl.alertas=null;S.pl.cob=null;S.pl.cupons=null}
+  try{const [al,cb,cp]=await Promise.all([sb.rpc('plataforma_alertas'),sb.rpc('plataforma_ler_cobranca'),sb.rpc('plataforma_cupons')]);S.pl.alertas=al.error?null:(al.data||[]);S.pl.cob=cb.error?null:cb.data;S.pl.cupons=cp.error?null:(cp.data||[]);try{const wg=await sb.rpc('whatsapp_geral_ligado');S.pl.wg=wg.error?undefined:!!wg.data}catch(_){S.pl.wg=undefined}}catch(_){S.pl.alertas=null;S.pl.cob=null;S.pl.cupons=null}
   if(S.view==='plataforma')render();
 }
 function headPlataforma(){return `<div class="page-head"><div><h1>Plataforma</h1><p class="muted">Salões, assinaturas e pagamentos do Agendio</p></div></div>`}
@@ -2157,9 +2158,25 @@ function plPainel(){
   return `<div class="stats">${k(i.saloes||0,'salões cadastrados')}${k(i.ativos||0,'assinantes ativos')}${k(i.em_teste||0,'em período de teste')}${k(i.vencidos||0,'assinaturas vencidas')}</div>
   <div class="stats">${k(i.cancelados||0,'canceladas')}${k(i.bloqueados||0,'bloqueadas')}${k(brl(i.mrr||0),'receita mensal (MRR)')}${k(brl(i.arr||0),'receita anual (ARR)')}</div>
   <div class="row-actions" style="margin:6px 0 16px"><button class="btn ghost" data-act="plSituacoes">Atualizar situações</button><button class="btn ghost" data-act="plCobrancas">Gerar cobranças</button><button class="btn" data-act="plNovoSalao">Cadastrar salão</button></div>
-  ${plAlertas()}${plPedidos()}
+  ${plWaGeral()}${plAlertas()}${plPedidos()}
   ${plDiag()}
   <p class="muted" style="font-size:13px">MRR soma o valor do plano dos salões com assinatura ativa. "Atualizar situações" marca como vencidos os salões com data passada. "Gerar cobranças" cria a mensalidade de cada salão ativo que não tem cobrança em aberto.</p>${g}`;
+}
+function plWaGeral(){
+  const v=S.pl.wg;
+  if(v===undefined)return `<div class="panel" style="margin-bottom:14px"><b>Envio automático de WhatsApp</b><p class="muted" style="margin:4px 0 0">Ainda não disponível. Rode o arquivo agendio-TUDO.sql no Supabase (etapa 71) e recarregue.</p></div>`;
+  return `<div class="panel" style="margin-bottom:14px"><b>Envio automático de WhatsApp (chave geral)</b>
+  <p class="muted" style="margin:4px 0 8px;max-width:640px">${v?'Ligado: o sistema envia os lembretes e avisos pelo WhatsApp dos salões que ativaram o envio automático.':'Desligado: nenhum salão envia mensagem automática pelo WhatsApp. Deixe assim até a Meta liberar o acesso.'} Lembretes por e-mail não são afetados.</p>
+  <div class="row-actions"><button class="btn${v?' ghost':''}" data-act="plWaGeral">${v?'Desligar o envio automático':'Ligar o envio automático'}</button></div></div>`;
+}
+async function salvarWaGeral(){
+  const ativo=!S.pl.wg;
+  const go=async()=>{
+    const r=await sb.rpc('plataforma_whatsapp_definir',{p_ativo:ativo});
+    if(r.error)throw erroUi(falha(r.error));
+    S.pl.wg=ativo;S.waGeral=ativo;toast(ativo?'Envio automático ligado.':'Envio automático desligado.');render();
+  };
+  if(ativo)confirmar('Ligar o envio automático?','Os salões que ativaram o envio passam a mandar lembretes e avisos pelo WhatsApp. Ligue só depois que a Meta liberar o acesso.','Ligar',go);else await go().catch(e=>toast(e.message||falha(e),true));
 }
 function plDiag(){
   const d=S.pl.diag;let corpo='<p class="muted" style="margin:4px 0 8px">Confere se o servidor do site (pasta api na Vercel), o Supabase e o Mercado Pago estão conversando. Use quando o pagamento online não abrir.</p>';
@@ -2403,7 +2420,7 @@ function telaMensagens(){
     <label for="mg-pix">Chave Pix</label><input id="mg-pix" name="pix_chave" maxlength="120" placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória" autocomplete="off" value="${esc(sv._pix||'')}" ${pode?'':'disabled'}></div>`;
   const cfgAv=`<div class="panel msg-card"><b>Link de avaliação</b><p class="muted" style="margin:2px 0 8px">Cole o link de avaliação do seu Google. Com ele, aparece o botão <b>Pedir avaliação</b> nos atendimentos e uma lista dos últimos 7 dias.</p><details style="margin:0 0 8px"><summary class="muted" style="cursor:pointer">Como pegar o link no Google</summary><ol class="muted" style="margin:6px 0 0;padding-left:20px;max-width:560px"><li>No celular ou computador, procure o nome do seu salão no Google (precisa estar logada na conta do Perfil da Empresa).</li><li>Toque em <b>Pedir avaliações</b> (ou <b>Compartilhar formulário de avaliação</b>).</li><li>Toque em <b>Copiar link</b> e cole aqui embaixo. Ele começa com https://g.page/r/ ou https://search.google.com/.</li></ol></details>
     <label for="mg-avalia">Link (começa com https://)</label><input id="mg-avalia" name="avalia_link" type="url" maxlength="300" placeholder="https://g.page/r/..." autocomplete="off" value="${esc(sv._avalia||'')}" ${pode?'':'disabled'}></div>`;
-  const auto=(S.onl&&S.onl.wa!==null&&S.onl.wa!==undefined&&!S.legado)?`<div class="panel msg-card" style="margin-bottom:12px"><b>Envio automático de WhatsApp</b><p class="muted" style="margin:2px 0 8px;max-width:620px">Lembrete na véspera do atendimento e aviso quando você aceita ou recusa um pedido online, sem você apertar nada. <b>Só funciona depois que o WhatsApp Business for conectado ao sistema</b>; até lá as mensagens ficam apenas na fila.</p>${recAuto()&&S.onl.uso&&S.onl.uso.preco>0?custoMsg(S.onl.uso.preco,S.onl.uso):''}${recAuto()?`<label class="chk"><input type="checkbox" id="wa-auto" ${S.onl.wa?'checked':''} ${pode?'':'disabled'}> Ligar o envio automático</label>`:`<p style="margin:0"><span class="tag">Não incluído no seu plano</span> O envio automático faz parte do plano <b>Completo</b>. Peça a troca na aba <b>Salão</b>. Enquanto isso, o botão de WhatsApp de cada atendimento abre a mensagem pronta para você enviar.</p>`}</div>`:'';
+  const auto=(S.onl&&S.onl.wa!==null&&S.onl.wa!==undefined&&!S.legado)?`<div class="panel msg-card" style="margin-bottom:12px"><b>Envio automático de WhatsApp</b><p class="muted" style="margin:2px 0 8px;max-width:620px">Lembrete na véspera do atendimento e aviso quando você aceita ou recusa um pedido online, sem você apertar nada. <b>Só funciona depois que o WhatsApp Business for conectado ao sistema</b>; até lá as mensagens ficam apenas na fila.</p>${S.waGeral===false?'<p class="faixa" style="margin:0 0 8px">O envio automático está temporariamente desativado em todo o Agendio, até a Meta liberar o acesso. Nenhuma mensagem sai agora; você pode deixar a opção ligada e ela passa a valer sozinha quando for liberado. Enquanto isso, use o botão de WhatsApp de cada atendimento.</p>':""}${recAuto()&&S.onl.uso&&S.onl.uso.preco>0?custoMsg(S.onl.uso.preco,S.onl.uso):''}${recAuto()?`<label class="chk"><input type="checkbox" id="wa-auto" ${S.onl.wa?'checked':''} ${pode?'':'disabled'}> Ligar o envio automático</label>`:`<p style="margin:0"><span class="tag">Não incluído no seu plano</span> O envio automático faz parte do plano <b>Completo</b>. Peça a troca na aba <b>Salão</b>. Enquanto isso, o botão de WhatsApp de cada atendimento abre a mensagem pronta para você enviar.</p>`}</div>`:'';
   return `${nota}${auto}${blocoWaProprio(pode)}<p class="muted" style="max-width:640px">Escreva do seu jeito. Os campos entre chaves, como <b>{nome}</b>, são trocados pelos dados da cliente na hora de enviar. Linhas com horário ou profissional em branco somem sozinhas.</p>
   <form data-form="mensagens" class="msg-grid">${cfg}${cfgAv}${Object.keys(MSG_DEF).map(card).join('')}<p class="erro" id="a-erro" role="alert"></p>${pode?'<div class="acts"><button class="btn">Salvar mensagens</button></div>':'<p class="muted">Só quem administra o salão altera os textos.</p>'}</form>`;
 }
@@ -5271,7 +5288,7 @@ document.addEventListener('click',e=>{
     pedePlano:()=>{const p=(S.assin&&S.assin.planos||[]).find(x=>x.id===id);if(!p)return;confirmar('Pedir o plano '+p.nome+'?','Avisamos a equipe do Agendio, que conclui a troca e envia a cobrança.','Pedir plano',async()=>{const r=await sb.rpc('solicitar_plano',{p_plano:id,p_msg:''});if(r.error)throw r.error;toast('Pedido enviado.')})},
     insVar:()=>{const t=$('mg-'+id);if(!t)return;const v='{'+a.dataset.v+'}',i=t.selectionStart??t.value.length,f=t.selectionEnd??i;t.value=t.value.slice(0,i)+v+t.value.slice(f);t.focus();t.selectionStart=t.selectionEnd=i+v.length;t.dispatchEvent(new Event('input',{bubbles:true}))},
     padraoMsg:()=>{const t=$('mg-'+id);if(!t)return;t.value=MSG_DEF[id].d;t.dispatchEvent(new Event('input',{bubbles:true}))},
-    plAba:()=>{S.pl.aba=id;S.pl.lim=60;render();if(id==='suporte')carregarChamadosPl();if(id==='metricas'&&!S.pl.met)carregarMetricas();if(id==='site'&&!S.pl.site)carregarSite()},chNovo:()=>formChamado(),plDiag:()=>rodarDiag(),plEmailTeste:()=>enviarEmailTeste(),plMet:()=>carregarMetricas(true),chAbrir:()=>chAbrir(id,a.dataset.adm==='1'),chEnviar:()=>chEnviar(!!a.dataset.resolver),chFechar:()=>$('dlg').close(),ajRecarrega:()=>{S.aj.ok=false;render();carregarAjuda()},plRecarrega:()=>{S.pl.ok=false;render();carregarPlataforma()},
+    plWaGeral:()=>salvarWaGeral(),plAba:()=>{S.pl.aba=id;S.pl.lim=60;render();if(id==='suporte')carregarChamadosPl();if(id==='metricas'&&!S.pl.met)carregarMetricas();if(id==='site'&&!S.pl.site)carregarSite()},chNovo:()=>formChamado(),plDiag:()=>rodarDiag(),plEmailTeste:()=>enviarEmailTeste(),plMet:()=>carregarMetricas(true),chAbrir:()=>chAbrir(id,a.dataset.adm==='1'),chEnviar:()=>chEnviar(!!a.dataset.resolver),chFechar:()=>$('dlg').close(),ajRecarrega:()=>{S.aj.ok=false;render();carregarAjuda()},plRecarrega:()=>{S.pl.ok=false;render();carregarPlataforma()},
     plSalao:()=>detSalao(id),plNovoSalao:()=>formNovoSalao(),
     plSetPlano:()=>plRpc('plataforma_definir_plano',{p_tenant:id,p_plano:$('pd-plano').value},'Plano alterado.',id),
     plSetStatus:()=>plRpc('plataforma_definir_status',{p_tenant:id,p_status:$('pd-st').value,p_motivo:$('pd-mot').value.trim()},'Situação atualizada.',id),
