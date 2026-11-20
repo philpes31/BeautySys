@@ -3296,6 +3296,15 @@ async function salvarAtend(id,d){
   }
   await recarregar();
   toast(msg);
+  if(!id){
+    setTimeout(()=>{
+      try{
+        const at=S.atend.find(x=>x.id===aid),bt=at&&btnAgendado(at);
+        if(!bt||document.querySelector('#dlg[open]'))return;
+        abrir(`<h2>Agendamento registrado</h2><p>Quer avisar a cliente pelo WhatsApp? A mensagem já vai pronta; você só aperta Enviar.</p><div class="acts"><button type="button" class="btn ghost" data-act="fechar">Agora não</button>${bt.replace('btn ghost sm wa-btn','btn wa-btn').replace('>Avisar agendamento<','>Avisar no WhatsApp<')}</div>`);
+      }catch(_){}
+    },450);
+  }
 }
 /* Agendamento recorrente: cria as próximas ocorrências (sem pagamento) e pula as datas que têm conflito. */
 function datasRepetidas(data,modo,vezes){
