@@ -3996,6 +3996,26 @@ function bloqDia(d){
   const l=(S.bloq||[]).filter(b=>b.data===d).sort((a,b)=>(a.inicio||'').localeCompare(b.inicio||''));
   return l.length?`<div class="list" style="margin-bottom:8px">${l.map(b=>`<div class="item" style="background:var(--line-2)"><div class="grow"><div class="t">Bloqueado · ${b.inicio?esc(b.inicio+' às '+b.fim):'dia inteiro'}</div><div class="muted">${esc(b.profissional||'Todo o salão')}${b.motivo?' · '+esc(b.motivo):''}</div></div>${podeBloq()?`<div class="item-acts"><button class="btn ghost sm" data-act="delBloq" data-id="${esc(b.id)}">Remover</button></div>`:''}</div>`).join('')}</div>`:'';
 }
+function feriadosBR(ano){
+  const a=ano%19,b=Math.floor(ano/100),c=ano%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mes=Math.floor((h+l-7*m+114)/31),dia=((h+l-7*m+114)%31)+1;
+  const pas=new Date(Date.UTC(ano,mes-1,dia)),mv=(n)=>{const x=new Date(pas.getTime()+n*864e5);return x.toISOString().slice(0,10)},fx=(m,d)=>ano+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+  const L=[[fx(1,1),'Ano Novo'],[mv(-48),'Carnaval (segunda)'],[mv(-47),'Carnaval (terça)'],[mv(-2),'Sexta-feira Santa'],[mv(0),'Páscoa'],[fx(4,21),'Tiradentes'],[fx(5,1),'Dia do Trabalho'],[mv(60),'Corpus Christi'],[fx(9,7),'Independência'],[fx(10,12),'Nossa Senhora Aparecida'],[fx(11,2),'Finados'],[fx(11,15),'Proclamação da República'],[fx(11,20),'Consciência Negra'],[fx(12,25),'Natal']];
+  return L.sort((x,y)=>x[0].localeCompare(y[0]));
+}
+function formFeriados(){
+  const h=hoje(),ano=+h.slice(0,4),ja=new Set((S.bloq||[]).filter(b=>!b.profissional&&!b.inicio).map(b=>b.data));
+  const L=[...feriadosBR(ano),...feriadosBR(ano+1)].filter(f=>f[0]>=h);
+  abrir(`<h2>Bloquear feriados</h2><p class="muted">Marque os dias em que o salão fica fechado. O horário fica bloqueado para todo o salão, e você pode remover depois na Agenda. Feriados municipais e estaduais você cadastra em Bloquear horário.</p>
+  <form data-form="feriados"><div class="list" style="max-height:320px;overflow:auto">${L.map(f=>`<label class="chk" style="padding:6px 0"><input type="checkbox" name="f_${f[0]}" ${ja.has(f[0])?'disabled':'checked'}> ${esc(fd(f[0]))} · ${esc(f[1])}${ja.has(f[0])?' <span class="tag">já bloqueado</span>':''}</label>`).join('')}</div>
+  <div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Bloquear marcados</button></div></form>`);
+}
+async function salvarFeriados(d){
+  const nomes={};[...feriadosBR(+hoje().slice(0,4)),...feriadosBR(+hoje().slice(0,4)+1)].forEach(f=>nomes[f[0]]=f[1]);
+  const L=Object.keys(d).filter(k=>/^f_\d{4}-\d{2}-\d{2}$/.test(k)&&d[k]==='on').map(k=>k.slice(2)).filter(x=>nomes[x]).map(x=>({profissional:'',data:x,motivo:nomes[x]}));
+  if(!L.length)throw erroUi('Marque pelo menos um feriado.');
+  const r=await sb.from('bloqueios').insert(L);if(r.error)throw r.error;
+  await recarregar();render();toast(L.length===1?'1 feriado bloqueado.':L.length+' feriados bloqueados.');
+}
 function formBloq(data){
   const profs=listaProfs();
   abrir(`<h2>Bloquear horário</h2><form data-form="bloq">
@@ -4479,7 +4499,7 @@ function telaAgenda(){
   const h=hoje(),ini=addDia(segunda(h),7*(S.agSem||0)),dias=Array.from({length:7},(_,i)=>addDia(ini,i)),am=addDia(h,1);
   const pend=S.atend.filter(a=>a.data===am).sort(byHora),env=enviados();
   const total=S.atend.filter(a=>a.data>=ini&&a.data<=dias[6]).length;
-  return `<div class="bar">${agToggle()}<button class="btn ghost" data-act="agSem" data-id="-1">‹ Anterior</button><button class="btn ghost" data-act="agSem" data-id="0">Esta semana</button><button class="btn ghost" data-act="agSem" data-id="1">Próxima ›</button><button class="btn" data-act="novoAtend" data-data="${h}">Novo atendimento</button>${podeBloq()?`<button class="btn ghost" data-act="novoBloq" data-data="${h}">Bloquear horário</button>`:''}</div>`+
+  return `<div class="bar">${agToggle()}<button class="btn ghost" data-act="agSem" data-id="-1">‹ Anterior</button><button class="btn ghost" data-act="agSem" data-id="0">Esta semana</button><button class="btn ghost" data-act="agSem" data-id="1">Próxima ›</button><button class="btn" data-act="novoAtend" data-data="${h}">Novo atendimento</button>${podeBloq()?`<button class="btn ghost" data-act="novoBloq" data-data="${h}">Bloquear horário</button><button class="btn ghost" data-act="feriados">Feriados</button>`:''}</div>`+
   blocoPedidos()+blocoPendPag()+blocoEspera()+(pend.length?`<div class="panel"><b>Lembretes de amanhã (${pend.length})</b><p class="muted" style="margin:4px 0 12px">Cada botão abre o WhatsApp com a mensagem pronta. Você só aperta Enviar.${pend.filter(a=>env[a.id]).length?` Já enviados: ${pend.filter(a=>env[a.id]).length}.`:''}</p><div class="list">${pend.map(linhaAg).join('')}</div></div>`:'')+
   `<p class="muted num" style="margin:0 0 6px">${fd(ini)} a ${fd(dias[6])} · ${total} ${total===1?'atendimento':'atendimentos'}</p>`+
   dias.map(d=>{const l=S.atendTodos.filter(a=>a.data===d).sort(byHora);
@@ -4923,6 +4943,9 @@ function telaBackup(){
   return `<div class="panel"><p>Os dados ficam guardados na nuvem e aparecem para todas as pessoas que têm login. Aqui você baixa uma cópia em planilha ou em arquivo de backup.</p>
   <div class="row-actions"><button class="btn" data-act="exportXlsx">Baixar planilha Excel (.xlsx)</button><button class="btn ghost" data-act="exportJson">Baixar backup (.json)</button><button class="btn ghost" data-act="exportCsv">Baixar atendimentos (.csv)</button></div>
   <p class="muted" style="font-size:13px">A planilha tem cinco abas: Clientes, Atendimentos, Despesas, Produtos e Fichas.</p></div>
+  <div class="panel"><b>Planilha para o contador</b><p class="muted">Entradas e saídas de um mês, uma linha por lançamento, com a forma de pagamento. Abre no Excel.</p>
+  <label for="ct-m">Mês</label><input id="ct-m" type="month" value="${esc(hoje().slice(0,7))}" max="${esc(hoje().slice(0,7))}">
+  <div class="row-actions" style="margin-top:8px"><button class="btn" data-act="exportContador">Baixar planilha do mês</button></div></div>
   <div class="panel"><b>Importar planilha ou backup</b><p class="muted">Aceita a planilha .xlsx baixada aqui (já editada no Excel ou não) e o backup .json, inclusive de versões anteriores. Linhas com o mesmo ID são atualizadas; linhas novas, com a coluna ID em branco, são adicionadas. Nada é apagado: para excluir um registro, use o botão Excluir no sistema. O estoque atual dos produtos que já existem não muda pela planilha: corrija em Estoque, botão Movimentar, Ajuste. Importar o mesmo arquivo duas vezes não duplica.</p>
   <label for="arquivo">Planilha (.xlsx) ou backup (.json)</label><input id="arquivo" type="file" accept=".xlsx,.json,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
   ${S.prog?`<p class="num" style="margin-top:10px">${esc(S.prog)}</p>`:''}</div>
@@ -4937,6 +4960,25 @@ function salvarArquivo(nome,txt,tipo){
 }
 function exportJson(){
   salvarArquivo(`salao-backup-${hoje()}.json`,JSON.stringify({versao:5,exportadoEm:new Date().toISOString(),clientes:S.clientes,atendimentos:S.atendTodos,despesas:S.gastos,produtos:S.produtos,fichas:S.fichas},null,2),'application/json');
+}
+function exportContador(){
+  const ym=($('ct-m')||{}).value||hoje().slice(0,7);
+  if(!/^\d{4}-\d{2}$/.test(ym))return toast('Escolha o mês.',true);
+  const q=v=>{let t=String(v==null?'':v);if(/^[=+\-@\t\r]/.test(t)&&!/^[+-]?[\d\s().,-]+$/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"'};
+  const num=v=>(Math.round((Number(v)||0)*100)/100).toFixed(2).replace('.',',');
+  const L=[];
+  S.atend.filter(a=>!aberto(a)&&!inativo(a)&&a.pagamento!==CP_PAG&&diaCaixa(a).slice(0,7)===ym&&(Number(a.valor)||0)!==0).forEach(a=>{const c=cli(a.clienteId)||{};L.push([diaCaixa(a),'Entrada','Atendimento',procTxt(a)+(c.nome?' - '+c.nome:''),a.pagamento||'Sem forma informada',a.valor])});
+  (S.vendas||[]).filter(v=>v.status==='ativa'&&v.forma!==CP_PAG&&String(v.data).slice(0,7)===ym).forEach(v=>{const c=cli(v.clienteId)||{};L.push([v.data,'Entrada','Venda de produtos',c.nome||'Venda avulsa',v.forma||'Sem forma informada',v.total])});
+  const dias=new Date(+ym.slice(0,4),+ym.slice(5,7),0).getDate();
+  for(let i=1;i<=dias;i++){const d=ym+'-'+String(i).padStart(2,'0'),r=cpDia(d);r.itens.forEach(x=>L.push([d,x.v>=0?'Entrada':'Saída','Cartão-presente/pacote',(x.c&&x.c.nome)||'Cartão',(x.c&&x.c.forma)||'Sem forma informada',Math.abs(x.v)]))}
+  S.gastos.filter(g=>String(g.data).slice(0,7)===ym).forEach(g=>L.push([g.data,'Saída',g.categoria||'Despesa',g.descricao||'',g.pagamento||'',g.valor]));
+  L.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
+  if(!L.length)return toast('Não há lançamentos neste mês.',true);
+  const ent=L.filter(x=>x[1]==='Entrada').reduce((t,x)=>t+(Number(x[5])||0),0),sai=L.filter(x=>x[1]==='Saída').reduce((t,x)=>t+(Number(x[5])||0),0);
+  const cab=['Data','Tipo','Categoria','Descrição','Forma de pagamento','Valor'];
+  const linhas=L.map(x=>[x[0].split('-').reverse().join('/'),x[1],x[2],x[3],x[4],num(x[5])]);
+  linhas.push([],['','Total de entradas','','','',num(ent)],['','Total de saídas','','','',num(sai)],['','Resultado do mês','','','',num(ent-sai)]);
+  salvarArquivo(`contador-${ym}.csv`,'\ufeff'+[cab.map(q).join(';'),...linhas.map(r=>r.map(q).join(';'))].join('\n'),'text/csv');
 }
 function exportCsv(){
   const q=v=>{let t=String(v==null?'':v);if(/^[=+\-@\t\r]/.test(t)&&!/^[+-]?[\d\s().,-]+$/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"'};
@@ -5300,7 +5342,7 @@ document.addEventListener('click',e=>{
     gwSel:()=>{S.gwSel=id;render()},satPub:()=>{const pub=a.dataset.pub==='1';sb.rpc('satisfacao_publicar',{p_id:id,p_publico:pub}).then(r=>{if(r.error){if(r.error.code==='PGRST202'||r.error.code==='42883')throw erroUi('Rode o arquivo 67-pagina-publica.sql (ou o agendio-TUDO.sql) no Supabase.');throw r.error}const x=(S.satisf||[]).find(y=>y.id===id);if(x)x.publico=pub;render();toast(pub?'Elogio na página de agendamento.':'Elogio tirado da página.')}).catch(x=>toast(falha(x),true))},mpDesconectar:()=>confirmar('Desconectar o recebimento online?','O sinal automático, o link de pagamento e a cobrança do clube deixam de funcionar. Pedidos com sinal pendente continuam, mas a cliente não conseguirá pagar.','Desconectar',async()=>{await chamaApi('mp-conectar',{remover:true});S.onl.mp=false;S.onl.gw='';if(S.agCfg&&S.agCfg.online&&S.agCfg.online.sinal&&S.agCfg.online.sinal.modo==='mp'){const c=Object.assign({},S.agCfg);c.online=Object.assign({},c.online,{sinal:Object.assign({},c.online.sinal,{modo:'nenhum'})});await salvarAgCfg(c)}render();toast('Recebimento online desconectado.')}),
     ocultaPassos:()=>{LS.set('salao_passos_off','1');render();toast('Primeiros passos ocultados. Para ver de novo, use o botão no cartão Agendamento online.')},
     mostraPassos:()=>{LS.set('salao_passos_off','');render()},
-    novoServico:()=>formServico(''),editServico:()=>formServico(id),delServico:()=>removerServico(id).catch(x=>toast(falha(x),true)),novoBloq:()=>formBloq(a.dataset.data),delBloq:()=>confirmar('Remover este bloqueio?','O horário volta a ficar livre.','Remover',async()=>{const r=await sb.from('bloqueios').delete().eq('id',id);if(r.error)throw r.error;await recarregar();toast('Bloqueio removido.')}),
+    novoServico:()=>formServico(''),exportContador:()=>exportContador(),feriados:()=>formFeriados(),editServico:()=>formServico(id),delServico:()=>removerServico(id).catch(x=>toast(falha(x),true)),novoBloq:()=>formBloq(a.dataset.data),delBloq:()=>confirmar('Remover este bloqueio?','O horário volta a ficar livre.','Remover',async()=>{const r=await sb.from('bloqueios').delete().eq('id',id);if(r.error)throw r.error;await recarregar();toast('Bloqueio removido.')}),
     metaProf:()=>formMetaProf(id),diaCol:()=>{const b=S.agDiaCol||hoje();S.agDiaCol=id==='0'?hoje():addDia(b,+id);render()},cobrarLink:()=>cobrarLink(id),balcao:()=>balcaoAbrir(),balcaoSair:()=>balcaoSair(),balcaoChegou:async()=>{const x=S.atendTodos.find(y=>y.id===id),c=x&&cli(x.clienteId);try{await filaMarca(id,'aguardando');toast('Chegada registrada'+(c?': '+c.nome:'')+'.')}catch(e){falha(e)}balcaoAtualiza()},novoAtend:()=>formAtend(null,a.dataset.cliente,a.dataset.data),receber:()=>formReceber(id),agVis:()=>{S.agVis=['mes','lista','fila','dia'].includes(id)?id:'sem';if(id!=='fila')LS.set('salao_ag_vis',S.agVis);render()},filaMarca:()=>filaMarca(id,a.dataset.st),reciboCom:()=>reciboCom(id),etqFiltro:()=>{S.etqFiltro=id||'';render()},galRemover:()=>confirmar('Remover esta foto?','Ela deixa de aparecer na página de agendamento.','Remover',()=>galRemover(id)),agMes:()=>{S.agMes=id==='0'?0:(S.agMes||0)+Number(id);S.agDia=null;render()},agDia:()=>{S.agDia=id;render()},agSem:()=>{S.agSem=id==='0'?0:(S.agSem||0)+Number(id);render()},meta:()=>formMeta(),imprimir:()=>window.print(),editAtend:()=>formAtend(id),delAtend:()=>pedirDelAtend(id),
     abrir:()=>{S.view='clientes';S.sel=id;render();window.scrollTo(0,0)},
     novoVale:()=>formVale(),delVale:()=>confirmar('Excluir este vale?','O valor volta a entrar na comissão a pagar.','Excluir',async()=>{const r=await sb.from('vales').delete().eq('id',id);if(r.error)throw r.error;await recarregar();toast('Vale excluído.')}),
@@ -5418,6 +5460,7 @@ $('dlg').addEventListener('submit',async e=>{
     else if(k==='atend'){const av=avisosAgenda(dados,id);if(av.length&&!window.confirm(av.join('\n')+'\n\nSalvar mesmo assim?'))return;await salvarAtend(id,dados)}
     else if(k==='servico')await salvarServico(id,dados);
     else if(k==='bloq')await salvarBloq(dados);
+    else if(k==='feriados')await salvarFeriados(dados);
     else if(k==='espera')await salvarEspera(dados);
     else if(k==='pacote')await salvarPacote(id,dados);
     else if(k==='clubeplano'){try{await salvarClubePlano(id,dados)}catch(x){if(x&&x.mantem)return;throw x}}
