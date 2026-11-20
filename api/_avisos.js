@@ -62,4 +62,23 @@ async function lembretesClientes(site) {
   }
   return r;
 }
-module.exports = { processar, resumoAdmin, avisarAdmin, lembretesClientes };
+// Parabéns por e-mail no dia do aniversário (o salão liga em Clientes > Aniversário; só vai para quem tem e-mail na ficha). Um por ano.
+async function aniversarios(site) {
+  const r = { enviados: 0, falhas: 0 };
+  if (!E.configurado()) return Object.assign(r, { desligado: true });
+  const lista = await L.rpcServico('cron_aniversarios_email', {});
+  for (const it of (Array.isArray(lista) ? lista : []).slice(0, 100)) {
+    const nome = E.esc(it.cliente || ''), salao = E.esc(it.salao || 'seu salão');
+    const titulo = 'Feliz aniversário' + (it.cliente ? ', ' + it.cliente : '') + '!';
+    const msg = String(it.mensagem || '').trim() || 'Hoje o dia é seu! A equipe do ' + (it.salao || 'salão') + ' deseja um dia lindo.';
+    const corpo = '<p>' + E.esc(msg).replace(/\n/g, '<br>') + '</p>'
+      + (it.mimo ? '<p style="background:#fbeef3;border-radius:10px;padding:12px 14px"><b>Seu mimo:</b> ' + E.esc(it.mimo) + '</p>' : '')
+      + '<p>Para marcar o seu horário, fale com o salão' + (it.whatsapp ? ' pelo WhatsApp ' + E.esc(it.whatsapp) : ' respondendo este e-mail') + '.</p>';
+    const x = await E.enviar({ para: it.email, assunto: titulo + ' - ' + (it.salao || ''), html: E.layout(titulo, corpo, null).replace('porque é responsável por um salão no Agendio', 'porque você é cliente de ' + salao), responder: it.salao_email });
+    if (!x.ok) { r.falhas++; console.error('aniversário falhou:', x.erro); continue; }
+    try { await L.rpcServico('cron_marcar_email', { p_tenant: it.tenant_id, p_tipo: 'aniv_cli', p_chave: it.chave }); } catch (e) { console.error('marcar aniversário:', e.message); }
+    r.enviados++;
+  }
+  return r;
+}
+module.exports = { processar, resumoAdmin, avisarAdmin, lembretesClientes, aniversarios };

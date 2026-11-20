@@ -134,6 +134,12 @@ input,textarea{border-width:1px;border-radius:8px;background:#fffefb}
 var C=window.SALAO_CONFIG||{},A=document.getElementById('app');
 var SLUG=(function(){var m=/\/c\/([^\/?#]+)/.exec(location.pathname);return m?decodeURIComponent(m[1]).toLowerCase():''})();
 var TOKEN=(new URLSearchParams(location.search).get('k')||'').toLowerCase();
+function selos(p,n){
+  if(n>20||n<1)return '<div class="barra" role="img" aria-label="'+p+' de '+n+' visitas"><i style="width:'+Math.round(p/Math.max(n,1)*100)+'%"></i></div>';
+  var h='<div role="img" aria-label="'+p+' de '+n+' visitas" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">';
+  for(var i=1;i<=n;i++){var on=i<=p;h+='<span style="width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:15px;font-weight:700;'+(on?'background:var(--ac,#96562b);color:#fff;border:2px solid var(--ac,#96562b)':'border:2px dashed #bbb;color:#888')+'">'+(i===n?'\u2605':(on?'\u2713':i))+'</span>'}
+  return h+'</div>';
+}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function brl(v){return Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
 function cor(hex){
@@ -175,7 +181,7 @@ function tela(d){
     '<div class="acoes"><a class="btn1" href="/a/'+encodeURIComponent(d.slug||SLUG)+'">Agendar um horário</a></div></section>';
   if(d.cashback){h+='<section><h2>Cashback</h2><div class="cartao"><div class="num">'+esc(brl(d.cashback.saldo))+'</div><div class="d">Seu saldo para usar no salão. A cada compra ou atendimento pago você ganha '+esc(String(d.cashback.percentual).replace('.',','))+'% de volta. Avise na hora de pagar que quer usar.</div></div></section>'}
   if((d.pacotes||[]).length){h+='<section><h2>Meus pacotes</h2>'+d.pacotes.map(function(p){var feitas=p.total-p.restantes;return '<div class="cartao"><div class="t">'+esc(p.nome)+'</div><div class="d">'+esc(p.restantes)+' de '+esc(p.total)+' sessões restantes'+(p.servico?' · '+esc(p.servico):'')+(p.validade?' · vale até '+esc(dmy(p.validade)):'')+'</div><div class="barra" role="img" aria-label="'+esc(feitas)+' de '+esc(p.total)+' sessões usadas"><i style="width:'+Math.round(feitas/p.total*100)+'%"></i></div></div>'}).join('')+'</section>'}
-  if(d.fidelidade){var f=d.fidelidade;h+='<section><h2>Fidelidade</h2><div class="cartao"><div class="t">'+esc(f.premio)+'</div><div class="d">'+esc(f.progresso)+' de '+esc(f.visitas)+' visitas para o próximo prêmio'+(f.disponiveis>0?'. <b>Você tem '+esc(f.disponiveis)+(f.disponiveis===1?' prêmio disponível!':' prêmios disponíveis!')+'</b> Avise na sua próxima visita.':'')+'</div><div class="barra" role="img" aria-label="'+esc(f.progresso)+' de '+esc(f.visitas)+' visitas"><i style="width:'+Math.round(f.progresso/f.visitas*100)+'%"></i></div></div></section>'}
+  if(d.fidelidade){var f=d.fidelidade;h+='<section><h2>Fidelidade</h2><div class="cartao"><div class="t">'+esc(f.premio)+'</div><div class="d">'+esc(f.progresso)+' de '+esc(f.visitas)+' visitas para o próximo prêmio'+(f.disponiveis>0?'. <b>Você tem '+esc(f.disponiveis)+(f.disponiveis===1?' prêmio disponível!':' prêmios disponíveis!')+'</b> Avise na sua próxima visita.':'')+'</div>'+selos(Number(f.progresso)||0,Number(f.visitas)||0)+'</div></section>'}
   if((d.historico||[]).length){h+='<section><h2>Últimas visitas</h2><div class="cartao">'+d.historico.map(function(x){return '<div class="hist"><span>'+esc(x.servico)+'</span><span>'+esc(dmy(x.data))+'</span></div>'}).join('')+'</div></section>'}
   var z=zap(d.whatsapp,'Oi! Aqui é '+(d.nome||'')+'.');
   if(z)h+='<div class="acoes" style="justify-content:center;margin-top:26px"><a class="btn2" href="'+esc(z)+'" target="_blank" rel="noopener noreferrer">Falar com o salão no WhatsApp</a></div>';

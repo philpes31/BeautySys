@@ -707,6 +707,7 @@ async function iniciar(){
   S.iniciado=true;
   if(!(await checaMfa())){S.iniciado=false;return}
   await carregarCtx();
+  if(temSalao()){try{sb.rpc('registrar_acesso').then(()=>{},()=>{})}catch(_){}}
   if(!temSalao()&&ehAdmin()){S.view='plataforma'}
   render();
   carregarPend();
@@ -1390,9 +1391,16 @@ async function carregarEquipe(){
   try{
     const [m,c]=await Promise.all([sb.from('tenant_users').select('*').order('criado_em'),NV('equipe')!=='nenhum'?sb.from('convites').select('*').is('usado_em',null).order('criado_em'):{data:[]}]);
     if(m.error)throw m.error;
-    S.eq={ok:true,membros:m.data||[],convites:(c&&c.data)||[]};
-  }catch(e){S.eq={ok:true,membros:[],convites:[],erro:true}}
+    S.eq={ok:true,membros:m.data||[],convites:(c&&c.data)||[],ult:{},logins:[]};
+    if(S.ctx&&S.ctx.role==='proprietario'){try{const [u,l]=await Promise.all([sb.rpc('ultimos_acessos'),sb.rpc('acessos_equipe',{p_limite:40})]);if(!u.error)(u.data||[]).forEach(x=>{S.eq.ult[x.user_id]=x.quando});if(!l.error)S.eq.logins=l.data||[]}catch(_){}}
+  }catch(e){S.eq={ok:true,membros:[],convites:[],ult:{},logins:[],erro:true}}
   if(S.view==='equipe')render();
+}
+function dhTxt(v){const q=new Date(v);return isNaN(q)?'':q.toLocaleDateString('pt-BR')+' às '+q.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
+function blocoLogins(){
+  if(!S.ctx||S.ctx.role!=='proprietario'||!S.eq||!S.eq.ok)return '';
+  const l=S.eq.logins||[];
+  return `<h3 style="margin:22px 0 8px;font-size:15px">Últimos acessos ao sistema</h3>`+(l.length?'<div class="list" style="max-height:320px;overflow:auto">'+l.map(x=>`<div class="item"><div class="grow"><div class="t">${esc(x.quem)}</div></div><div class="side muted">${esc(dhTxt(x.quando))}</div></div>`).join('')+'</div><p class="muted" style="font-size:12px">Um registro por entrada (a cada 30 minutos no máximo). Guardamos por 90 dias.</p>':'<p class="muted">Os acessos começam a aparecer a partir de agora.</p>');
 }
 function telaEquipe(){
   if(!S.eq.ok)return '<p class="muted">Carregando…</p>';
@@ -1400,9 +1408,9 @@ function telaEquipe(){
   const dono=S.ctx&&S.ctx.role==='proprietario',pode=NV('equipe')==='escrita';
   const eu=S.sessao&&S.sessao.user&&S.sessao.user.id;
   const uso=pl?`<p class="muted" style="margin:0 0 14px">Plano ${esc(pl.nome)}: ${ativos}${pend?` (+${pend} convite${pend>1?'s':''})`:''} de ${pl.max_usuarios} usuários.</p>`:'';
-  const lm=S.eq.membros.map(m=>`<div class="item${dono?' click':''}" ${dono?`tabindex="0" role="button" data-act="editMembro" data-id="${esc(m.user_id)}"`:''}>${avatar(m.nome||m.email)}<div class="grow"><div class="t">${esc(m.nome||m.email||'Sem nome')}${m.user_id===eu?' <span class="muted">(você)</span>':''}</div><div class="muted">${esc(m.email||'')}${m.profissional_nome?' · atende como '+esc(m.profissional_nome):''}</div></div><div class="side"><span class="tag">${esc(PAPEIS[m.role]||m.role)}</span>${m.ativo?'':' <span class="tag late">Desativado</span>'}${Object.keys(m.permissoes||{}).length?' <span class="tag">Permissões ajustadas</span>':''}</div></div>`).join('');
+  const lm=S.eq.membros.map(m=>`<div class="item${dono?' click':''}" ${dono?`tabindex="0" role="button" data-act="editMembro" data-id="${esc(m.user_id)}"`:''}>${avatar(m.nome||m.email)}<div class="grow"><div class="t">${esc(m.nome||m.email||'Sem nome')}${m.user_id===eu?' <span class="muted">(você)</span>':''}</div><div class="muted">${esc(m.email||'')}${m.profissional_nome?' · atende como '+esc(m.profissional_nome):''}</div>${dono?`<div class="muted" style="font-size:12px">${S.eq.ult&&S.eq.ult[m.user_id]?'Último acesso: '+esc(dhTxt(S.eq.ult[m.user_id])):'Ainda sem acesso registrado'}</div>`:''}</div><div class="side"><span class="tag">${esc(PAPEIS[m.role]||m.role)}</span>${m.ativo?'':' <span class="tag late">Desativado</span>'}${Object.keys(m.permissoes||{}).length?' <span class="tag">Permissões ajustadas</span>':''}</div></div>`).join('');
   const lc=S.eq.convites.length?`<h3 style="margin:22px 0 8px;font-size:15px">Convites pendentes</h3><div class="list">`+S.eq.convites.map(c=>{const venc=new Date(c.expira_em)<new Date();return `<div class="item"><div class="grow"><div class="t">${esc(c.nome||c.email)}</div><div class="muted">${esc(c.email)} · ${esc(PAPEIS[c.role]||c.role)}${venc?' · vencido':''}</div></div>${pode?`<button class="btn ghost sm" data-act="cancelaConvite" data-id="${esc(c.id)}">Cancelar</button>`:''}</div>`}).join('')+'</div>':'';
-  return `<div class="bar"><span class="muted grow">${dono?'Toque em uma pessoa para mudar o perfil e as permissões.':'Somente o proprietário altera a equipe.'}</span>${pode?'<button class="btn" data-act="novoConvite">Convidar pessoa</button>':''}</div>${uso}<div class="list">${lm}</div>${lc}`;
+  return `<div class="bar"><span class="muted grow">${dono?'Toque em uma pessoa para mudar o perfil e as permissões.':'Somente o proprietário altera a equipe.'}</span>${pode?'<button class="btn" data-act="novoConvite">Convidar pessoa</button>':''}</div>${uso}<div class="list">${lm}</div>${lc}${blocoLogins()}`;
 }
 function formConvite(){
   abrir(`<h2>Convidar pessoa</h2><form data-form="convite"><p class="muted">A pessoa cria a conta no site com este mesmo e-mail e entra direto no seu salão.</p>
@@ -2333,7 +2341,7 @@ function barraEtiquetas(){
   return `<div class="etqs filtro" role="group" aria-label="Filtrar por etiqueta"><button type="button" class="etq ${S.etqFiltro?'':'on'}" data-act="etqFiltro" data-id="" aria-pressed="${S.etqFiltro?'false':'true'}">Todas</button>${L.map(t=>`<button type="button" class="etq ${S.etqFiltro&&S.etqFiltro.toLowerCase()===t.toLowerCase()?'on':''}" data-act="etqFiltro" data-id="${esc(t)}" aria-pressed="${S.etqFiltro&&S.etqFiltro.toLowerCase()===t.toLowerCase()?'true':'false'}">${esc(t)}</button>`).join('')}</div>`;
 }
 function lista(){
-  return `<div class="bar"><input id="busca" type="search" placeholder="Buscar por nome ou telefone" value="${esc(S.busca)}" autocomplete="off" aria-label="Buscar cliente">${!S.legado&&NV('config')==='escrita'?'<button class="btn ghost" data-act="fidConfig">Fidelidade</button>':''}${!S.legado&&NV('clientes')==='escrita'?'<button class="btn ghost" data-act="impAbrir">Importar planilha</button>':''}<button class="btn" data-act="novaCliente">Nova cliente</button></div>${avisoRepetidas()}${blocoIndicacoes()}${barraEtiquetas()}<div id="lista">${itensClientes()}</div>`;
+  return `<div class="bar"><input id="busca" type="search" placeholder="Buscar por nome ou telefone" value="${esc(S.busca)}" autocomplete="off" aria-label="Buscar cliente">${!S.legado&&NV('config')==='escrita'?'<button class="btn ghost" data-act="fidConfig">Fidelidade</button><button class="btn ghost" data-act="aniConfig">Aniversário</button>':''}${!S.legado&&NV('clientes')==='escrita'?'<button class="btn ghost" data-act="impAbrir">Importar planilha</button>':''}<button class="btn" data-act="novaCliente">Nova cliente</button></div>${avisoRepetidas()}${blocoIndicacoes()}${barraEtiquetas()}<div id="lista">${itensClientes()}</div>`;
 }
 const indicouLista=id=>S.clientes.filter(x=>x.indicadaPor===id);
 function blocoIndicacoes(){
@@ -2736,13 +2744,34 @@ function fidStatus(c){
   const ganhos=Math.floor(v/f.visitas),usados=(S.resgates||[]).filter(r=>r.clienteId===c.id).length;
   return {f,visitas:v,faltam:f.visitas-(v%f.visitas),prog:v%f.visitas,disp:Math.max(0,ganhos-usados),usados};
 }
+function selosHtml(p,n){
+  if(n>20)return '';
+  let h='<div class="selos" role="img" aria-label="'+p+' de '+n+' visitas" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">';
+  for(let i=1;i<=n;i++){const on=i<=p,fim=i===n;h+='<span style="width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:15px;font-weight:700;'+(on?'background:var(--accent);color:var(--accent-ink,#fff);border:2px solid var(--accent)':'border:2px dashed var(--line);color:var(--muted)')+'">'+(fim?'★':(on?'✓':i))+'</span>'}
+  return h+'</div>';
+}
 function blocoFidelidade(c){
   const f=fidCfg();if(!f.ativo||S.legado)return '';
   const st=fidStatus(c),pode=NV('clientes')==='escrita';
   return `<div class="panel"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><b>Fidelidade</b>${st.disp>0?`<span class="tag ok">${st.disp} ${st.disp===1?'prêmio disponível':'prêmios disponíveis'}</span>`:''}</div>
   <p class="muted num" style="margin:6px 0 8px">${st.prog} de ${f.visitas} visitas para o próximo prêmio: ${esc(f.premio)}${st.usados?` · já resgatou ${st.usados}`:''}</p>
-  <div class="barv" role="progressbar" aria-valuemin="0" aria-valuemax="${f.visitas}" aria-valuenow="${st.prog}" aria-label="Visitas para o próximo prêmio"><i style="width:${Math.round(st.prog/f.visitas*100)}%"></i></div>
+  ${selosHtml(st.prog,f.visitas)||`<div class="barv" role="progressbar" aria-valuemin="0" aria-valuemax="${f.visitas}" aria-valuenow="${st.prog}" aria-label="Visitas para o próximo prêmio"><i style="width:${Math.round(st.prog/f.visitas*100)}%"></i></div>`}
   ${st.disp>0&&pode?`<div class="row-actions" style="margin-top:12px"><button class="btn sm" data-act="fidResgatar" data-id="${esc(c.id)}">Resgatar prêmio</button></div>`:''}</div>`;
+}
+const anivCfg=()=>{const a=(S.agCfg&&S.agCfg.aniversario)||{};return {ativo:!!a.ativo,mensagem:String(a.mensagem||''),mimo:String(a.mimo||'')}};
+function formAniv(){
+  const a=anivCfg(),q=S.clientes.filter(c=>c.nascimento&&c.email).length;
+  abrir(`<h2>Aniversário automático</h2><form data-form="aniversario">
+  <p class="muted" style="margin-top:0">No dia do aniversário, o sistema envia um e-mail de parabéns para a cliente, sozinho, uma vez por ano. Só vai para quem tem <b>nascimento</b> e <b>e-mail</b> na ficha (hoje: ${q} cliente${q===1?'':'s'}).</p>
+  <label class="chk"><input type="checkbox" name="ativo" ${a.ativo?'checked':''}> Enviar parabéns automático</label>
+  <label for="an-m">Mensagem (opcional)</label><textarea id="an-m" name="mensagem" rows="3" maxlength="400" placeholder="Hoje o dia é seu! Vem comemorar com a gente.">${esc(a.mensagem)}</textarea>
+  <label for="an-b">Mimo (opcional)</label><input id="an-b" name="mimo" maxlength="160" value="${esc(a.mimo)}" placeholder="Ex.: 10% de desconto em qualquer serviço neste mês">
+  <div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Salvar</button></div></form>`);
+}
+async function salvarAniv(d){
+  const ativo=d.ativo==='on',mensagem=String(d.mensagem||'').trim().slice(0,400),mimo=String(d.mimo||'').trim().slice(0,160);
+  await salvarAgCfg(Object.assign({},S.agCfg,{aniversario:{ativo,mensagem,mimo}}));
+  $('dlg').close();render();toast(ativo?'Aniversário automático ligado.':'Aniversário automático desligado.');
 }
 function formFid(){
   const f=fidCfg();
@@ -5143,7 +5172,7 @@ document.addEventListener('click',e=>{
     metaProf:()=>formMetaProf(id),diaCol:()=>{const b=S.agDiaCol||hoje();S.agDiaCol=id==='0'?hoje():addDia(b,+id);render()},cobrarLink:()=>cobrarLink(id),balcao:()=>balcaoAbrir(),balcaoSair:()=>balcaoSair(),balcaoChegou:async()=>{const x=S.atendTodos.find(y=>y.id===id),c=x&&cli(x.clienteId);try{await filaMarca(id,'aguardando');toast('Chegada registrada'+(c?': '+c.nome:'')+'.')}catch(e){falha(e)}balcaoAtualiza()},novoAtend:()=>formAtend(null,a.dataset.cliente,a.dataset.data),receber:()=>formReceber(id),agVis:()=>{S.agVis=['mes','lista','fila','dia'].includes(id)?id:'sem';if(id!=='fila')LS.set('salao_ag_vis',S.agVis);render()},filaMarca:()=>filaMarca(id,a.dataset.st),reciboCom:()=>reciboCom(id),etqFiltro:()=>{S.etqFiltro=id||'';render()},galRemover:()=>confirmar('Remover esta foto?','Ela deixa de aparecer na página de agendamento.','Remover',()=>galRemover(id)),agMes:()=>{S.agMes=id==='0'?0:(S.agMes||0)+Number(id);S.agDia=null;render()},agDia:()=>{S.agDia=id;render()},agSem:()=>{S.agSem=id==='0'?0:(S.agSem||0)+Number(id);render()},meta:()=>formMeta(),imprimir:()=>window.print(),editAtend:()=>formAtend(id),delAtend:()=>pedirDelAtend(id),
     abrir:()=>{S.view='clientes';S.sel=id;render();window.scrollTo(0,0)},
     novoVale:()=>formVale(),delVale:()=>confirmar('Excluir este vale?','O valor volta a entrar na comissão a pagar.','Excluir',async()=>{const r=await sb.from('vales').delete().eq('id',id);if(r.error)throw r.error;await recarregar();toast('Vale excluído.')}),
-    relAba:()=>{S.relAba=id;render()},indPer:()=>{S.indPer=Number(id);render()},calLink:()=>{calLink(a.dataset.prof||'',false).catch(x=>toast(falha(x),true))},calRenovar:()=>{const prof2=a.dataset.prof||'';confirmar('Gerar um link novo?','O link atual deixa de funcionar. Quem assinou precisa assinar de novo com o link novo.','Gerar link novo',()=>calLink(prof2,true).then(()=>{throw {mantem:true}},x=>{toast(falha(x),true)}))},vgDias:()=>{S.vgDias=Number(id);render()},vgAviso:()=>vagasAviso(id),vgZap:()=>vgZap(id),vgCopiar:()=>vgCopiar(),caixaFechar:caixaFechar,diaRel:()=>{S.diaRel=id==='0'?hoje():addDia(S.diaRel||hoje(),Number(id));render()},juntarVer:()=>dlgRepetidas(),juntarManter:()=>confirmar('Juntar estes cadastros?','Os atendimentos das outras passam para a cliente escolhida e o cadastro repetido é removido. Não dá para desfazer.','Juntar',()=>juntarClientes(id,String(a.dataset.outras||'').split(',').filter(Boolean))),novoPacote:()=>formPacote(a.dataset.cliente),usarSessao:()=>{usarSessao(id).catch(x=>toast(falha(x),true))},encerrarPacote:()=>confirmar('Encerrar este pacote?','As sessões que sobraram deixam de poder ser usadas.','Encerrar',()=>encerrarPacote(id)),fidConfig:()=>formFid(),fidResgatar:()=>confirmar('Resgatar o prêmio?','Isso registra que a cliente já recebeu o prêmio.','Resgatar',()=>resgatarPremio(id)),novaEspera:()=>formEspera(),esAvisada:()=>{esMarcar(id,'avisada').catch(x=>toast(falha(x),true))},esRemover:()=>confirmar('Remover da lista de espera?','A cliente deixa de aparecer na lista.','Remover',()=>esMarcar(id,'remover')),retDias:()=>{S.retDias=Number(id)||60;LS.set('salao_ret_dias',String(S.retDias));render()},retChamei:()=>{const c=retContatos();c[id]=hoje();LS.set('salao_ret_contato',JSON.stringify(c));setTimeout(render,50)},mais:()=>{S.lim[id]=(S.lim[id]||100)+200;render()},voltar:()=>{S.sel=null;render()},estAba:()=>{S.estAba=id;render()},novoProd:()=>formProd(),editProd:()=>formProd(id),delProd:()=>pedirDelProd(id),movProd:()=>formMov(id),histProd:()=>histProd(id),novaFicha:()=>formFicha(id),editFicha:()=>formFicha(null,id),delFicha:()=>pedirDelFicha(id),exportJson,exportCsv,exportXlsx,novaDesp:()=>formDesp(),editDesp:()=>formDesp(id),delDesp:()=>pedirDelDesp(id),fechar:()=>$('dlg').close(),
+    relAba:()=>{S.relAba=id;render()},indPer:()=>{S.indPer=Number(id);render()},calLink:()=>{calLink(a.dataset.prof||'',false).catch(x=>toast(falha(x),true))},calRenovar:()=>{const prof2=a.dataset.prof||'';confirmar('Gerar um link novo?','O link atual deixa de funcionar. Quem assinou precisa assinar de novo com o link novo.','Gerar link novo',()=>calLink(prof2,true).then(()=>{throw {mantem:true}},x=>{toast(falha(x),true)}))},vgDias:()=>{S.vgDias=Number(id);render()},vgAviso:()=>vagasAviso(id),vgZap:()=>vgZap(id),vgCopiar:()=>vgCopiar(),caixaFechar:caixaFechar,diaRel:()=>{S.diaRel=id==='0'?hoje():addDia(S.diaRel||hoje(),Number(id));render()},juntarVer:()=>dlgRepetidas(),juntarManter:()=>confirmar('Juntar estes cadastros?','Os atendimentos das outras passam para a cliente escolhida e o cadastro repetido é removido. Não dá para desfazer.','Juntar',()=>juntarClientes(id,String(a.dataset.outras||'').split(',').filter(Boolean))),novoPacote:()=>formPacote(a.dataset.cliente),usarSessao:()=>{usarSessao(id).catch(x=>toast(falha(x),true))},encerrarPacote:()=>confirmar('Encerrar este pacote?','As sessões que sobraram deixam de poder ser usadas.','Encerrar',()=>encerrarPacote(id)),fidConfig:()=>formFid(),aniConfig:()=>formAniv(),fidResgatar:()=>confirmar('Resgatar o prêmio?','Isso registra que a cliente já recebeu o prêmio.','Resgatar',()=>resgatarPremio(id)),novaEspera:()=>formEspera(),esAvisada:()=>{esMarcar(id,'avisada').catch(x=>toast(falha(x),true))},esRemover:()=>confirmar('Remover da lista de espera?','A cliente deixa de aparecer na lista.','Remover',()=>esMarcar(id,'remover')),retDias:()=>{S.retDias=Number(id)||60;LS.set('salao_ret_dias',String(S.retDias));render()},retChamei:()=>{const c=retContatos();c[id]=hoje();LS.set('salao_ret_contato',JSON.stringify(c));setTimeout(render,50)},mais:()=>{S.lim[id]=(S.lim[id]||100)+200;render()},voltar:()=>{S.sel=null;render()},estAba:()=>{S.estAba=id;render()},novoProd:()=>formProd(),editProd:()=>formProd(id),delProd:()=>pedirDelProd(id),movProd:()=>formMov(id),histProd:()=>histProd(id),novaFicha:()=>formFicha(id),editFicha:()=>formFicha(null,id),delFicha:()=>pedirDelFicha(id),exportJson,exportCsv,exportXlsx,novaDesp:()=>formDesp(),editDesp:()=>formDesp(id),delDesp:()=>pedirDelDesp(id),fechar:()=>$('dlg').close(),
     recarregar:()=>{S.erro='';render();recarregar()},
     tentarCtx:()=>{parar();iniciar()},
     siteRecarrega:()=>{S.pl.siteErro=false;S.pl.site=null;render();carregarSite()},siteFaqAdd:()=>{lerSiteDom();S.pl.site.faq.push({p:'',r:''});render();const q=document.querySelectorAll('[data-fq=p]');if(q.length)q[q.length-1].focus()},siteFaqDel:()=>{lerSiteDom();S.pl.site.faq.splice(Number(id),1);render()},siteFaqPadrao:()=>{lerSiteDom();S.pl.site.faq=SITE_FAQ.map(x=>({p:x.p,r:x.r}));render()},siteRestaurar:()=>confirmar('Voltar o site aos textos padrão?','Os textos, o contato, a faixa de promoção e as perguntas que você escreveu serão apagados. Os planos continuam vindo da aba Planos.','Restaurar',async()=>{const r=await sb.rpc('plataforma_salvar_site',{p:{}});if(r.error)throw r.error;S.pl.site=null;await carregarSite();toast('Site restaurado.')}),
@@ -5259,6 +5288,7 @@ $('dlg').addEventListener('submit',async e=>{
     else if(k==='clubeassinar')await salvarClubeAssinar(id,dados);
     else if(k==='clubepagar')await salvarClubePagar(id,dados);
     else if(k==='fidelidade')await salvarFid(dados);
+    else if(k==='aniversario')await salvarAniv(dados);
     else if(k==='vale')await salvarVale(dados);
     else if(k==='anamnese')await salvarAnamnese(id,dados);
     else if(k==='foto')await salvarFoto(id,dados);

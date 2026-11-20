@@ -34,7 +34,9 @@ module.exports = async (req, res) => {
     try { resumo = await A.resumoAdmin(L.siteUrl(req)); } catch (e) { console.error('cron resumo:', e.message); }
     let lembEmail = null;
     try { lembEmail = await A.lembretesClientes(L.siteUrl(req)); } catch (e) { console.error('cron lembretes e-mail:', e.message); }
-    return L.json(res, 200, { ok: true, lembretes_email: lembEmail, emails, resumo_admin: resumo, situacoes, cobrancas_geradas: geradas, saloes_bloqueados: bloqueados, cobrancas_mensagens: msgsCobradas, sinais_expirados: sinais, lembretes_na_fila: lembretes, avisos_celular: push, espera_removida: espera, whatsapp, tokens_whatsapp: tokens, relatorios_mensais: relatorios, copias_semanais: copias });
+    let anivEmail = null;
+    try { anivEmail = await A.aniversarios(L.siteUrl(req)); } catch (e) { console.error('cron aniversários e-mail:', e.message); }
+    return L.json(res, 200, { ok: true, lembretes_email: lembEmail, aniversarios_email: anivEmail, emails, resumo_admin: resumo, situacoes, cobrancas_geradas: geradas, saloes_bloqueados: bloqueados, cobrancas_mensagens: msgsCobradas, sinais_expirados: sinais, lembretes_na_fila: lembretes, avisos_celular: push, espera_removida: espera, whatsapp, tokens_whatsapp: tokens, relatorios_mensais: relatorios, copias_semanais: copias });
   } catch (e) {
     console.error('cron:', e.message);
     return L.json(res, 500, { erro: 'Falha na rotina diária.' });
