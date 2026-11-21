@@ -257,7 +257,8 @@ dialog{background:var(--surface);color:var(--ink);border:1px solid var(--line);b
 .atx form,.atx{position:relative}
 .atx-foot{position:sticky;bottom:-24px;margin:16px -24px -24px;padding:12px 24px 24px;background:var(--surface);border-top:1px solid var(--line);display:flex;align-items:center;gap:10px;z-index:2}
 .atx-tot{flex:1;min-width:0}.atx-tot small{display:block;color:var(--muted);font-size:12px}.atx-tot b{font-size:20px}
-@media (max-width:700px){.atx-foot{bottom:-18px;margin:16px -18px -18px;padding:12px 18px calc(18px + env(safe-area-inset-bottom,0px))}.atx-horas{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:700px){.atx-horas{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:640px){.atx-foot{bottom:calc(-18px - env(safe-area-inset-bottom,0px));margin:16px -18px calc(-18px - env(safe-area-inset-bottom,0px));padding:12px 18px calc(18px + env(safe-area-inset-bottom,0px))}dialog{overflow-x:hidden;overscroll-behavior:contain;touch-action:pan-y}dialog:has(form.atx){height:92dvh}}
 dialog::backdrop{background:rgba(26,12,20,.58);backdrop-filter:blur(2px)}
 dialog h2{margin-top:0;font-size:28px}
 .pg-abas{display:flex;gap:6px;margin:0 0 14px;border-bottom:1px solid var(--line)}
