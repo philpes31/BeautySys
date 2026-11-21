@@ -680,7 +680,7 @@ const rowC=r=>({email:r.email||'',id:r.id,nome:r.nome||'',telefone:r.telefone||'
 const STATUS_OK=['agendado','confirmado','cancelado','faltou'],STATUS_ROT={agendado:'Agendado',confirmado:'Confirmado',cancelado:'Cancelou',faltou:'Faltou'};
 const inativo=a=>a.status==='cancelado'||a.status==='faltou';
 const procTxt=a=>(a.procedimento||'')+(a.procedimento2?' + '+a.procedimento2:'');
-const rowA=r=>({gorjeta:Number(r.gorjeta)||0,sala:r.sala||'',fila:r.fila||'',filaEm:r.fila_em||'',token:r.token_cliente||'',cancCli:!!r.cancelado_pela_cliente,remarcadoEm:r.remarcado_em||'',id:r.id,clienteId:r.cliente_id,data:r.data,procedimento:r.procedimento||'',procedimento2:r.procedimento2||'',procTxt:(r.procedimento||'')+(r.procedimento2?' + '+r.procedimento2:''),profissional:r.profissional||'',
+const rowA=r=>({taxaAg:Number(r.taxa_valor)||0,taxaPaga:!!r.taxa_paga,gorjeta:Number(r.gorjeta)||0,sala:r.sala||'',fila:r.fila||'',filaEm:r.fila_em||'',token:r.token_cliente||'',cancCli:!!r.cancelado_pela_cliente,remarcadoEm:r.remarcado_em||'',id:r.id,clienteId:r.cliente_id,data:r.data,procedimento:r.procedimento||'',procedimento2:r.procedimento2||'',procTxt:(r.procedimento||'')+(r.procedimento2?' + '+r.procedimento2:''),profissional:r.profissional||'',
   hora:String(r.hora||'').slice(0,5),valor:Number(r.valor)||0,pagamento:r.pagamento||'',parcelas:PARC(r.parcelas),gastoProdutos:Number(r.gasto_produtos)||0,taxaMaquina:Number(r.taxa_maquina)||0,retorno:r.retorno||'',obs:r.obs||'',duracao:Math.min(720,Math.max(5,Number(r.duracao)||60)),status:STATUS_OK.includes(r.status)?r.status:'agendado',valor2:Math.max(0,Number(r.valor2)||0),pago:r.pago!==false,pagoEm:r.pago_em||''});
 const CATS=['Anúncio Instagram','Água','Internet','Produtos de limpeza','Luz','Manutenção','Aluguel','Condomínio','Outros'];
 const rowD=r=>({id:r.id,data:r.data,categoria:r.categoria||'Outros',descricao:r.descricao||'',valor:Number(r.valor)||0});
@@ -3271,6 +3271,7 @@ function formAtend(id,clienteId,data){
   const profSel=a.profissional||profPadrao(),parcSel=PARC(a.parcelas),credito=a.pagamento==='Cartão de crédito',cartao=credito||a.pagamento==='Cartão de débito';
   const pags=['Pix','Dinheiro','Cartão de débito','Cartão de crédito','Outro'];if(a.pagamento===FIADO)pags.push(FIADO);if(a.pagamento===CP_PAG)pags.push(CP_PAG);
   const tem2=!!a.procedimento2,v2=Number(a.valor2)||0,v1=a.valor===undefined||a.valor===''?'':Math.max(0,(Number(a.valor)||0)-v2),pagoSel=id?(a.pago!==false&&!isFiado(a)):String(a.data||hoje())<=hoje();
+  const taxaSt=a.taxaAg>0?(a.taxaPaga?'paga':'pend'):'nao',taxaVal=a.taxaAg>0?a.taxaAg:'';
   const cls=[...S.clientes].sort((x,y)=>(x.nome||'').localeCompare(y.nome||'','pt-BR'));
   const pf=cat.length?cat:procs.map(n=>({nome:n,duracao:0,preco:0}));
   [a.procedimento,a.procedimento2].forEach(n=>{if(n&&!pf.some(x=>x.nome===n))pf.push({nome:n,duracao:0,preco:0})});
@@ -3298,6 +3299,10 @@ function formAtend(id,clienteId,data){
   <select id="a-prof" name="profissional" class="atx-oculto" tabindex="-1" aria-hidden="true">${profs.map(p=>`<option value="${esc(p)}" ${p===profSel?'selected':''}>${esc(p)}</option>`).join('')}</select>
   <div class="chips" id="atx-profs" role="group" aria-label="Profissional"></div>
   <h3 class="atx-h"><i>5</i> Pagamento</h3>
+  ${S.semTaxaAg?'':`<div class="panel" style="margin:0 0 12px"><b>Taxa de agendamento</b>
+    <input type="hidden" id="a-taxag" name="taxa_status" value="${taxaSt}">
+    <div class="atx-seg" id="atx-taxa" role="group" aria-label="Taxa de agendamento" style="grid-template-columns:repeat(3,1fr);margin-top:8px"><button type="button" data-t="nao" aria-pressed="${taxaSt==='nao'}">Sem taxa</button><button type="button" data-t="pend" aria-pressed="${taxaSt==='pend'}">Falta pagar</button><button type="button" data-t="paga" aria-pressed="${taxaSt==='paga'}">Paga</button></div>
+    <div id="a-taxagv-wrap" ${taxaSt==='nao'?'hidden':''} style="margin-top:8px"><label for="a-taxagv">Valor da taxa (R$)</label><input id="a-taxagv" name="taxa_ag_valor" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(taxaVal||'')}"></div></div>`}
   <select id="a-pago" name="pago" class="atx-oculto" tabindex="-1" aria-hidden="true"><option value="1" ${pagoSel?'selected':''}>Sim, já foi pago</option><option value="0" ${pagoSel?'':'selected'}>Ainda não pago</option></select>
   <div class="atx-seg" id="atx-pago" role="group" aria-label="Pagamento"><button type="button" data-v="1" aria-pressed="${pagoSel}">Já foi pago</button><button type="button" data-v="0" aria-pressed="${!pagoSel}">Pagar depois</button></div>
   <div id="a-pag-wrap" ${pagoSel?'':'hidden'}>
@@ -3409,6 +3414,7 @@ function atUi(){
       sp.value=cur[0]||'';if(sp2)sp2.value=cur[1]||'';
       ch(sp);setTimeout(tudo,0);return}
     if(b.dataset.prof!==undefined){pf.value=b.dataset.prof;ch(pf);pProfs();pHoras();return}
+    if(b.closest('#atx-taxa')){const h=g('a-taxag');h.value=b.dataset.t;[...g('atx-taxa').children].forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.t===h.value)));g('a-taxagv-wrap').hidden=h.value==='nao';const iv=g('a-taxagv');if(h.value!=='nao'&&!(Number(iv.value)>0)){const c=Number(String((msgsSalvas()._taxa)||'').replace(/[^\d,.]/g,'').replace(',','.'));if(c>0)iv.value=c}return}
     if(b.closest('#atx-pago')){pg.value=b.dataset.v;ch(pg);setTimeout(pPag,0);return}
     if(b.dataset.forma){fp.value=fp.value===b.dataset.forma?'':b.dataset.forma;ch(fp);setTimeout(pPag,0);return}
   });
@@ -3435,6 +3441,10 @@ async function salvarAtend(id,d){
   if(!id&&!S.semStatus)o.status='agendado';
   if(d.sala!==undefined&&(d.sala||(antes&&antes.sala)))o.sala=String(d.sala||'').slice(0,40);
   if(d.gorjeta!==undefined){const g=Math.round((Number(String(d.gorjeta||'0').replace(',','.'))||0)*100)/100;if(g<0||g>100000)throw erroUi('A gorjeta precisa ser entre R$ 0,00 e R$ 100.000,00.');if(g||(antes&&antes.gorjeta))o.gorjeta=g}
+  if(d.taxa_status!==undefined){const ts=['nao','pend','paga'].includes(d.taxa_status)?d.taxa_status:'nao',tv=Math.round((Number(String(d.taxa_ag_valor||'0').replace(',','.'))||0)*100)/100;
+    if(ts!=='nao'&&!(tv>0))throw erroUi('Informe o valor da taxa de agendamento.');
+    if(tv>100000)throw erroUi('O valor da taxa é grande demais.');
+    if(ts!=='nao'||(antes&&antes.taxaAg)){o.taxa_valor=ts==='nao'?0:tv;o.taxa_paga=ts==='paga'}}
   const aid=id||novoId();
   if(!id)o.id=aid;
   const grava=x=>id?sb.from('atendimentos').update(x).eq('id',id):sb.from('atendimentos').insert(x);
@@ -3442,6 +3452,7 @@ async function salvarAtend(id,d){
   if(r.error&&/hora/i.test(String(r.error.message||''))&&(r.error.code==='42703'||r.error.code==='PGRST204'||/column/i.test(r.error.message||''))){
     delete o.hora;r=await grava(o);S.semHora=true;
   }
+  if(r.error&&/taxa_(valor|paga)/i.test(String(r.error.message||''))&&o.taxa_valor!==undefined){const quis=o.taxa_valor>0;delete o.taxa_valor;delete o.taxa_paga;S.semTaxaAg=true;if(quis)throw erroUi('Para guardar a taxa de agendamento, rode o arquivo 73-taxa-agendamento.sql (ou o agendio-TUDO.sql) no Supabase.');r=await grava(o)}
   if(r.error&&/gorjeta/i.test(String(r.error.message||''))&&o.gorjeta!==undefined){delete o.gorjeta;if(Number(d.gorjeta)>0)throw erroUi('Para registrar gorjeta, rode o arquivo 63-email-cliente-gorjeta.sql (ou o agendio-TUDO.sql) no Supabase.');r=await grava(o)}
   if(r.error&&/\bsala\b/i.test(String(r.error.message||''))&&o.sala!==undefined){delete o.sala;if(o.sala===undefined&&(d.sala||'')!=='')throw erroUi('Para usar salas, rode o arquivo 61-salas.sql (ou o agendio-TUDO.sql) no Supabase.');r=await grava(o)}
   if(r.error&&/duracao/i.test(String(r.error.message||''))){delete o.duracao;S.semDur=true;r=await grava(o)}
@@ -3991,7 +4002,8 @@ async function mudarStatus(id,st){
 function linhaAg(a){
   const c=cli(a.clienteId)||{nome:'(cliente removida)'};
   const tag=a.status==='confirmado'?' <span class="tag ok">Confirmado</span>':inativo(a)?` <span class="tag late">${a.cancCli&&a.status==='cancelado'?'Cancelado pela cliente':STATUS_ROT[a.status]}</span>`:(a.remarcadoEm?' <span class="tag ok">Remarcado pela cliente</span>':'');
-  return `<div class="item"${inativo(a)?' style="opacity:.62"':''}><div class="side-val" style="min-width:56px">${esc(a.hora||'—')}</div>${avatar(c.nome)}<div class="grow"><div class="t">${esc(c.nome)}${tag}</div><div class="muted">${esc(procTxt(a))}${a.profissional?' · '+esc(a.profissional):''}</div></div>
+  const tagTx=a.taxaAg>0?(a.taxaPaga?` <span class="tag ok">Taxa paga ${brl(a.taxaAg)}</span>`:` <span class="tag late">Taxa pendente ${brl(a.taxaAg)}</span>`):'';
+  return `<div class="item"${inativo(a)?' style="opacity:.62"':''}><div class="side-val" style="min-width:56px">${esc(a.hora||'—')}</div>${avatar(c.nome)}<div class="grow"><div class="t">${esc(c.nome)}${tag}${tagTx}</div><div class="muted">${esc(procTxt(a))}${a.profissional?' · '+esc(a.profissional):''}</div></div>
   <div class="item-acts">${inativo(a)?'':btnAgendado(a)+btnLembrete(a)+btnTaxa(a)+btnAvalia(a)}${btnStatus(a)}<button class="btn ghost sm" data-act="editAtend" data-id="${esc(a.id)}">Editar</button></div></div>`;
 }
 
