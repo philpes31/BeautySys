@@ -220,6 +220,44 @@ body:not(.logado) main.wrap{max-width:none;padding:0}
 
 /* Janelas, avisos */
 dialog{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:18px;padding:24px;width:min(560px,calc(100vw - 32px));max-height:90dvh;overflow:auto;box-shadow:0 24px 60px -20px rgba(20,8,16,.5)}
+/* Tela de atendimento em passos */
+.atx-oculto{position:absolute!important;opacity:0;pointer-events:none;width:1px!important;height:1px!important;min-height:0!important;padding:0!important;border:0!important;overflow:hidden}
+.atx-h{display:flex;align-items:center;gap:8px;font-family:var(--font-body);font-size:13px;font-weight:700;color:var(--muted);margin:18px 0 8px}
+.atx-h i{font-style:normal;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:12px;display:grid;place-items:center}
+.atx .chips{display:flex;flex-wrap:wrap;gap:8px}
+.atx-chip{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:9px 14px;font:inherit;font-size:15px;min-height:44px;cursor:pointer}
+.atx-chip[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.atx-cli-ok{display:flex;align-items:center;gap:10px;background:var(--accent-soft);border-radius:12px;padding:10px 12px}
+.atx-cli-ok .grow{flex:1;min-width:0}.atx-cli-ok small{display:block;color:var(--muted)}
+.atx-av{width:36px;height:36px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;flex:none}
+.atx-lista{border:1px solid var(--line);border-radius:10px;margin-top:6px;overflow:hidden}
+.atx-lista button{display:flex;justify-content:space-between;gap:8px;width:100%;border:0;border-top:1px solid var(--line-2);background:var(--surface);color:var(--ink);padding:12px;font:inherit;text-align:left;min-height:46px;cursor:pointer}
+.atx-lista button:first-child{border-top:0}.atx-lista small{color:var(--muted)}.atx-lista p{margin:0;padding:12px}
+.atx-aviso{background:var(--amber-soft);color:var(--amber);border-radius:10px;padding:8px 10px;font-size:13px;margin-top:8px}.atx-aviso:empty{display:none}
+.atx-horas{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.atx-horas button{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:10px 0;font:inherit;min-height:44px;cursor:pointer}
+.atx-horas button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.atx-horas p{grid-column:1/-1;margin:0;font-size:13px;color:var(--muted)}
+.atx-hora-l{margin-top:10px}.atx-hora-l label{font-size:13px;color:var(--muted)}
+.atx-servs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.atx-serv{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:10px;text-align:left;font:inherit;min-height:64px;position:relative;cursor:pointer}
+.atx-serv b{display:block;font-size:14.5px;padding-right:18px}.atx-serv span{font-size:12.5px;color:var(--muted)}
+.atx-serv[aria-pressed=true]{border-color:var(--accent);background:var(--accent-soft)}
+.atx-serv[aria-pressed=true]::after{content:"✓";position:absolute;top:8px;right:10px;color:var(--accent);font-weight:700}
+.atx-dica{margin:6px 0 0;font-size:13px}
+.atx-sel{margin-top:10px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.atx-sel>div{display:flex;align-items:center;gap:10px;padding:8px 10px;border-top:1px solid var(--line-2)}.atx-sel>div:first-child{border-top:0}
+.atx-sel>div[hidden]{display:none}.atx-sel span{flex:1;min-width:0}.atx-sel input{width:110px;min-height:42px;text-align:right}
+.atx-seg{display:grid;grid-template-columns:1fr 1fr;background:var(--line-2);border-radius:12px;padding:4px;gap:4px}
+.atx-seg button{border:0;background:transparent;color:var(--ink);border-radius:9px;padding:10px;font:inherit;min-height:44px;cursor:pointer}
+.atx-seg button[aria-pressed=true]{background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.14);font-weight:700}
+.atx-mais{margin-top:16px;border:1px solid var(--line);border-radius:12px;padding:0 12px 12px}
+.atx-mais summary{padding:13px 0;font-weight:700;cursor:pointer;min-height:44px}
+.atx-mais>div{margin-top:10px}.atx-mais label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+.atx form,.atx{position:relative}
+.atx-foot{position:sticky;bottom:-24px;margin:16px -24px -24px;padding:12px 24px 24px;background:var(--surface);border-top:1px solid var(--line);display:flex;align-items:center;gap:10px;z-index:2}
+.atx-tot{flex:1;min-width:0}.atx-tot small{display:block;color:var(--muted);font-size:12px}.atx-tot b{font-size:20px}
+@media (max-width:700px){.atx-foot{bottom:-18px;margin:16px -18px -18px;padding:12px 18px calc(18px + env(safe-area-inset-bottom,0px))}.atx-horas{grid-template-columns:repeat(3,1fr)}}
 dialog::backdrop{background:rgba(26,12,20,.58);backdrop-filter:blur(2px)}
 dialog h2{margin-top:0;font-size:28px}
 .pg-abas{display:flex;gap:6px;margin:0 0 14px;border-bottom:1px solid var(--line)}
@@ -3233,35 +3271,55 @@ function formAtend(id,clienteId,data){
   const pags=['Pix','Dinheiro','Cartão de débito','Cartão de crédito','Outro'];if(a.pagamento===FIADO)pags.push(FIADO);if(a.pagamento===CP_PAG)pags.push(CP_PAG);
   const tem2=!!a.procedimento2,v2=Number(a.valor2)||0,v1=a.valor===undefined||a.valor===''?'':Math.max(0,(Number(a.valor)||0)-v2),pagoSel=id?(a.pago!==false&&!isFiado(a)):String(a.data||hoje())<=hoje();
   const cls=[...S.clientes].sort((x,y)=>(x.nome||'').localeCompare(y.nome||'','pt-BR'));
-  abrir(`<h2>${id?'Editar atendimento':'Novo atendimento'}</h2><form data-form="atend" data-id="${esc(id||'')}">
-  <label for="a-cli">Cliente *</label><select id="a-cli" name="clienteId" required><option value="">Selecione…</option>${cls.map(c=>`<option value="${esc(c.id)}" ${c.id===a.clienteId?'selected':''}>${esc(c.nome)}</option>`).join('')}</select><div id="a-falta" class="muted" role="status" style="margin-top:4px;color:var(--late,#9b2f2f)">${esc(avisoFaltas(a.clienteId))}</div>
-  <div class="grid2"><div><label for="a-data">Data *</label><input id="a-data" name="data" type="date" required value="${esc(a.data)}"></div>
-  <div><label for="a-hora">Horário</label><input id="a-hora" name="hora" type="time" value="${esc(a.hora||'')}"></div>
-  <div><label for="a-proc">Procedimento *</label><select id="a-proc" name="procedimento" required><option value="">Selecione…</option>${procs.map(p=>`<option value="${esc(p)}" ${p===a.procedimento?'selected':''}>${esc(p)}</option>`).join('')}</select></div>
-  ${S.semProc2?'':`<div><label for="a-proc2">Segundo procedimento (opcional)</label><select id="a-proc2" name="procedimento2"><option value="">Nenhum</option>${procs2.map(p=>`<option value="${esc(p)}" ${p===a.procedimento2?'selected':''}>${esc(p)}</option>`).join('')}</select></div>`}
-  <div><label for="a-dur">Duração (min)</label><input id="a-dur" name="duracao" type="number" min="5" max="720" step="5" inputmode="numeric" value="${esc(a.duracao||60)}"></div>
-  <div><label for="a-prof">Profissional</label><select id="a-prof" name="profissional">${profs.map(p=>`<option value="${esc(p)}" ${p===profSel?'selected':''}>${esc(p)}</option>`).join('')}</select></div>
-  <div><label for="a-val" id="a-val-l">${tem2?'Valor do 1º procedimento (R$)':'Valor (R$)'}</label><input id="a-val" name="valor" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(v1)}"></div>
-  <div id="a-val2-wrap" ${tem2?'':'hidden'}><label for="a-val2">Valor do 2º procedimento (R$)</label><input id="a-val2" name="valor2" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(a.valor2||'')}"></div>
-  <div><label for="a-pago">Já foi pago?</label><select id="a-pago" name="pago"><option value="1" ${pagoSel?'selected':''}>Sim, já foi pago</option><option value="0" ${pagoSel?'':'selected'}>Ainda não pago</option></select></div>
-  <div id="a-pag-wrap" ${pagoSel?'':'hidden'}><label for="a-pag">Forma de pagamento</label><select id="a-pag" name="pagamento"><option value="">—</option>${pags.map(p=>`<option ${p===a.pagamento?'selected':''}>${p}</option>`).join('')}</select></div>
+  const pf=cat.length?cat:procs.map(n=>({nome:n,duracao:0,preco:0}));
+  [a.procedimento,a.procedimento2].forEach(n=>{if(n&&!pf.some(x=>x.nome===n))pf.push({nome:n,duracao:0,preco:0})});
+  abrir(`<h2>${id?'Editar atendimento':'Novo atendimento'}</h2><form data-form="atend" data-id="${esc(id||'')}" class="atx">
+  <h3 class="atx-h"><i>1</i> Cliente</h3>
+  <select id="a-cli" name="clienteId" class="atx-oculto" tabindex="-1" aria-hidden="true"><option value="">Selecione…</option>${cls.map(c=>`<option value="${esc(c.id)}" ${c.id===a.clienteId?'selected':''}>${esc(c.nome)}</option>`).join('')}</select>
+  <div id="atx-cli"></div><div id="a-falta" class="atx-aviso" role="status">${esc(avisoFaltas(a.clienteId))}</div>
+  <h3 class="atx-h"><i>2</i> Quando</h3>
+  <div class="chips" id="atx-dias" role="group" aria-label="Dia"></div>
+  <div id="atx-data-w" hidden><label for="a-data">Dia *</label><input id="a-data" name="data" type="date" required value="${esc(a.data)}"></div>
+  <div id="atx-horas" class="atx-horas" role="group" aria-label="Horários livres"></div>
+  <div class="atx-hora-l"><label for="a-hora">Horário</label><input id="a-hora" name="hora" type="time" value="${esc(a.hora||'')}"></div>
+  <h3 class="atx-h"><i>3</i> Serviços</h3>
+  <select id="a-proc" name="procedimento" class="atx-oculto" tabindex="-1" aria-hidden="true"><option value="">Selecione…</option>${procs.map(p=>`<option value="${esc(p)}" ${p===a.procedimento?'selected':''}>${esc(p)}</option>`).join('')}</select>
+  ${S.semProc2?'':`<select id="a-proc2" name="procedimento2" class="atx-oculto" tabindex="-1" aria-hidden="true"><option value="">Nenhum</option>${procs2.map(p=>`<option value="${esc(p)}" ${p===a.procedimento2?'selected':''}>${esc(p)}</option>`).join('')}</select>`}
+  <div class="atx-servs" id="atx-servs" role="group" aria-label="Serviços">${pf.map(s=>`<button type="button" class="atx-serv" data-nome="${esc(s.nome)}" aria-pressed="false"><b>${esc(s.nome)}</b><span>${[Number(s.duracao)>0?Number(s.duracao)+' min':'',Number(s.preco)>0?brl(Number(s.preco)):''].filter(Boolean).join(' · ')||'&nbsp;'}</span></button>`).join('')}</div>
+  <p class="muted atx-dica" id="atx-limite" hidden>Por enquanto cada atendimento aceita até 2 serviços.</p>
+  <div class="atx-sel" id="atx-sel" hidden>
+    <div id="atx-v1"><span id="atx-n1"></span><input id="a-val" name="valor" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(v1)}" aria-label="Valor do 1º serviço (R$)"></div>
+    <div id="a-val2-wrap" ${tem2?'':'hidden'}><span id="atx-n2"></span><input id="a-val2" name="valor2" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(a.valor2||'')}" aria-label="Valor do 2º serviço (R$)"></div>
+  </div>
+  <div id="a-total" class="muted num" aria-live="polite"></div>
+  ${!id&&recOk('promocoes')&&!S.semPromo&&(S.promos||[]).some(x=>x.ativo)?`<div><label for="a-cup">Cupom (opcional)</label><input id="a-cup" name="cupom" maxlength="20" autocapitalize="characters" placeholder="Ex.: NATAL10" autocomplete="off"></div>`:''}
+  <h3 class="atx-h"><i>4</i> Profissional</h3>
+  <select id="a-prof" name="profissional" class="atx-oculto" tabindex="-1" aria-hidden="true">${profs.map(p=>`<option value="${esc(p)}" ${p===profSel?'selected':''}>${esc(p)}</option>`).join('')}</select>
+  <div class="chips" id="atx-profs" role="group" aria-label="Profissional"></div>
+  <h3 class="atx-h"><i>5</i> Pagamento</h3>
+  <select id="a-pago" name="pago" class="atx-oculto" tabindex="-1" aria-hidden="true"><option value="1" ${pagoSel?'selected':''}>Sim, já foi pago</option><option value="0" ${pagoSel?'':'selected'}>Ainda não pago</option></select>
+  <div class="atx-seg" id="atx-pago" role="group" aria-label="Pagamento"><button type="button" data-v="1" aria-pressed="${pagoSel}">Já foi pago</button><button type="button" data-v="0" aria-pressed="${!pagoSel}">Pagar depois</button></div>
+  <div id="a-pag-wrap" ${pagoSel?'':'hidden'}>
+    <select id="a-pag" name="pagamento" class="atx-oculto" tabindex="-1" aria-hidden="true"><option value="">—</option>${pags.map(p=>`<option ${p===a.pagamento?'selected':''}>${p}</option>`).join('')}</select>
+    <div class="chips" id="atx-forma" role="group" aria-label="Forma de pagamento" style="margin-top:10px"></div></div>
   <div id="a-parc-wrap" ${credito?'':'hidden'}><label for="a-parc">Parcelas</label><select id="a-parc" name="parcelas">${Array.from({length:12},(_,i)=>i+1).map(n=>`<option value="${n}" ${n===parcSel?'selected':''}>${n}x</option>`).join('')}</select><div id="a-parc-info" class="muted num"></div></div>
   <div id="a-taxa-wrap" ${cartao?'':'hidden'}><label for="a-taxa">Taxa da máquina (R$)</label><input id="a-taxa" name="taxaMaquina" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(a.taxaMaquina||'')}"></div>
-  <div><label for="a-gorj">Gorjeta (R$, opcional)</label><input id="a-gorj" name="gorjeta" type="number" step="0.01" min="0" inputmode="decimal" value="${a.gorjeta?esc(a.gorjeta):''}" placeholder="0,00"><p class="muted" style="margin:4px 0 0">É repassada inteira à profissional e não entra no faturamento do salão.</p></div>
-  ${(S.agCfg&&S.agCfg.salas||[]).length?`<div><label for="a-sala">Sala ou equipamento</label><select id="a-sala" name="sala"><option value="">Nenhuma</option>${[...(S.agCfg.salas||[]),...(a.sala&&!(S.agCfg.salas||[]).includes(a.sala)?[a.sala]:[])].map(x=>`<option ${x===a.sala?'selected':''}>${esc(x)}</option>`).join('')}</select></div>`:''}
-  ${!id&&!S.legado?`<div class="grid2"><div><label for="a-rep">Repetir este horário</label><select id="a-rep" name="repetir"><option value="">Não repete</option><option value="7">Toda semana</option><option value="14">A cada 15 dias</option><option value="mes">Todo mês</option></select></div><div><label for="a-vz">Quantas vezes no total</label><input id="a-vz" name="vezes" type="number" min="2" max="12" value="4" inputmode="numeric"></div></div>`:''}
-  ${!id&&recOk('promocoes')&&!S.semPromo&&(S.promos||[]).some(x=>x.ativo)?`<div><label for="a-cup">Cupom (opcional)</label><input id="a-cup" name="cupom" maxlength="20" autocapitalize="characters" placeholder="Ex.: NATAL10" autocomplete="off"></div>`:''}
-  <div><label for="a-prod">Gastos com produtos (R$)</label><input id="a-prod" name="gastoProdutos" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(a.gastoProdutos||'')}"></div>
-  <div><label for="a-ret">Retorno previsto</label><input id="a-ret" name="retorno" type="date" value="${esc(a.retorno)}"></div></div>
-  <div id="a-estq" class="panel" style="margin-top:10px" hidden><div id="a-estq-txt" class="muted num"></div>
-    <label class="chk"><input type="checkbox" id="a-baixa" name="baixa" ${id?'':'checked'}> Dar baixa no estoque com a ficha técnica</label></div>
+  <details class="atx-mais" ${id&&(a.gorjeta||a.gastoProdutos||a.retorno||a.obs||a.sala)?'open':''}><summary>Mais opções</summary>
+    <div><label for="a-dur">Duração (min)</label><input id="a-dur" name="duracao" type="number" min="5" max="720" step="5" inputmode="numeric" value="${esc(a.duracao||60)}"></div>
+    <div><label for="a-gorj">Gorjeta (R$, opcional)</label><input id="a-gorj" name="gorjeta" type="number" step="0.01" min="0" inputmode="decimal" value="${a.gorjeta?esc(a.gorjeta):''}" placeholder="0,00"><p class="muted" style="margin:4px 0 0">É repassada inteira à profissional e não entra no faturamento do salão.</p></div>
+    ${(S.agCfg&&S.agCfg.salas||[]).length?`<div><label for="a-sala">Sala ou equipamento</label><select id="a-sala" name="sala"><option value="">Nenhuma</option>${[...(S.agCfg.salas||[]),...(a.sala&&!(S.agCfg.salas||[]).includes(a.sala)?[a.sala]:[])].map(x=>`<option ${x===a.sala?'selected':''}>${esc(x)}</option>`).join('')}</select></div>`:''}
+    ${!id&&!S.legado?`<div class="grid2"><div><label for="a-rep">Repetir este horário</label><select id="a-rep" name="repetir"><option value="">Não repete</option><option value="7">Toda semana</option><option value="14">A cada 15 dias</option><option value="mes">Todo mês</option></select></div><div><label for="a-vz">Quantas vezes no total</label><input id="a-vz" name="vezes" type="number" min="2" max="12" value="4" inputmode="numeric"></div></div>`:''}
+    <div><label for="a-prod">Gastos com produtos (R$)</label><input id="a-prod" name="gastoProdutos" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(a.gastoProdutos||'')}"></div>
+    <div><label for="a-ret">Retorno previsto</label><input id="a-ret" name="retorno" type="date" value="${esc(a.retorno)}"></div>
+    <div id="a-estq" class="panel" style="margin-top:10px" hidden><div id="a-estq-txt" class="muted num"></div>
+      <label class="chk"><input type="checkbox" id="a-baixa" name="baixa" ${id?'':'checked'}> Dar baixa no estoque com a ficha técnica</label></div>
+    <label for="a-obs">Observações</label><textarea id="a-obs" name="obs" rows="3" placeholder="Produtos usados, tom, fórmula…">${esc(a.obs)}</textarea>
+  </details>
   <input type="hidden" name="tinha" value="${id&&S.movs.some(m=>m.atendimentoId===id)?'1':'0'}">
-  <div id="a-total" class="muted num" style="margin-top:10px" aria-live="polite"></div>
   <div id="a-liq" class="muted num" style="margin-top:6px"></div>
-  <label for="a-obs">Observações</label><textarea id="a-obs" name="obs" rows="3" placeholder="Produtos usados, tom, fórmula…">${esc(a.obs)}</textarea>
-  <div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Salvar</button></div></form>`);
+  <div class="atx-foot"><div class="atx-tot"><small id="atx-resumo">Escolha o serviço</small><b id="atx-total">R$ 0,00</b></div><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Salvar</button></div></form>`);
   const bx=$('a-baixa');if(bx&&id)bx.checked=S.movs.some(m=>m.atendimentoId===id);
-  atualizaParc();atualizaEstq(false);
+  atualizaParc();atualizaEstq(false);atUi();
 }
 function atualizaEstq(auto){
   const w=$('a-estq'),pr=$('a-proc');if(!w||!pr)return;
@@ -3285,7 +3343,81 @@ function atualizaParc(){
   const prod=din($('a-prod').value),taxa=cartao?din($('a-taxa').value):0;
   $('a-liq').textContent=(prod>0||taxa>0)&&v>0?`Resultado do atendimento: ${brl(v)} − ${brl(prod+taxa)} de despesas = ${brl(v-prod-taxa)}`:'';
 }
+function atUi(){
+  const f=document.querySelector('form.atx');if(!f||f.dataset.pronto)return;f.dataset.pronto='1';
+  const g=id=>document.getElementById(id),ch=n=>n&&n.dispatchEvent(new Event('change',{bubbles:true}));
+  const sc=g('a-cli'),sp=g('a-proc'),sp2=g('a-proc2'),dt=g('a-data'),hr=g('a-hora'),pf=g('a-prof'),pg=g('a-pago'),fp=g('a-pag');
+  const nomeCli=()=>{const c=cli(sc.value);return c?c.nome:''};
+  function pCli(){
+    const w=g('atx-cli');
+    if(sc.value){const c=cli(sc.value)||{};w.innerHTML=`<div class="atx-cli-ok"><span class="atx-av">${esc((c.nome||'?').charAt(0).toUpperCase())}</span><span class="grow"><b>${esc(c.nome||'')}</b><small>${esc(c.telefone||'')}</small></span><button type="button" class="atx-chip" data-atx="trocar" style="min-height:38px;padding:4px 14px">Trocar</button></div>`;return}
+    w.innerHTML=`<input type="search" id="atx-q" placeholder="Digite o nome ou o telefone" autocomplete="off" aria-label="Buscar cliente"><div class="atx-lista" id="atx-l"></div>`;
+    const q=g('atx-q'),l=g('atx-l');
+    const lista=()=>{const t=nomeNorm(q.value),d=q.value.replace(/\D/g,'');
+      const r=[...S.clientes].filter(c=>!t||nomeNorm(c.nome).includes(t)||(d&&String(c.telefone||'').replace(/\D/g,'').includes(d))).sort((x,y)=>(x.nome||'').localeCompare(y.nome||'','pt-BR'));
+      l.innerHTML=(r.slice(0,8).map(c=>`<button type="button" data-cli="${esc(c.id)}"><span>${esc(c.nome)}</span><small>${esc(c.telefone||'')}</small></button>`).join('')||'<p class="muted">Nenhuma cliente encontrada.</p>')+(r.length>8?'<p class="muted">Digite mais letras para achar a cliente.</p>':'')};
+    q.oninput=lista;lista();
+  }
+  function pDias(){
+    const w=g('atx-dias'),h=hoje(),d=dt.value,L=[[h,'Hoje'],[addDia(h,1),'Amanhã']];
+    for(let i=2;i<=4;i++){const x=addDia(h,i),n=new Date(x+'T12:00:00').getDay();L.push([x,DIAS_SEM[n].slice(0,3)+' '+x.slice(8)])}
+    const fora=!L.some(x=>x[0]===d);
+    w.innerHTML=L.map(([x,t])=>`<button type="button" class="atx-chip" data-dia="${x}" aria-pressed="${x===d}">${t}</button>`).join('')+`<button type="button" class="atx-chip" data-atx="outro" aria-pressed="${fora}">${fora&&d?esc(fd(d)):'Outro dia…'}</button>`;
+    g('atx-data-w').hidden=!(fora||f.dataset.outro==='1');
+  }
+  function pHoras(){
+    const w=g('atx-horas'),d=dt.value,pr=pf.value,dur=Number(g('a-dur').value)||60,cfg=(S.agCfg&&S.agCfg.profissionais)||{};
+    if(!d||!cfg[pr]){w.hidden=true;return}
+    w.hidden=false;
+    const v=vagasDia(d,Math.min(dur,60)).find(x=>x.prof===pr),T=new Set();
+    (v?v.faixas:[]).forEach(([a,b])=>{for(let t=a;t+dur<=b&&T.size<24;t+=30)T.add(minHm(t))});
+    const own=hr.value&&hr.value.slice(0,5);if(own)T.add(own);
+    const L=[...T].sort();
+    w.innerHTML=L.length?L.map(t=>`<button type="button" data-hora="${t}" aria-pressed="${t===own}">${t}</button>`).join(''):`<p>Sem horário livre neste dia para ${esc(pr||'a profissional')}. Você pode digitar o horário abaixo para encaixar.</p>`;
+  }
+  function pServs(){
+    const cur=[sp.value,sp2?sp2.value:''].filter(Boolean);
+    g('atx-servs').querySelectorAll('.atx-serv').forEach(b=>b.setAttribute('aria-pressed',String(cur.includes(b.dataset.nome))));
+    g('atx-sel').hidden=!cur.length;g('atx-n1').textContent=cur[0]||'';g('atx-n2').textContent=cur[1]||'';
+  }
+  function pProfs(){
+    g('atx-profs').innerHTML=[...pf.options].map(o=>`<button type="button" class="atx-chip" data-prof="${esc(o.value)}" aria-pressed="${o.value===pf.value}">${esc(o.value||'—')}</button>`).join('');
+  }
+  function pPag(){
+    [...g('atx-pago').children].forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===pg.value)));
+    g('atx-forma').innerHTML=[...fp.options].filter(o=>o.value).map(o=>`<button type="button" class="atx-chip" data-forma="${esc(o.value)}" aria-pressed="${o.value===fp.value}">${esc(o.value)}</button>`).join('');
+  }
+  function pResumo(){
+    const n=[sp.value,sp2?sp2.value:''].filter(Boolean).length,v=(Number(g('a-val').value)||0)+(n>1?(Number(g('a-val2').value)||0):0),dur=Number(g('a-dur').value)||0,h=hr.value;
+    g('atx-total').textContent=brl(v);
+    g('atx-resumo').textContent=n?`${n} ${n===1?'serviço':'serviços'}${dur?' · '+dur+' min':''}${h?' · '+h:''}`:'Escolha o serviço';
+  }
+  const tudo=()=>{pServs();pHoras();pDias();pPag();pResumo()};
+  f.addEventListener('click',e=>{
+    const b=e.target.closest('button');if(!b||!f.contains(b))return;
+    if(b.dataset.cli){sc.value=b.dataset.cli;ch(sc);pCli();pResumo();return}
+    if(b.dataset.atx==='trocar'){sc.value='';ch(sc);pCli();return}
+    if(b.dataset.atx==='outro'){f.dataset.outro='1';g('atx-data-w').hidden=false;pDias();g('a-data').focus();return}
+    if(b.dataset.dia){dt.value=b.dataset.dia;f.dataset.outro='';ch(dt);setTimeout(tudo,0);return}
+    if(b.dataset.hora){hr.value=b.dataset.hora;ch(hr);pHoras();pResumo();return}
+    if(b.classList.contains('atx-serv')){
+      const n=b.dataset.nome;let cur=[sp.value,sp2?sp2.value:''].filter(Boolean);
+      if(cur.includes(n))cur=cur.filter(x=>x!==n);
+      else{if(cur.length>=(sp2?2:1)){g('atx-limite').hidden=false;return}cur.push(n)}
+      g('atx-limite').hidden=true;
+      sp.value=cur[0]||'';if(sp2)sp2.value=cur[1]||'';
+      ch(sp);setTimeout(tudo,0);return}
+    if(b.dataset.prof!==undefined){pf.value=b.dataset.prof;ch(pf);pProfs();pHoras();return}
+    if(b.closest('#atx-pago')){pg.value=b.dataset.v;ch(pg);setTimeout(pPag,0);return}
+    if(b.dataset.forma){fp.value=fp.value===b.dataset.forma?'':b.dataset.forma;ch(fp);setTimeout(pPag,0);return}
+  });
+  f.addEventListener('input',()=>setTimeout(pResumo,0));
+  f.addEventListener('change',()=>setTimeout(()=>{pServs();pHoras();pDias();pPag();pResumo()},0));
+  pCli();pProfs();tudo();
+}
 async function salvarAtend(id,d){
+  if(!d.clienteId)throw erroUi('Escolha a cliente.');
+  if(!String(d.procedimento||'').trim())throw erroUi('Escolha pelo menos um serviço.');
   const pago=d.pago!=='0',pagForma=pago?(d.pagamento||''):'',cred=pagForma==='Cartão de crédito',cartao=cred||pagForma==='Cartão de débito';
   const v2=String(d.procedimento2||'').trim()?din(d.valor2):0,v1=din(d.valor);
   /* Cupom: confere o desconto antes de gravar; o uso só é registrado depois que o atendimento salvou. */
