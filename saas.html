@@ -230,7 +230,8 @@ dialog{background:var(--surface);color:var(--ink);border:1px solid var(--line);b
 .atx-cli-ok{display:flex;align-items:center;gap:10px;background:var(--accent-soft);border-radius:12px;padding:10px 12px}
 .atx-cli-ok .grow{flex:1;min-width:0}.atx-cli-ok small{display:block;color:var(--muted)}
 .atx-av{width:36px;height:36px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;flex:none}
-.atx-lista{border:1px solid var(--line);border-radius:10px;margin-top:6px;overflow:hidden}
+.atx-cli-box{position:relative}.atx-cli-box input{padding-right:40px;background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23777' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center}
+.atx-lista{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:5;max-height:min(280px,42dvh);overflow-y:auto;overscroll-behavior:contain;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 28px -12px rgba(0,0,0,.35)}.atx-lista[hidden]{display:none}
 .atx-lista button{display:flex;justify-content:space-between;gap:8px;width:100%;border:0;border-top:1px solid var(--line-2);background:var(--surface);color:var(--ink);padding:12px;font:inherit;text-align:left;min-height:46px;cursor:pointer}
 .atx-lista button:first-child{border-top:0}.atx-lista small{color:var(--muted)}.atx-lista p{margin:0;padding:12px}
 .atx-aviso{background:var(--amber-soft);color:var(--amber);border-radius:10px;padding:8px 10px;font-size:13px;margin-top:8px}.atx-aviso:empty{display:none}
@@ -239,7 +240,8 @@ dialog{background:var(--surface);color:var(--ink);border:1px solid var(--line);b
 .atx-horas button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .atx-horas p{grid-column:1/-1;margin:0;font-size:13px;color:var(--muted)}
 .atx-hora-l{margin-top:10px}.atx-hora-l label{font-size:13px;color:var(--muted)}
-.atx-servs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.atx-servs{display:block}.atx-servs.atx-lista{padding:6px}.atx-servs .atx-serv{display:block;width:100%;margin:0 0 6px;min-height:56px}.atx-servs .atx-serv:last-child{margin-bottom:0}
+.atx-dd{width:100%;text-align:left;min-height:48px;padding:10px 40px 10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23777' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center;font:inherit;color:var(--ink);cursor:pointer}.atx-dd.vazio{color:var(--muted)}
 .atx-serv{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:10px;text-align:left;font:inherit;min-height:64px;position:relative;cursor:pointer}
 .atx-serv b{display:block;font-size:14.5px;padding-right:18px}.atx-serv span{font-size:12.5px;color:var(--muted)}
 .atx-serv[aria-pressed=true]{border-color:var(--accent);background:var(--accent-soft)}
@@ -3287,7 +3289,7 @@ function formAtend(id,clienteId,data){
   <h3 class="atx-h"><i>3</i> Serviços</h3>
   <select id="a-proc" name="procedimento" class="atx-oculto" tabindex="-1" aria-hidden="true"><option value="">Selecione…</option>${procs.map(p=>`<option value="${esc(p)}" ${p===a.procedimento?'selected':''}>${esc(p)}</option>`).join('')}</select>
   ${S.semProc2?'':`<select id="a-proc2" name="procedimento2" class="atx-oculto" tabindex="-1" aria-hidden="true"><option value="">Nenhum</option>${procs2.map(p=>`<option value="${esc(p)}" ${p===a.procedimento2?'selected':''}>${esc(p)}</option>`).join('')}</select>`}
-  <div class="atx-servs" id="atx-servs" role="group" aria-label="Serviços">${pf.map(s=>`<button type="button" class="atx-serv" data-nome="${esc(s.nome)}" aria-pressed="false"><b>${esc(s.nome)}</b><span>${[Number(s.duracao)>0?Number(s.duracao)+' min':'',Number(s.preco)>0?brl(Number(s.preco)):''].filter(Boolean).join(' · ')||'&nbsp;'}</span></button>`).join('')}</div>
+  <div class="atx-cli-box" id="atx-sbox"><button type="button" class="atx-dd" id="atx-sbtn" aria-expanded="false" data-atx="sabrir"><span id="atx-sbtn-t">Toque para escolher o serviço</span></button><div class="atx-servs atx-lista" id="atx-servs" role="group" aria-label="Serviços" hidden>${pf.map(s=>`<button type="button" class="atx-serv" data-nome="${esc(s.nome)}" aria-pressed="false"><b>${esc(s.nome)}</b><span>${[Number(s.duracao)>0?Number(s.duracao)+' min':'',Number(s.preco)>0?brl(Number(s.preco)):''].filter(Boolean).join(' · ')||'&nbsp;'}</span></button>`).join('')}</div></div>
   <p class="muted atx-dica" id="atx-limite" hidden>Por enquanto cada atendimento aceita até 2 serviços.</p>
   <div class="atx-sel" id="atx-sel" hidden>
     <div id="atx-v1"><span id="atx-n1"></span><input id="a-val" name="valor" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(v1)}" aria-label="Valor do 1º serviço (R$)"></div>
@@ -3314,7 +3316,6 @@ function formAtend(id,clienteId,data){
     <div><label for="a-dur">Duração (min)</label><input id="a-dur" name="duracao" type="number" min="5" max="720" step="5" inputmode="numeric" value="${esc(a.duracao||60)}"></div>
     <div><label for="a-gorj">Gorjeta (R$, opcional)</label><input id="a-gorj" name="gorjeta" type="number" step="0.01" min="0" inputmode="decimal" value="${a.gorjeta?esc(a.gorjeta):''}" placeholder="0,00"><p class="muted" style="margin:4px 0 0">É repassada inteira à profissional e não entra no faturamento do salão.</p></div>
     ${(S.agCfg&&S.agCfg.salas||[]).length?`<div><label for="a-sala">Sala ou equipamento</label><select id="a-sala" name="sala"><option value="">Nenhuma</option>${[...(S.agCfg.salas||[]),...(a.sala&&!(S.agCfg.salas||[]).includes(a.sala)?[a.sala]:[])].map(x=>`<option ${x===a.sala?'selected':''}>${esc(x)}</option>`).join('')}</select></div>`:''}
-    ${!id&&!S.legado?`<div class="grid2"><div><label for="a-rep">Repetir este horário</label><select id="a-rep" name="repetir"><option value="">Não repete</option><option value="7">Toda semana</option><option value="14">A cada 15 dias</option><option value="mes">Todo mês</option></select></div><div><label for="a-vz">Quantas vezes no total</label><input id="a-vz" name="vezes" type="number" min="2" max="12" value="4" inputmode="numeric"></div></div>`:''}
     <div><label for="a-prod">Gastos com produtos (R$)</label><input id="a-prod" name="gastoProdutos" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(a.gastoProdutos||'')}"></div>
     <div><label for="a-ret">Retorno previsto</label><input id="a-ret" name="retorno" type="date" value="${esc(a.retorno)}"></div>
     <div id="a-estq" class="panel" style="margin-top:10px" hidden><div id="a-estq-txt" class="muted num"></div>
@@ -3357,12 +3358,13 @@ function atUi(){
   function pCli(){
     const w=g('atx-cli');
     if(sc.value){const c=cli(sc.value)||{};w.innerHTML=`<div class="atx-cli-ok"><span class="atx-av">${esc((c.nome||'?').charAt(0).toUpperCase())}</span><span class="grow"><b>${esc(c.nome||'')}</b><small>${esc(c.telefone||'')}</small></span><button type="button" class="atx-chip" data-atx="trocar" style="min-height:38px;padding:4px 14px">Trocar</button></div>`;return}
-    w.innerHTML=`<input type="search" id="atx-q" placeholder="Digite o nome ou o telefone" autocomplete="off" aria-label="Buscar cliente"><div class="atx-lista" id="atx-l"></div>`;
+    w.innerHTML=`<div class="atx-cli-box"><input type="search" id="atx-q" placeholder="Toque para escolher ou digite o nome" autocomplete="off" aria-label="Buscar cliente" aria-expanded="false"><div class="atx-lista" id="atx-l" hidden></div></div>`;
     const q=g('atx-q'),l=g('atx-l');
     const lista=()=>{const t=nomeNorm(q.value),d=q.value.replace(/\D/g,'');
       const r=[...S.clientes].filter(c=>!t||nomeNorm(c.nome).includes(t)||(d&&String(c.telefone||'').replace(/\D/g,'').includes(d))).sort((x,y)=>(x.nome||'').localeCompare(y.nome||'','pt-BR'));
-      l.innerHTML=(r.slice(0,8).map(c=>`<button type="button" data-cli="${esc(c.id)}"><span>${esc(c.nome)}</span><small>${esc(c.telefone||'')}</small></button>`).join('')||'<p class="muted">Nenhuma cliente encontrada.</p>')+(r.length>8?'<p class="muted">Digite mais letras para achar a cliente.</p>':'')};
-    q.oninput=lista;lista();
+      l.hidden=false;q.setAttribute('aria-expanded','true');l.innerHTML=(r.slice(0,60).map(c=>`<button type="button" data-cli="${esc(c.id)}"><span>${esc(c.nome)}</span><small>${esc(c.telefone||'')}</small></button>`).join('')||'<p class="muted">Nenhuma cliente encontrada.</p>')+(r.length>60?'<p class="muted">Digite mais letras para achar a cliente.</p>':'')};
+    q.oninput=lista;q.onfocus=lista;q.onclick=lista;
+    if(!window.__atxFecha){window.__atxFecha=1;document.addEventListener('pointerdown',e=>{const l2=document.getElementById('atx-l');if(l2&&!e.target.closest('#atx-cli'))l2.hidden=true;const s2=document.getElementById('atx-servs');if(s2&&!e.target.closest('#atx-sbox')){s2.hidden=true;const sb2=document.getElementById('atx-sbtn');if(sb2)sb2.setAttribute('aria-expanded','false')}},true)}
   }
   function pDias(){
     const w=g('atx-dias'),h=hoje(),d=dt.value,L=[[h,'Hoje'],[addDia(h,1),'Amanhã']];
@@ -3384,6 +3386,7 @@ function atUi(){
   function pServs(){
     const cur=[sp.value,sp2?sp2.value:''].filter(Boolean);
     g('atx-servs').querySelectorAll('.atx-serv').forEach(b=>b.setAttribute('aria-pressed',String(cur.includes(b.dataset.nome))));
+    const bt=g('atx-sbtn-t');if(bt){bt.textContent=cur.length?cur.join(' + '):'Toque para escolher o serviço';g('atx-sbtn').classList.toggle('vazio',!cur.length)}
     g('atx-sel').hidden=!cur.length;g('atx-n1').textContent=cur[0]||'';g('atx-n2').textContent=cur[1]||'';
   }
   function pProfs(){
@@ -3401,6 +3404,7 @@ function atUi(){
   const tudo=()=>{pServs();pHoras();pDias();pPag();pResumo()};
   f.addEventListener('click',e=>{
     const b=e.target.closest('button');if(!b||!f.contains(b))return;
+    if(b.dataset.atx==='sabrir'){const l=g('atx-servs');l.hidden=!l.hidden;b.setAttribute('aria-expanded',String(!l.hidden));return}
     if(b.dataset.cli){sc.value=b.dataset.cli;ch(sc);pCli();pResumo();return}
     if(b.dataset.atx==='trocar'){sc.value='';ch(sc);pCli();return}
     if(b.dataset.atx==='outro'){f.dataset.outro='1';g('atx-data-w').hidden=false;pDias();g('a-data').focus();return}
