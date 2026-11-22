@@ -241,7 +241,7 @@ dialog{background:var(--surface);color:var(--ink);border:1px solid var(--line);b
 .atx-horas p{grid-column:1/-1;margin:0;font-size:13px;color:var(--muted)}
 .atx-hora-l{margin-top:10px}.atx-hora-l label{font-size:13px;color:var(--muted)}
 .atx-servs{display:block}.atx-servs.atx-lista{padding:6px}.atx-servs .atx-serv{display:block;width:100%;margin:0 0 6px;min-height:56px}.atx-servs .atx-serv:last-child{margin-bottom:0}
-.atx-dd{width:100%;text-align:left;min-height:48px;padding:10px 40px 10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23777' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center;font:inherit;color:var(--ink);cursor:pointer}.atx-dd.vazio{color:var(--muted)}
+.atx-dd{width:100%;text-align:left;min-height:48px;padding:10px 40px 10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23777' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center;font:inherit;color:var(--ink);cursor:pointer}.atx-dd.vazio{color:var(--muted)}.atx-dd span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#atx-xv>div{display:flex;align-items:center;gap:10px;padding:8px 10px;border-top:1px solid var(--line-2)}#atx-xv span{flex:1;min-width:0}#atx-xv input{width:110px;min-height:42px;text-align:right}
 .atx-serv{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:10px;text-align:left;font:inherit;min-height:64px;position:relative;cursor:pointer}
 .atx-serv b{display:block;font-size:14.5px;padding-right:18px}.atx-serv span{font-size:12.5px;color:var(--muted)}
 .atx-serv[aria-pressed=true]{border-color:var(--accent);background:var(--accent-soft)}
@@ -682,7 +682,7 @@ const rowC=r=>({email:r.email||'',id:r.id,nome:r.nome||'',telefone:r.telefone||'
 const STATUS_OK=['agendado','confirmado','cancelado','faltou'],STATUS_ROT={agendado:'Agendado',confirmado:'Confirmado',cancelado:'Cancelou',faltou:'Faltou'};
 const inativo=a=>a.status==='cancelado'||a.status==='faltou';
 const procTxt=a=>(a.procedimento||'')+(a.procedimento2?' + '+a.procedimento2:'');
-const rowA=r=>({taxaAg:Number(r.taxa_valor)||0,taxaPaga:!!r.taxa_paga,gorjeta:Number(r.gorjeta)||0,sala:r.sala||'',fila:r.fila||'',filaEm:r.fila_em||'',token:r.token_cliente||'',cancCli:!!r.cancelado_pela_cliente,remarcadoEm:r.remarcado_em||'',id:r.id,clienteId:r.cliente_id,data:r.data,procedimento:r.procedimento||'',procedimento2:r.procedimento2||'',procTxt:(r.procedimento||'')+(r.procedimento2?' + '+r.procedimento2:''),profissional:r.profissional||'',
+const rowA=r=>({itens:Array.isArray(r.itens)?r.itens.filter(x=>x&&x.nome).map(x=>({nome:String(x.nome),valor:Number(x.valor)||0})):[],taxaAg:Number(r.taxa_valor)||0,taxaPaga:!!r.taxa_paga,gorjeta:Number(r.gorjeta)||0,sala:r.sala||'',fila:r.fila||'',filaEm:r.fila_em||'',token:r.token_cliente||'',cancCli:!!r.cancelado_pela_cliente,remarcadoEm:r.remarcado_em||'',id:r.id,clienteId:r.cliente_id,data:r.data,procedimento:r.procedimento||'',procedimento2:r.procedimento2||'',procTxt:(r.procedimento||'')+(r.procedimento2?' + '+r.procedimento2:''),profissional:r.profissional||'',
   hora:String(r.hora||'').slice(0,5),valor:Number(r.valor)||0,pagamento:r.pagamento||'',parcelas:PARC(r.parcelas),gastoProdutos:Number(r.gasto_produtos)||0,taxaMaquina:Number(r.taxa_maquina)||0,retorno:r.retorno||'',obs:r.obs||'',duracao:Math.min(720,Math.max(5,Number(r.duracao)||60)),status:STATUS_OK.includes(r.status)?r.status:'agendado',valor2:Math.max(0,Number(r.valor2)||0),pago:r.pago!==false,pagoEm:r.pago_em||''});
 const CATS=['Anúncio Instagram','Água','Internet','Produtos de limpeza','Luz','Manutenção','Aluguel','Condomínio','Outros'];
 const rowD=r=>({id:r.id,data:r.data,categoria:r.categoria||'Outros',descricao:r.descricao||'',valor:Number(r.valor)||0});
@@ -961,7 +961,9 @@ const chaveCom=(prof,serv)=>String(prof).replace(/\|/g,'')+'|'+String(serv).repl
 const PROD_COM='Venda de produtos';
 function pctCom(C,prof,serv){const e=C[chaveCom(prof,serv)];return e!=null&&e!==''?(Number(e)||0):(serv===PROD_COM?0:(Number(C[prof])||0))}
 /* Divide o valor de um atendimento entre o 1º e o 2º procedimento (valor2) para aplicar a porcentagem de cada serviço. */
+const itensDe=a=>{if(a.itens&&a.itens.length>=3)return a.itens;const tot=Number(a.valor)||0,v2=a.procedimento2?Math.min(tot,Number(a.valor2)||0):0,L=[{nome:a.procedimento||'',valor:Math.round((tot-v2)*100)/100}];if(a.procedimento2)L.push({nome:a.procedimento2,valor:v2});return L};
 function partesCom(a,v){
+  if(a.itens&&a.itens.length>=3){const it=a.itens,sm=it.reduce((t,x)=>t+x.valor,0);if(!(sm>0))return [[a.procedimento||'',v]];let rest=v;return it.map((x,i)=>{const p=i===it.length-1?Math.round(rest*100)/100:Math.round(v*(x.valor/sm)*100)/100;rest-=p;return [x.nome,p]})}
   const tot=Number(a.valor)||0,v2=Math.min(tot,Number(a.valor2)||0);
   if(!a.procedimento2||!(v2>0)||!(tot>0))return [[a.procedimento||'',v]];
   const p2=Math.round(v*(v2/tot)*100)/100;return [[a.procedimento||'',Math.round((v-p2)*100)/100],[a.procedimento2,p2]];
@@ -3227,8 +3229,8 @@ function imprimeRecibo(){
 }
 function reciboAtend(id){
   const a=S.atend.find(x=>x.id===id);if(!a)return;
-  const c=cli(a.clienteId)||{},v2=a.procedimento2?Math.min(Number(a.valor)||0,Number(a.valor2)||0):0,tn=(S.salao&&S.salao.nome)||(S.ctx&&S.ctx.tenant&&S.ctx.tenant.nome)||'Salão';
-  const L=[[a.procedimento||'Atendimento',(Number(a.valor)||0)-v2]];if(a.procedimento2)L.push([a.procedimento2,v2]);
+  const c=cli(a.clienteId)||{},tn=(S.salao&&S.salao.nome)||(S.ctx&&S.ctx.tenant&&S.ctx.tenant.nome)||'Salão';
+  const L=itensDe(a).map(x=>[x.nome||'Atendimento',x.valor]);
   abrirRecibo({emissor:tn,doc:S.salao&&S.salao.documento?(S.salao.doc_tipo==='cnpj'?'CNPJ ':'CPF ')+S.salao.documento:'',num:String(a.id).replace(/[^A-Za-z0-9]/g,'').slice(-6).toUpperCase().padStart(6,'0'),para:c.nome||'Cliente',linhas:L,total:Number(a.valor)||0,forma:a.pagamento?pagTxt(a):'',data:a.pagoEm&&a.pagoEm>a.data?a.pagoEm:a.data,obs:a.profissional?'Atendimento com '+a.profissional:''},c.telefone);
 }
 function reciboPag(id){
@@ -3267,17 +3269,18 @@ function telaAtend(){
 }
 function formAtend(id,clienteId,data){
   if(!S.clientes.length){toast('Cadastre uma cliente primeiro.',true);return}
-  const pre=S.preAg;S.preAg=null;const a=id?S.atendTodos.find(x=>x.id===id):{data:data||hoje(),clienteId:clienteId||'',hora:(pre&&pre.hora)||'',profissional:(pre&&pre.prof)||''};if(id&&!a)return;
+  const pre=S.preAg;S.preAg=null;const a0=id?S.atendTodos.find(x=>x.id===id):{data:data||hoje(),clienteId:clienteId||'',hora:(pre&&pre.hora)||'',profissional:(pre&&pre.prof)||''};if(id&&!a0)return;
+  const it3=a0.itens&&a0.itens.length>=3?a0.itens:null,ex0=it3?it3.slice(2):[],a=it3?Object.assign({},a0,{procedimento:it3[0].nome,procedimento2:it3[1].nome,valor2:it3[1].valor}):a0;
   const cat=servicosCat(),procs=cat.length?cat.map(x=>x.nome):[...PROCS];if(a.procedimento&&!procs.includes(a.procedimento))procs.push(a.procedimento);const procs2=[...procs];if(a.procedimento2&&!procs2.includes(a.procedimento2))procs2.push(a.procedimento2);
   const profs=listaProfs();if(a.profissional&&!profs.includes(a.profissional))profs.push(a.profissional);
   const profSel=a.profissional||profPadrao(),parcSel=PARC(a.parcelas),credito=a.pagamento==='Cartão de crédito',cartao=credito||a.pagamento==='Cartão de débito';
   const pags=['Pix','Dinheiro','Cartão de débito','Cartão de crédito','Outro'];if(a.pagamento===FIADO)pags.push(FIADO);if(a.pagamento===CP_PAG)pags.push(CP_PAG);
-  const tem2=!!a.procedimento2,v2=Number(a.valor2)||0,v1=a.valor===undefined||a.valor===''?'':Math.max(0,(Number(a.valor)||0)-v2),pagoSel=id?(a.pago!==false&&!isFiado(a)):String(a.data||hoje())<=hoje();
+  const tem2=!!a.procedimento2,v2=Number(a.valor2)||0,v1=it3?it3[0].valor:(a.valor===undefined||a.valor===''?'':Math.max(0,(Number(a.valor)||0)-v2)),pagoSel=id?(a.pago!==false&&!isFiado(a)):String(a.data||hoje())<=hoje();
   const taxaSt=a.taxaAg>0?(a.taxaPaga?'paga':'pend'):'nao',taxaVal=a.taxaAg>0?a.taxaAg:'';
   const cls=[...S.clientes].sort((x,y)=>(x.nome||'').localeCompare(y.nome||'','pt-BR'));
   const pf=cat.length?cat:procs.map(n=>({nome:n,duracao:0,preco:0}));
-  [a.procedimento,a.procedimento2].forEach(n=>{if(n&&!pf.some(x=>x.nome===n))pf.push({nome:n,duracao:0,preco:0})});
-  abrir(`<h2>${id?'Editar atendimento':'Novo atendimento'}</h2><form data-form="atend" data-id="${esc(id||'')}" class="atx">
+  [a.procedimento,a.procedimento2,...ex0.map(x=>x.nome)].forEach(n=>{if(n&&!pf.some(x=>x.nome===n))pf.push({nome:n,duracao:0,preco:0})});
+  abrir(`<h2>${id?'Editar atendimento':'Novo atendimento'}</h2><form data-form="atend" data-id="${esc(id||'')}" class="atx" data-ex="${esc(JSON.stringify(ex0))}">
   <h3 class="atx-h"><i>1</i> Cliente</h3>
   <select id="a-cli" name="clienteId" class="atx-oculto" tabindex="-1" aria-hidden="true"><option value="">Selecione…</option>${cls.map(c=>`<option value="${esc(c.id)}" ${c.id===a.clienteId?'selected':''}>${esc(c.nome)}</option>`).join('')}</select>
   <div id="atx-cli"></div><div id="a-falta" class="atx-aviso" role="status">${esc(avisoFaltas(a.clienteId))}</div>
@@ -3290,10 +3293,11 @@ function formAtend(id,clienteId,data){
   <select id="a-proc" name="procedimento" class="atx-oculto" tabindex="-1" aria-hidden="true"><option value="">Selecione…</option>${procs.map(p=>`<option value="${esc(p)}" ${p===a.procedimento?'selected':''}>${esc(p)}</option>`).join('')}</select>
   ${S.semProc2?'':`<select id="a-proc2" name="procedimento2" class="atx-oculto" tabindex="-1" aria-hidden="true"><option value="">Nenhum</option>${procs2.map(p=>`<option value="${esc(p)}" ${p===a.procedimento2?'selected':''}>${esc(p)}</option>`).join('')}</select>`}
   <div class="atx-cli-box" id="atx-sbox"><button type="button" class="atx-dd" id="atx-sbtn" aria-expanded="false" data-atx="sabrir"><span id="atx-sbtn-t">Toque para escolher o serviço</span></button><div class="atx-servs atx-lista" id="atx-servs" role="group" aria-label="Serviços" hidden>${pf.map(s=>`<button type="button" class="atx-serv" data-nome="${esc(s.nome)}" aria-pressed="false"><b>${esc(s.nome)}</b><span>${[Number(s.duracao)>0?Number(s.duracao)+' min':'',Number(s.preco)>0?brl(Number(s.preco)):''].filter(Boolean).join(' · ')||'&nbsp;'}</span></button>`).join('')}</div></div>
-  <p class="muted atx-dica" id="atx-limite" hidden>Por enquanto cada atendimento aceita até 2 serviços.</p>
+  <p class="muted atx-dica" id="atx-limite" hidden>Este banco ainda aceita só 1 serviço por atendimento.</p>
   <div class="atx-sel" id="atx-sel" hidden>
     <div id="atx-v1"><span id="atx-n1"></span><input id="a-val" name="valor" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(v1)}" aria-label="Valor do 1º serviço (R$)"></div>
     <div id="a-val2-wrap" ${tem2?'':'hidden'}><span id="atx-n2"></span><input id="a-val2" name="valor2" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(a.valor2||'')}" aria-label="Valor do 2º serviço (R$)"></div>
+    <div id="atx-xv"></div>
   </div>
   <div id="a-total" class="muted num" aria-live="polite"></div>
   ${!id&&recOk('promocoes')&&!S.semPromo&&(S.promos||[]).some(x=>x.ativo)?`<div><label for="a-cup">Cupom (opcional)</label><input id="a-cup" name="cupom" maxlength="20" autocapitalize="characters" placeholder="Ex.: NATAL10" autocomplete="off"></div>`:''}
@@ -3337,6 +3341,7 @@ function atualizaEstq(auto){
   $('a-estq-txt').textContent=`Ficha técnica de ${pr.value}: ${itens.map(x=>x.p.nome).join(', ')}. Custo estimado de produtos: ${brl(custo)}.`;
   if(auto&&(campo.value===''||campo.dataset.auto==='1')){campo.value=custo>0?custo:'';campo.dataset.auto='1';atualizaParc()}
 }
+const exVals=()=>[...document.querySelectorAll('.atx-xvi')].map(i=>({nome:i.dataset.n,valor:Number(i.value)||0}));
 function atualizaParc(){
   const pag=$('a-pag'),w=$('a-parc-wrap');if(!pag||!w)return;
   const pg=$('a-pago')?$('a-pago').value==='1':true,p2=$('a-proc2')?$('a-proc2').value:'';
@@ -3344,8 +3349,8 @@ function atualizaParc(){
   const lv=$('a-val-l');if(lv)lv.textContent=p2?'Valor do 1º procedimento (R$)':'Valor (R$)';
   const cred=pg&&pag.value==='Cartão de crédito',cartao=pg&&(cred||pag.value==='Cartão de débito');
   w.hidden=!cred;$('a-taxa-wrap').hidden=!cartao;
-  const v2=p2?(Number($('a-val2').value)||0):0,v=(Number($('a-val').value)||0)+v2,n=PARC($('a-parc').value);
-  $('a-total').innerHTML=p2?`Total do atendimento: <b>${brl(v)}</b> (${brl(Number($('a-val').value)||0)} + ${brl(v2)})`:'';
+  const v2=p2?(Number($('a-val2').value)||0):0,xs=exVals(),pcs=[Number($('a-val').value)||0,...(p2?[v2]:[]),...xs.map(x=>x.valor)],v=pcs.reduce((t,x)=>t+x,0),n=PARC($('a-parc').value);
+  $('a-total').innerHTML=pcs.length>1?`Total do atendimento: <b>${brl(v)}</b> (${pcs.map(brl).join(' + ')})`:'';
   $('a-parc-info').textContent=cred&&v>0?`${n}x de ${brl(v/n)}`:'';
   const prod=din($('a-prod').value),taxa=cartao?din($('a-taxa').value):0;
   $('a-liq').textContent=(prod>0||taxa>0)&&v>0?`Resultado do atendimento: ${brl(v)} − ${brl(prod+taxa)} de despesas = ${brl(v-prod-taxa)}`:'';
@@ -3355,6 +3360,8 @@ function atUi(){
   const g=id=>document.getElementById(id),ch=n=>n&&n.dispatchEvent(new Event('change',{bubbles:true}));
   const sc=g('a-cli'),sp=g('a-proc'),sp2=g('a-proc2'),dt=g('a-data'),hr=g('a-hora'),pf=g('a-prof'),pg=g('a-pago'),fp=g('a-pag');
   const nomeCli=()=>{const c=cli(sc.value);return c?c.nome:''};
+  let EX=[];try{EX=JSON.parse(f.dataset.ex||'[]')}catch(_){}
+  const nomesSel=()=>[sp.value,sp2?sp2.value:'',...EX.map(x=>x.nome)].filter(Boolean);
   function pCli(){
     const w=g('atx-cli');
     if(sc.value){const c=cli(sc.value)||{};w.innerHTML=`<div class="atx-cli-ok"><span class="atx-av">${esc((c.nome||'?').charAt(0).toUpperCase())}</span><span class="grow"><b>${esc(c.nome||'')}</b><small>${esc(c.telefone||'')}</small></span><button type="button" class="atx-chip" data-atx="trocar" style="min-height:38px;padding:4px 14px">Trocar</button></div>`;return}
@@ -3384,7 +3391,9 @@ function atUi(){
     w.innerHTML=L.length?L.map(t=>`<button type="button" data-hora="${t}" aria-pressed="${t===own}">${t}</button>`).join(''):`<p>Sem horário livre neste dia para ${esc(pr||'a profissional')}. Você pode digitar o horário abaixo para encaixar.</p>`;
   }
   function pServs(){
-    const cur=[sp.value,sp2?sp2.value:''].filter(Boolean);
+    const cur=nomesSel();
+    const xr=g('atx-xv'),chave=EX.map(x=>x.nome).join('|');
+    if(xr&&xr.dataset.k!==chave){xr.dataset.k=chave;xr.innerHTML=EX.map((x,i)=>`<div><span>${esc(x.nome)}</span><input class="atx-xvi" data-i="${i}" data-n="${esc(x.nome)}" type="number" step="0.01" min="0" inputmode="decimal" value="${x.valor?esc(x.valor):''}" aria-label="Valor de ${esc(x.nome)} (R$)"></div>`).join('')}
     g('atx-servs').querySelectorAll('.atx-serv').forEach(b=>b.setAttribute('aria-pressed',String(cur.includes(b.dataset.nome))));
     const bt=g('atx-sbtn-t');if(bt){bt.textContent=cur.length?cur.join(' + '):'Toque para escolher o serviço';g('atx-sbtn').classList.toggle('vazio',!cur.length)}
     g('atx-sel').hidden=!cur.length;g('atx-n1').textContent=cur[0]||'';g('atx-n2').textContent=cur[1]||'';
@@ -3397,7 +3406,7 @@ function atUi(){
     g('atx-forma').innerHTML=[...fp.options].filter(o=>o.value).map(o=>`<button type="button" class="atx-chip" data-forma="${esc(o.value)}" aria-pressed="${o.value===fp.value}">${esc(o.value)}</button>`).join('');
   }
   function pResumo(){
-    const n=[sp.value,sp2?sp2.value:''].filter(Boolean).length,v=(Number(g('a-val').value)||0)+(n>1?(Number(g('a-val2').value)||0):0),dur=Number(g('a-dur').value)||0,h=hr.value;
+    const n=nomesSel().length,v=(Number(g('a-val').value)||0)+(sp2&&sp2.value?(Number(g('a-val2').value)||0):0)+exVals().reduce((t,x)=>t+x.valor,0),dur=Number(g('a-dur').value)||0,h=hr.value;
     g('atx-total').textContent=brl(v);
     g('atx-resumo').textContent=n?`${n} ${n===1?'serviço':'serviços'}${dur?' · '+dur+' min':''}${h?' · '+h:''}`:'Escolha o serviço';
   }
@@ -3411,18 +3420,22 @@ function atUi(){
     if(b.dataset.dia){dt.value=b.dataset.dia;f.dataset.outro='';ch(dt);setTimeout(tudo,0);return}
     if(b.dataset.hora){hr.value=b.dataset.hora;ch(hr);pHoras();pResumo();return}
     if(b.classList.contains('atx-serv')){
-      const n=b.dataset.nome;let cur=[sp.value,sp2?sp2.value:''].filter(Boolean);
+      const n=b.dataset.nome;let cur=nomesSel();
       if(cur.includes(n))cur=cur.filter(x=>x!==n);
-      else{if(cur.length>=(sp2?2:1)){g('atx-limite').hidden=false;return}cur.push(n)}
+      else{if(cur.length>=(sp2?99:1)){g('atx-limite').hidden=false;return}cur.push(n)}
       g('atx-limite').hidden=true;
+      const vals={};if(sp.value)vals[sp.value]=g('a-val').value;if(sp2&&sp2.value)vals[sp2.value]=g('a-val2').value;EX.forEach(x=>{vals[x.nome]=x.valor});
       sp.value=cur[0]||'';if(sp2)sp2.value=cur[1]||'';
+      const cat2=servicosCat();EX=cur.slice(2).map(nm=>{const c=cat2.find(x=>x.nome===nm);return {nome:nm,valor:vals[nm]!==undefined&&vals[nm]!==''?Number(vals[nm])||0:(c&&Number(c.preco))||0}});
+      if(cur[0]&&vals[cur[0]]!==undefined)g('a-val').value=vals[cur[0]];else if(!cur[0])g('a-val').value='';
+      if(sp2){if(cur[1]&&vals[cur[1]]!==undefined)g('a-val2').value=vals[cur[1]];else if(!cur[1])g('a-val2').value=''}
       ch(sp);setTimeout(tudo,0);return}
     if(b.dataset.prof!==undefined){pf.value=b.dataset.prof;ch(pf);pProfs();pHoras();return}
     if(b.closest('#atx-taxa')){const h=g('a-taxag');h.value=b.dataset.t;[...g('atx-taxa').children].forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.t===h.value)));g('a-taxagv-wrap').hidden=h.value==='nao';const iv=g('a-taxagv');if(h.value!=='nao'&&!(Number(iv.value)>0)){const c=Number(String((msgsSalvas()._taxa)||'').replace(/[^\d,.]/g,'').replace(',','.'));if(c>0)iv.value=c}return}
     if(b.closest('#atx-pago')){pg.value=b.dataset.v;ch(pg);setTimeout(pPag,0);return}
     if(b.dataset.forma){fp.value=fp.value===b.dataset.forma?'':b.dataset.forma;ch(fp);setTimeout(pPag,0);return}
   });
-  f.addEventListener('input',()=>setTimeout(pResumo,0));
+  f.addEventListener('input',e=>{if(e.target.classList&&e.target.classList.contains('atx-xvi')){const x=EX[+e.target.dataset.i];if(x)x.valor=Number(e.target.value)||0}setTimeout(pResumo,0)});
   f.addEventListener('change',()=>setTimeout(()=>{pServs();pHoras();pDias();pPag();pResumo()},0));
   pCli();pProfs();tudo();
 }
@@ -3430,7 +3443,8 @@ async function salvarAtend(id,d){
   if(!d.clienteId)throw erroUi('Escolha a cliente.');
   if(!String(d.procedimento||'').trim())throw erroUi('Escolha pelo menos um serviço.');
   const pago=d.pago!=='0',pagForma=pago?(d.pagamento||''):'',cred=pagForma==='Cartão de crédito',cartao=cred||pagForma==='Cartão de débito';
-  const v2=String(d.procedimento2||'').trim()?din(d.valor2):0,v1=din(d.valor);
+  const xs=String(d.procedimento2||'').trim()?[...document.querySelectorAll('.atx-xvi')].map(i=>({nome:i.dataset.n,valor:din(i.value)})):[];
+  const v2b=String(d.procedimento2||'').trim()?din(d.valor2):0,v2=Math.round((v2b+xs.reduce((t,x)=>t+x.valor,0))*100)/100,v1=din(d.valor);
   /* Cupom: confere o desconto antes de gravar; o uso só é registrado depois que o atendimento salvou. */
   let cupDesc=0,cupCod='';const cupom=id?'':String(d.cupom||'').trim();
   if(cupom){const c=await vdChama('promo_aplicar',{p_codigo:cupom,p_base:v1+v2,p_apenas_ver:true});cupDesc=Math.min(v1+v2,Number(c.desconto)||0);cupCod=c.codigo||cupom}
@@ -3438,7 +3452,7 @@ async function salvarAtend(id,d){
   const o={cliente_id:d.clienteId,data:d.data,procedimento:d.procedimento.trim(),profissional:(d.profissional||profPadrao()||PROF).trim(),
     valor:tot,pagamento:pagForma,parcelas:cred?PARC(d.parcelas):1,gasto_produtos:din(d.gastoProdutos),taxa_maquina:cartao?din(d.taxaMaquina):0,retorno:d.retorno||null,obs:((d.obs||'').trim()+(cupDesc>0?((d.obs||'').trim()?' ':'')+'(cupom '+cupCod+': −'+brl(cupDesc)+')':'')).trim()};
   if(!S.semEst)o.hora=d.hora||null;
-  if(!S.semProc2)o.procedimento2=String(d.procedimento2||'').trim().slice(0,60);
+  if(!S.semProc2)o.procedimento2=[String(d.procedimento2||'').trim(),...xs.map(x=>x.nome)].filter(Boolean).join(' + ').slice(0,400);
   const antes=id&&S.atendTodos.find(x=>x.id===id);
   if(!S.semPago){o.valor2=Math.min(v2,tot);o.pago=pago;o.pago_em=pago?((antes&&antes.pago&&antes.pagoEm)||(String(d.data)>hoje()?d.data:hoje())):null}
   if(!S.semDur)o.duracao=Math.min(720,Math.max(5,Math.round(Number(d.duracao)||60)));
@@ -3449,6 +3463,7 @@ async function salvarAtend(id,d){
     if(ts!=='nao'&&!(tv>0))throw erroUi('Informe o valor da taxa de agendamento.');
     if(tv>100000)throw erroUi('O valor da taxa é grande demais.');
     if(ts!=='nao'||(antes&&antes.taxaAg)){o.taxa_valor=ts==='nao'?0:tv;o.taxa_paga=ts==='paga'}}
+  if(!S.semItens&&(xs.length||(antes&&antes.itens&&antes.itens.length)))o.itens=xs.length?[{nome:o.procedimento,valor:v1},{nome:String(d.procedimento2).trim(),valor:v2b},...xs]:[];
   const aid=id||novoId();
   if(!id)o.id=aid;
   const grava=x=>id?sb.from('atendimentos').update(x).eq('id',id):sb.from('atendimentos').insert(x);
@@ -3457,6 +3472,7 @@ async function salvarAtend(id,d){
     delete o.hora;r=await grava(o);S.semHora=true;
   }
   if(r.error&&/taxa_(valor|paga)/i.test(String(r.error.message||''))&&o.taxa_valor!==undefined){const quis=o.taxa_valor>0;delete o.taxa_valor;delete o.taxa_paga;S.semTaxaAg=true;if(quis)throw erroUi('Para guardar a taxa de agendamento, rode o arquivo 73-taxa-agendamento.sql (ou o agendio-TUDO.sql) no Supabase.');r=await grava(o)}
+  if(r.error&&/itens/i.test(String(r.error.message||''))&&o.itens!==undefined){const quis=o.itens.length>0;delete o.itens;S.semItens=true;if(quis)throw erroUi('Para usar 3 ou mais serviços, rode o arquivo 74-varios-servicos.sql (ou o agendio-TUDO.sql) no Supabase.');r=await grava(o)}
   if(r.error&&/gorjeta/i.test(String(r.error.message||''))&&o.gorjeta!==undefined){delete o.gorjeta;if(Number(d.gorjeta)>0)throw erroUi('Para registrar gorjeta, rode o arquivo 63-email-cliente-gorjeta.sql (ou o agendio-TUDO.sql) no Supabase.');r=await grava(o)}
   if(r.error&&/\bsala\b/i.test(String(r.error.message||''))&&o.sala!==undefined){delete o.sala;if(o.sala===undefined&&(d.sala||'')!=='')throw erroUi('Para usar salas, rode o arquivo 61-salas.sql (ou o agendio-TUDO.sql) no Supabase.');r=await grava(o)}
   if(r.error&&/duracao/i.test(String(r.error.message||''))){delete o.duracao;S.semDur=true;r=await grava(o)}
@@ -3474,7 +3490,7 @@ async function salvarAtend(id,d){
     try{
       if(tinha||(id&&baixa)){const x=await sb.from('movimentacoes_estoque').delete().eq('atendimento_id',aid);if(x.error)throw x.error}
       if(baixa){
-        const linhas=[...fichaDe(o.procedimento),...(o.procedimento2?fichaDe(o.procedimento2):[])].map(({f,p})=>({id:novoId(),produto_id:p.id,data:o.data,tipo:'atendimento',quantidade:-r4(usoEf(p,f.quantidade)),motivo:'Atendimento: '+o.procedimento+(o.procedimento2?' + '+o.procedimento2:''),atendimento_id:aid}));
+        const linhas=[o.procedimento,...(String(d.procedimento2||'').trim()?[String(d.procedimento2).trim()]:[]),...xs.map(x=>x.nome)].flatMap(n=>fichaDe(n)).map(({f,p})=>({id:novoId(),produto_id:p.id,data:o.data,tipo:'atendimento',quantidade:-r4(usoEf(p,f.quantidade)),motivo:('Atendimento: '+o.procedimento+(o.procedimento2?' + '+o.procedimento2:'')).slice(0,100),atendimento_id:aid}));
         if(linhas.length){const x=await sb.from('movimentacoes_estoque').insert(linhas);if(x.error)throw x.error;msg+=' Estoque atualizado.'}
       }else if(tinha)msg+=' Baixa do estoque desfeita.';
     }catch(_){msg+=' Atenção: não foi possível atualizar o estoque, confira na aba Estoque.'}
@@ -4001,7 +4017,7 @@ async function mudarStatus(id,st){
   if(!STATUS_OK.includes(st))return;
   const r=await sb.from('atendimentos').update({status:st}).eq('id',id);
   if(r.error){if(/status/i.test(String(r.error.message||''))){S.semStatus=true;toast('Rode o arquivo 08-agenda-status.sql no Supabase para usar o status.',true);render();return}throw r.error}
-  const _at=S.atendTodos.find(x=>x.id===id);await recarregar();render();if(st==='cancelado'&&_at)avisoVaga(_at.data,[_at.procedimento,_at.procedimento2],_at.profissional);toast(st==='cancelado'?'Marcado como cancelado.':st==='faltou'?'Marcado como falta.':st==='confirmado'?'Confirmado.':'Reativado.');
+  const _at=S.atendTodos.find(x=>x.id===id);await recarregar();render();if(st==='cancelado'&&_at)avisoVaga(_at.data,itensDe(_at).map(x=>x.nome),_at.profissional);toast(st==='cancelado'?'Marcado como cancelado.':st==='faltou'?'Marcado como falta.':st==='confirmado'?'Confirmado.':'Reativado.');
 }
 function linhaAg(a){
   const c=cli(a.clienteId)||{nome:'(cliente removida)'};
@@ -5588,7 +5604,7 @@ document.addEventListener('input',e=>{
   else if(['p-cont','p-preco','p-uso','p-perda'].includes(e.target.id))previaProd();
   else if(e.target.id==='f-qtd')previaFicha(false);
   else if(e.target.dataset&&e.target.dataset.cx!==undefined)caixaDifTela();
-  else if(['a-val','a-val2','a-prod','a-taxa'].includes(e.target.id)){if(e.target.id==='a-prod')e.target.dataset.auto='';atualizaParc()}
+  else if(['a-val','a-val2','a-prod','a-taxa'].includes(e.target.id)||(e.target.classList&&e.target.classList.contains('atx-xvi'))){if(e.target.id==='a-prod')e.target.dataset.auto='';atualizaParc()}
 });
 document.addEventListener('change',e=>{
   const t=e.target;
@@ -5608,9 +5624,9 @@ document.addEventListener('change',e=>{
   else if(t.id==='pv-c'){const n=$('pv-cn');if(n){n.hidden=t.value!=='__nova';if(!n.hidden)n.focus()}}
   else if(t.id==='a-ret'){delete t.dataset.auto}
   else if(t.id==='a-data'){const rt=$('a-ret'),pr=servicosCat(),A=pr.find(x=>x.nome===($('a-proc')||{}).value),B=pr.find(x=>x.nome===($('a-proc2')||{}).value),dias=Math.max((A&&A.retornoDias)||0,(B&&B.retornoDias)||0);if(rt&&rt.dataset.auto==='1'&&dias>0&&t.value)rt.value=addDia(t.value,dias)}
-  else if(t.id==='a-proc'||t.id==='a-proc2'){atualizaEstq(true);const c1=servicosCat(),f=n=>c1.find(x=>x.nome===n),A=f($('a-proc').value),B=$('a-proc2')?f($('a-proc2').value):null;
-    if(A||B){$('a-dur').value=((A&&A.duracao)||0)+((B&&B.duracao)||0)||60;const v=$('a-val'),v2=$('a-val2'),pa=(A&&Number(A.preco))||0,pb=(B&&Number(B.preco))||0;if(v&&pa>0&&(!Number(v.value)||v.dataset.auto==='1')){v.value=pa;v.dataset.auto='1'}if(v2&&pb>0&&(!Number(v2.value)||v2.dataset.auto==='1')){v2.value=pb;v2.dataset.auto='1'}}
-    const dias=Math.max((A&&A.retornoDias)||0,(B&&B.retornoDias)||0),rt=$('a-ret'),dt=$('a-data');if(rt&&dt&&dias>0&&dt.value&&(!rt.value||rt.dataset.auto==='1')){rt.value=addDia(dt.value,dias);rt.dataset.auto='1'}else if(rt&&rt.dataset.auto==='1'&&dias===0){rt.value='';delete rt.dataset.auto}
+  else if(t.id==='a-proc'||t.id==='a-proc2'){atualizaEstq(true);const c1=servicosCat(),f=n=>c1.find(x=>x.nome===n),A=f($('a-proc').value),B=$('a-proc2')?f($('a-proc2').value):null,XS=exVals().map(x=>f(x.nome)).filter(Boolean);
+    if(A||B||XS.length){$('a-dur').value=((A&&A.duracao)||0)+((B&&B.duracao)||0)+XS.reduce((t,x)=>t+(x.duracao||0),0)||60;const v=$('a-val'),v2=$('a-val2'),pa=(A&&Number(A.preco))||0,pb=(B&&Number(B.preco))||0;if(v&&pa>0&&(!Number(v.value)||v.dataset.auto==='1')){v.value=pa;v.dataset.auto='1'}if(v2&&pb>0&&(!Number(v2.value)||v2.dataset.auto==='1')){v2.value=pb;v2.dataset.auto='1'}}
+    const dias=Math.max((A&&A.retornoDias)||0,(B&&B.retornoDias)||0,...XS.map(x=>x.retornoDias||0)),rt=$('a-ret'),dt=$('a-data');if(rt&&dt&&dias>0&&dt.value&&(!rt.value||rt.dataset.auto==='1')){rt.value=addDia(dt.value,dias);rt.dataset.auto='1'}else if(rt&&rt.dataset.auto==='1'&&dias===0){rt.value='';delete rt.dataset.auto}
     atualizaParc()}
   else if(t.id==='bq-dia'){$('bq-h').hidden=t.checked}
   else if(t.id==='on-sa'){const c=$('sinal-campos');if(c)c.hidden=!t.checked}
