@@ -125,7 +125,7 @@ label.chk input{width:auto}
 .obs{margin-top:4px;overflow-wrap:anywhere;font-size:14px}
 .av{flex:none;display:grid;place-items:center;width:40px;height:40px;border-radius:50%;font-weight:700;font-size:14px;letter-spacing:.01em}
 .item .av{margin-right:2px}
-.chthread{max-height:42vh;overflow:auto;margin:10px 0}.chm{padding:10px 12px;border-radius:12px;margin:8px 0;max-width:92%;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--line-2)}.chm.suporte{background:var(--accent-soft);margin-left:auto}.chm b{font-size:13px}
+.chanx{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.chanx img{display:block;max-width:140px;max-height:140px;border-radius:8px;border:1px solid var(--line);object-fit:cover}.chthread{max-height:42vh;overflow:auto;margin:10px 0}.chm{padding:10px 12px;border-radius:12px;margin:8px 0;max-width:92%;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--line-2)}.chm.suporte{background:var(--accent-soft);margin-left:auto}.chm b{font-size:13px}
 #tabs button[data-n]::after,.segs button[data-n]::after{content:attr(data-n);margin-left:8px;background:var(--accent);color:var(--accent-ink);border-radius:99px;font-size:11px;font-weight:700;padding:1px 7px}
 .cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-bottom:16px}
 .cal-h{font-size:12px;font-weight:600;color:var(--muted);text-align:center;padding:4px 0}
@@ -2035,12 +2035,31 @@ function chContexto(x){
   if(x.navegador)L.push('Navegador: '+x.navegador);
   return L.length?`<details class="panel" style="margin:10px 0;padding:10px 14px"><summary>Informações técnicas enviadas</summary><div class="muted" style="font-size:13px;margin-top:6px;overflow-wrap:anywhere">${L.map(esc).join('<br>')}</div></details>`:'';
 }
+const CH_SEM='Rode o arquivo 76-chamado-imagens.sql (ou o agendio-TUDO.sql) no Supabase para liberar as imagens no chamado.';
+async function chSobe(inp){
+  const fs=inp&&inp.files?Array.from(inp.files):[];if(!fs.length)return [];
+  if(fs.length>3)throw erroUi('Envie no máximo 3 imagens por mensagem.');
+  const tid=S.ctx&&S.ctx.tenant&&S.ctx.tenant.id;if(!tid)throw erroUi('Não foi possível identificar o salão. Entre de novo.');
+  const bk=sb.storage.from('chamados'),out=[];
+  for(const f of fs){
+    const b=await fotoReduz(f),cam=tid+'/'+novoId().replace(/-/g,'')+'.jpg';
+    const up=await bk.upload(cam,b,{contentType:'image/jpeg',upsert:false});
+    if(up.error){if(out.length)await bk.remove(out).catch(()=>{});if(/bucket|not found/i.test(up.error.message||''))throw erroUi(CH_SEM);throw up.error}
+    out.push(cam);
+  }
+  return out;
+}
+async function chUrls(msgs){
+  const L=[...new Set((msgs||[]).flatMap(m=>Array.isArray(m.anexos)?m.anexos:[]))].filter(x=>!(S.chUrl&&S.chUrl[x]));
+  S.chUrl=S.chUrl||{};if(!L.length)return;
+  try{const u=await sb.storage.from('chamados').createSignedUrls(L,3600);(u.data||[]).forEach(y=>{if(y&&y.signedUrl)S.chUrl[y.path||'']=y.signedUrl})}catch(_){}
+}
 async function chAbrir(id,adm){
   const c=(adm?S.pl.ch||[]:S.aj.lista).find(x=>x.id===id);if(!c)return;
   S.chAtual={id,adm};abrir('<p class="muted">Carregando…</p>');
   try{
     const r=await sb.from('chamado_msgs').select('*').eq('chamado_id',id).order('criado_em');
-    if(r.error)throw r.error;S.chMsgs=r.data||[];chDesenha();
+    if(r.error)throw r.error;S.chMsgs=r.data||[];await chUrls(S.chMsgs);chDesenha();
     if(adm?c.nao_lido_suporte:c.nao_lido_salao){
       sb.rpc('chamado_lido',{p_id:id}).then(()=>{if(adm)c.nao_lido_suporte=false;else c.nao_lido_salao=false;carregarPend();render()})
     }
@@ -2048,11 +2067,11 @@ async function chAbrir(id,adm){
 }
 function chDesenha(){
   const {id,adm}=S.chAtual||{},c=(adm?S.pl.ch||[]:S.aj.lista).find(x=>x.id===id);if(!c)return;
-  const ms=(S.chMsgs||[]).map(m=>`<div class="chm ${m.autor}"><b>${esc(m.autor==='suporte'?(m.autor_nome||'Suporte Agendio')+' (suporte)':(m.autor_nome||'Salão'))}</b><span class="muted"> · ${esc(chData(m.criado_em))}</span><div>${esc(m.texto)}</div></div>`).join('');
+  const ms=(S.chMsgs||[]).map(m=>`<div class="chm ${m.autor}"><b>${esc(m.autor==='suporte'?(m.autor_nome||'Suporte Agendio')+' (suporte)':(m.autor_nome||'Salão'))}</b><span class="muted"> · ${esc(chData(m.criado_em))}</span><div>${esc(m.texto)}</div>${Array.isArray(m.anexos)&&m.anexos.length?`<div class="chanx">${m.anexos.map(p=>S.chUrl&&S.chUrl[p]?`<a href="${esc(S.chUrl[p])}" target="_blank" rel="noopener"><img src="${esc(S.chUrl[p])}" alt="Imagem enviada no chamado" loading="lazy"></a>`:'').join('')}</div>`:''}</div>`).join('');
   const acoes=adm?`<div class="acts" style="flex-wrap:wrap"><select id="ch-st" aria-label="Situação do chamado"><option value="">Manter situação</option><option value="aberto">Aberto</option><option value="em_andamento">Em andamento</option><option value="resolvido">Resolvido</option></select><button type="button" class="btn ghost" data-act="chFechar">Fechar</button><button type="button" class="btn ghost" data-act="chEnviar" data-resolver="1">Responder e resolver</button><button type="button" class="btn" data-act="chEnviar">Responder</button></div>`
     :`<div class="acts"><button type="button" class="btn ghost" data-act="chFechar">Fechar</button><button type="button" class="btn" data-act="chEnviar">Enviar</button></div>`;
   const d=$('dlg'),t=$('ch-txt'),rasc=t?t.value:'';
-  d.innerHTML=`<h2>${esc(c.assunto)}</h2><p class="muted">${adm?esc(nomeSalao(c.tenant_id))+' · '+esc(c.autor_nome||'')+' '+esc(c.autor_email||'')+' · ':''}${esc(CH_CAT[c.categoria]||c.categoria)} · <span class="tag">${esc(CH_ST[c.status]||c.status)}</span></p>${chContexto(c.contexto||{})}<div class="chthread" aria-live="polite">${ms}</div><label for="ch-txt">${adm?'Resposta':'Sua mensagem'}</label><textarea id="ch-txt" rows="3" maxlength="4000"></textarea>${acoes}`;
+  d.innerHTML=`<h2>${esc(c.assunto)}</h2><p class="muted">${adm?esc(nomeSalao(c.tenant_id))+' · '+esc(c.autor_nome||'')+' '+esc(c.autor_email||'')+' · ':''}${esc(CH_CAT[c.categoria]||c.categoria)} · <span class="tag">${esc(CH_ST[c.status]||c.status)}</span></p>${chContexto(c.contexto||{})}<div class="chthread" aria-live="polite">${ms}</div><label for="ch-txt">${adm?'Resposta':'Sua mensagem'}</label><textarea id="ch-txt" rows="3" maxlength="4000"></textarea>${adm?'':'<label for="ch-arq">Anexar imagem (opcional)</label><input id="ch-arq" type="file" accept="image/*" multiple><p class="muted" style="margin:4px 0 0">Até 3 imagens, por exemplo um print da tela.</p>'}${acoes}`;
   $('ch-txt').value=rasc;if(!d.open)d.showModal();
   const th=d.querySelector('.chthread');if(th)th.scrollTop=th.scrollHeight;
 }
@@ -2061,10 +2080,11 @@ async function chEnviar(resolver){
   if(!x&&!(adm&&(st||resolver))){toast('Escreva a mensagem.',true);return}
   S.busy=true;
   try{
-    const r=adm?await sb.rpc('plataforma_responder_chamado',{p_id:id,p_texto:x,p_status:resolver?'resolvido':st}):await sb.rpc('responder_chamado',{p_id:id,p_texto:x});
-    if(r.error)throw r.error;
+    const an=adm?[]:await chSobe($('ch-arq'));
+    const r=adm?await sb.rpc('plataforma_responder_chamado',{p_id:id,p_texto:x,p_status:resolver?'resolvido':st}):await sb.rpc('responder_chamado',an.length?{p_id:id,p_texto:x,p_anexos:an}:{p_id:id,p_texto:x});
+    if(r.error){if(an.length&&(r.error.code==='PGRST202'||r.error.code==='42883'))throw erroUi(CH_SEM);throw r.error}
     t.value='';
-    const m=await sb.from('chamado_msgs').select('*').eq('chamado_id',id).order('criado_em');if(!m.error)S.chMsgs=m.data||[];
+    const m=await sb.from('chamado_msgs').select('*').eq('chamado_id',id).order('criado_em');if(!m.error){S.chMsgs=m.data||[];await chUrls(S.chMsgs)}
     await (adm?carregarChamadosPl():carregarAjuda());chDesenha();carregarPend();toast(adm?'Resposta enviada.':'Mensagem enviada.');
   }catch(e){falha(e)}finally{S.busy=false}
 }
@@ -2074,12 +2094,15 @@ function formChamado(){
   <label for="ch-cat">Assunto geral</label><select id="ch-cat" name="categoria">${Object.keys(CH_CAT).map(k=>`<option value="${k}">${CH_CAT[k]}</option>`).join('')}</select>
   <label for="ch-ass">Título *</label><input id="ch-ass" name="assunto" required minlength="3" maxlength="120" autocomplete="off">
   <label for="ch-msg">O que está acontecendo? *</label><textarea id="ch-msg" name="texto" rows="5" required minlength="5" maxlength="4000"></textarea>
+  <label for="ch-arq">Anexar imagem (opcional)</label><input id="ch-arq" type="file" accept="image/*" multiple>
+  <p class="muted" style="margin:4px 0 0">Até 3 imagens, por exemplo um print do erro. Só você e a equipe do Agendio conseguem ver.</p>
   <label class="chk"><input type="checkbox" name="tecnico" value="1" checked> Enviar informações técnicas (tela em que estou${e?', último erro':''}, versão e navegador). Nunca enviamos dados de clientes.</label>
   <div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Enviar chamado</button></div></form>`);
 }
 async function salvarChamado(d){
   const ctx=d.tecnico?{tela:S.view,erro:S.ultimoErro||undefined,versao:AGENDIO_V,navegador:String(navigator.userAgent||'').slice(0,160),plano:S.ctx&&S.ctx.plano&&S.ctx.plano.nome||undefined}:{};
-  const r=await sb.rpc('abrir_chamado',{p:{categoria:d.categoria,assunto:d.assunto,texto:d.texto,contexto:ctx}});
+  const an=await chSobe(document.getElementById('ch-arq'));
+  const r=await sb.rpc('abrir_chamado',{p:{categoria:d.categoria,assunto:d.assunto,texto:d.texto,contexto:ctx,...(an.length?{anexos:an}:{})}});
   if(r.error)throw r.error;
   await carregarAjuda();toast('Chamado enviado. Avisamos aqui quando houver resposta.');
 }
