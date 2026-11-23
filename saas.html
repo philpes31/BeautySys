@@ -678,7 +678,7 @@ const pagTxt=a=>{
 };
 
 /* ---------- Dados (Supabase) ---------- */
-const rowC=r=>({email:r.email||'',id:r.id,nome:r.nome||'',telefone:r.telefone||'',nascimento:r.nascimento||'',obs:r.obs||'',indicadaPor:r.indicada_por||'',etiquetas:Array.isArray(r.etiquetas)?r.etiquetas:[]});
+const rowC=r=>({email:r.email||'',id:r.id,nome:r.nome||'',telefone:r.telefone||'',nascimento:r.nascimento||'',obs:r.obs||'',indicadaPor:r.indicada_por||'',comoConheceu:r.como_conheceu||'',etiquetas:Array.isArray(r.etiquetas)?r.etiquetas:[]});
 const STATUS_OK=['agendado','confirmado','cancelado','faltou'],STATUS_ROT={agendado:'Agendado',confirmado:'Confirmado',cancelado:'Cancelou',faltou:'Faltou'};
 const inativo=a=>a.status==='cancelado'||a.status==='faltou';
 const procTxt=a=>(a.procedimento||'')+(a.procedimento2?' + '+a.procedimento2:'');
@@ -1823,6 +1823,7 @@ function blocoEmailsSalao(){
   <label class="chk" style="padding:4px 0"><input type="checkbox" data-emcfg="backup_semanal" ${c.backup_semanal?'checked':''}> Cópia de segurança toda segunda-feira (arquivo com os dados do salão)</label>
   <p class="muted" style="margin:2px 0 10px;max-width:560px">Os e-mails vão para o endereço da proprietária. A cópia leva dados pessoais das clientes: ligue só se for guardar o arquivo com cuidado.</p>`;
 }
+document.addEventListener('change',e=>{if(e.target&&e.target.id==='f-orig'){const v=e.target.value,a=document.getElementById('f-orig-o-w'),b=document.getElementById('f-ind-w');if(a)a.hidden=v!=='Outro';if(b)b.hidden=v!=='Indicação de cliente'}});
 document.addEventListener('change',async e=>{const k=e.target&&e.target.dataset&&e.target.dataset.emcfg;if(!k||!S.emCfg)return;
   const n=Object.assign({},S.emCfg,{[k]:e.target.checked});
   try{const r=await sb.rpc('emails_config_gravar',{p_relatorio:!!n.relatorio_mensal,p_backup:!!n.backup_semanal});if(r.error)throw r.error;S.emCfg=r.data||n;toast('Preferência salva.')}catch(x){e.target.checked=!e.target.checked;toast(falha(x),true)}});
@@ -2496,10 +2497,17 @@ function lista(){
   return `<div class="bar"><input id="busca" type="search" placeholder="Buscar por nome ou telefone" value="${esc(S.busca)}" autocomplete="off" aria-label="Buscar cliente">${!S.legado&&NV('config')==='escrita'?'<button class="btn ghost" data-act="fidConfig">Fidelidade</button><button class="btn ghost" data-act="aniConfig">Aniversário</button>':''}${!S.legado&&NV('clientes')==='escrita'?'<button class="btn ghost" data-act="impAbrir">Importar planilha</button>':''}<button class="btn" data-act="novaCliente">Nova cliente</button></div>${avisoRepetidas()}${blocoIndicacoes()}${barraEtiquetas()}<div id="lista">${itensClientes()}</div>`;
 }
 const indicouLista=id=>S.clientes.filter(x=>x.indicadaPor===id);
+const ORIGENS=['Indicação de cliente','Instagram','Facebook','Google','TikTok','WhatsApp','Passou em frente ao salão'];
+const origemDe=c=>c.comoConheceu||(c.indicadaPor?'Indicação de cliente':'');
+function blocoOrigens(){
+  const m=new Map();S.clientes.forEach(x=>{const o=origemDe(x);if(o)m.set(o,(m.get(o)||0)+1)});
+  const L=[...m.entries()].sort((a,b)=>b[1]-a[1]);if(!L.length)return '';const tot=L.reduce((t,x)=>t+x[1],0);
+  return `<div class="panel" style="margin-bottom:12px"><b>De onde vêm as clientes</b><p class="muted" style="margin:4px 0 8px">${tot} ${tot===1?'cliente com a origem informada':'clientes com a origem informada'}.</p><div class="list">${L.slice(0,8).map(([o,n])=>`<div class="item"><div class="grow"><div class="t">${esc(o)}</div></div><div class="side"><b>${n}</b> · ${Math.round(n/tot*100)}%</div></div>`).join('')}</div></div>`;
+}
 function blocoIndicacoes(){
   const m=new Map();S.clientes.forEach(x=>{if(x.indicadaPor&&cli(x.indicadaPor))m.set(x.indicadaPor,(m.get(x.indicadaPor)||0)+1)});
-  const top=[...m.entries()].sort((a,b)=>b[1]-a[1]).slice(0,3);if(!top.length)return '';
-  return `<div class="panel" style="margin-bottom:12px"><b>Quem mais indica</b><div class="list" style="margin-top:8px">${top.map(([id,n])=>`<div class="item click" tabindex="0" role="button" data-act="abrir" data-id="${esc(id)}"><div class="grow"><div class="t">${esc(cli(id).nome)}</div></div><div class="side"><b>${n}</b> ${n===1?'indicação':'indicações'}</div></div>`).join('')}</div></div>`;
+  const top=[...m.entries()].sort((a,b)=>b[1]-a[1]).slice(0,3);if(!top.length)return blocoOrigens();
+  return blocoOrigens()+`<div class="panel" style="margin-bottom:12px"><b>Quem mais indica</b><div class="list" style="margin-top:8px">${top.map(([id,n])=>`<div class="item click" tabindex="0" role="button" data-act="abrir" data-id="${esc(id)}"><div class="grow"><div class="t">${esc(cli(id).nome)}</div></div><div class="side"><b>${n}</b> ${n===1?'indicação':'indicações'}</div></div>`).join('')}</div></div>`;
 }
 function avisoRepetidas(){
   const g=gruposRepetidos();if(!g.length||S.legado||NV('clientes')!=='escrita')return '';
@@ -2536,7 +2544,7 @@ function detalhe(){
     ${c.nascimento?`<div class="muted">Nascimento: ${fd(c.nascimento)}</div>`:''}
     ${chipsEtq(c)}
     ${faltasDe(c.id)?`<div class="muted">${chipFaltas(c)} Faltou sem avisar.</div>`:''}
-    ${(()=>{const q=cli(c.indicadaPor),L=indicouLista(c.id);return (q?`<div class="muted">Indicada por ${esc(q.nome)}</div>`:'')+(L.length?`<div class="muted">Indicou ${L.length} ${L.length===1?'cliente':'clientes'}: ${esc(L.map(x=>x.nome).join(', '))}</div>`:'')})()}
+    ${(()=>{const q=cli(c.indicadaPor),L=indicouLista(c.id),og=c.comoConheceu&&c.comoConheceu!=='Indicação de cliente'?c.comoConheceu:'';return (og?`<div class="muted">Conheceu o salão por: ${esc(og)}</div>`:'')+(q?`<div class="muted">Indicada por ${esc(q.nome)}</div>`:'')+(L.length?`<div class="muted">Indicou ${L.length} ${L.length===1?'cliente':'clientes'}: ${esc(L.map(x=>x.nome).join(', '))}</div>`:'')})()}
     ${(()=>{const f=S.atendTodos.filter(x=>x.clienteId===c.id&&x.status==='faltou').length,k=S.atendTodos.filter(x=>x.clienteId===c.id&&x.status==='cancelado').length;return f||k?`<div class="muted">${f?`<span class="tag late">${f} ${f===1?'falta':'faltas'}</span> `:''}${k?`${k} ${k===1?'cancelamento':'cancelamentos'}`:''}</div>`:''})()}
     ${/alergi|al[eé]rgic|sensibilidade|n[aã]o pode usar/i.test(c.obs||'')?'<div><span class="tag late" role="note">Atenção: alergia ou sensibilidade anotada</span></div>':''}
     ${c.obs?`<p class="obs">${esc(c.obs)}</p>`:''}</div>
@@ -2991,12 +2999,15 @@ async function resgatarPremio(cid){
 }
 function formCliente(id){
   const c=id?cli(id):{};if(id&&!c)return;
+  const origAtual=origemDe(c),origSel=!origAtual?'':(ORIGENS.includes(origAtual)?origAtual:'Outro');
   abrir(`<h2>${id?'Editar cliente':'Nova cliente'}</h2><form data-form="cliente" data-id="${esc(id||'')}">
   <label for="f-nome">Nome *</label><input id="f-nome" name="nome" required autocomplete="off" value="${esc(c.nome)}">
   <div class="grid2"><div><label for="f-tel">Telefone / WhatsApp</label><input id="f-tel" name="telefone" type="tel" value="${esc(c.telefone)}"></div>
   <div><label for="f-nasc">Nascimento</label><input id="f-nasc" name="nascimento" type="date" value="${esc(c.nascimento)}"></div></div>
   <label for="f-mail">E-mail (opcional)</label><input id="f-mail" name="email" type="email" maxlength="160" autocomplete="off" placeholder="Para receber o lembrete do horário" value="${esc(c.email)}">
-  ${S.clientes.some(x=>x.id!==id)?`<label for="f-ind">Indicada por</label><select id="f-ind" name="indicada_por"><option value="">Ninguém / não sei</option>${[...S.clientes].filter(x=>x.id!==id).sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','pt-BR')).map(x=>`<option value="${esc(x.id)}" ${x.id===c.indicadaPor?'selected':''}>${esc(x.nome)}</option>`).join('')}</select>`:''}
+  <label for="f-orig">Como conheceu o salão?</label><select id="f-orig" name="como_conheceu"><option value="">Não sei / não perguntei</option>${[...ORIGENS,'Outro'].map(o=>`<option value="${esc(o)}" ${o===origSel?'selected':''}>${esc(o)}</option>`).join('')}</select>
+  <div id="f-orig-o-w" ${origSel==='Outro'?'':'hidden'}><label for="f-orig-o">Qual?</label><input id="f-orig-o" name="como_outro" maxlength="40" placeholder="Ex.: panfleto, vizinha, evento" value="${esc(origSel==='Outro'?origAtual:'')}"></div>
+  <div id="f-ind-w" ${origSel==='Indicação de cliente'?'':'hidden'}>${S.clientes.some(x=>x.id!==id)?`<label for="f-ind">Indicada por</label><select id="f-ind" name="indicada_por"><option value="">Ninguém / não sei</option>${[...S.clientes].filter(x=>x.id!==id).sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','pt-BR')).map(x=>`<option value="${esc(x.id)}" ${x.id===c.indicadaPor?'selected':''}>${esc(x.nome)}</option>`).join('')}</select>`:''}</div>
   <label for="f-etq">Etiquetas (separe por vírgula)</label><input id="f-etq" name="etiquetas" list="etq-sug" maxlength="120" autocomplete="off" placeholder="Ex.: VIP, gestante, alérgica a amônia" value="${esc((c.etiquetas||[]).join(', '))}"><datalist id="etq-sug">${todasEtiquetas().map(t=>`<option value="${esc(t)}">`).join('')}</datalist>
   <label for="f-obs">Observações</label><textarea id="f-obs" name="obs" rows="3" placeholder="Alergias, preferências, cuidados">${esc(c.obs)}</textarea>
   <div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Salvar</button></div></form>`);
@@ -3013,7 +3024,9 @@ async function salvarCliente(id,d){
   const mail=String(d.email||'').trim().toLowerCase(),mailAntes=id?((cli(id)||{}).email||''):'';
   if(mail&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail))throw erroUi('Confira o e-mail da cliente: ele parece incompleto.');
   if(mail!==mailAntes)o.email=mail;
-  const ind=d.indicada_por||'',antes=id?((cli(id)||{}).indicadaPor||''):'';
+  const og=d.como_conheceu===undefined?undefined:(d.como_conheceu==='Outro'?(String(d.como_outro||'').trim().slice(0,40)||'Outro'):String(d.como_conheceu||'')),ogAntes=id?((cli(id)||{}).comoConheceu||''):'';
+  if(og!==undefined&&og!==ogAntes)o.como_conheceu=og||null;
+  const ind=og===undefined||og==='Indicação de cliente'?(d.indicada_por||''):'',antes=id?((cli(id)||{}).indicadaPor||''):'';
   if(ind!==antes)o.indicada_por=ind||null;
   const etq=lerEtiquetas(d.etiquetas),etqAntes=id?((cli(id)||{}).etiquetas||[]):[];
   if(etq.join('|')!==etqAntes.join('|'))o.etiquetas=etq;
@@ -3027,6 +3040,7 @@ async function salvarCliente(id,d){
     if(igual&&!window.confirm(`Já existe uma cliente chamada "${igual.nome}"${igual.telefone?' ('+igual.telefone+')':''}.\n\nÉ outra pessoa? Cadastrar mesmo assim?`))return;
   }
   const r=id?await sb.from('clientes').update(o).eq('id',id):await sb.from('clientes').insert(o);
+  if(r.error&&/como_conheceu/i.test(String(r.error.message||'')))throw erroUi('Para guardar como a cliente conheceu o salão, rode o arquivo 75-como-conheceu.sql (ou o agendio-TUDO.sql) no Supabase.');
   if(r.error&&/\bemail\b/i.test(String(r.error.message||'')))throw erroUi('Para guardar o e-mail da cliente, rode o arquivo 63-email-cliente-gorjeta.sql (ou o agendio-TUDO.sql) no Supabase.');
   if(r.error)throw r.error;
   await recarregar();
