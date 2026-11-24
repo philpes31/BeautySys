@@ -689,9 +689,11 @@ const rowD=r=>({id:r.id,data:r.data,categoria:r.categoria||'Outros',descricao:r.
 const gastosDoMes=m=>m?S.gastos.filter(g=>String(g.data).startsWith(m)):S.gastos;
 const mesesGastos=()=>[...new Set(S.gastos.map(g=>String(g.data).slice(0,7)))].filter(Boolean);
 async function todos(t,filtro){
+  // Pedir o salão de forma explícita deixa o banco usar o índice (salão, id) e não varrer os dados dos outros salões.
+  const tid=!S.legado&&S.ctx&&S.ctx.tenant&&S.ctx.tenant.id||null;
   let out=[],de=0;
   for(;;){
-    let q=sb.from(t).select('*');if(filtro)q=filtro(q);
+    let q=sb.from(t).select('*');if(tid)q=q.eq('tenant_id',tid);if(filtro)q=filtro(q);
     const r=await q.order('id').range(de,de+999);
     if(r.error)throw r.error;
     out=out.concat(r.data||[]);
