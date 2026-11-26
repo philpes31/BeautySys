@@ -469,11 +469,11 @@ footer{background:var(--foot);color:var(--foot-ink);padding-block:26px;font-size
   }
   aplica(null);planos([]);
   if(C.url&&C.anonKey){
-    var H={'Content-Type':'application/json',apikey:C.anonKey,Authorization:'Bearer '+C.anonKey};
-    fetch(C.url+'/rest/v1/rpc/whatsapp_geral_ligado',{method:'POST',headers:H,body:'{}'})
+    var HD={'Content-Type':'application/json',apikey:C.anonKey,Authorization:'Bearer '+C.anonKey};
+    fetch(C.url+'/rest/v1/rpc/whatsapp_geral_ligado',{method:'POST',headers:HD,body:'{}'})
       .then(function(r){return r.ok?r.json():true}).catch(function(){return true})
       .then(function(v){WAOFF=(v===false);if(WAOFF){var t=$('lemb-txt');if(t)t.textContent='Aviso por e-mail no dia anterior, com confirmação de presença, remarcação e cancelamento pelo link.'}
-        return fetch(C.url+'/rest/v1/rpc/publico_site',{method:'POST',headers:H,body:'{}'})})
+        return fetch(C.url+'/rest/v1/rpc/publico_site',{method:'POST',headers:HD,body:'{}'})})
       .then(function(r){if(!r.ok)throw 0;return r.json()}).then(aplica).catch(function(){$('planos-lista').innerHTML='<p class="vazio">Não foi possível carregar os planos agora. <a href="'+esc(ENTRAR)+'">Entre no sistema</a> para ver todos.</p>'});
   }else $('planos-lista').innerHTML='<p class="vazio">Entre no sistema para ver os planos disponíveis.</p>';
 
