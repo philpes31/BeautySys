@@ -232,6 +232,13 @@ footer{background:var(--foot);color:var(--foot-ink);padding-block:26px;font-size
   .nav a.ghost{display:none}
 }
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.btn{transition:none}}
+
+.zap-flut{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:50;display:flex;align-items:center;gap:8px;background:#1f9d55;color:#fff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 16px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.zap-flut[hidden]{display:none}
+.zap-flut:hover{background:#17804a}
+.zap-flut:focus-visible{outline:3px solid #fff;outline-offset:2px;box-shadow:0 0 0 5px #1f9d55}
+.zap-flut svg{width:24px;height:24px;fill:#fff;flex:none}
+@media (max-width:520px){.zap-flut span{display:none}.zap-flut{padding:14px}}
 </style>
 </head>
 <body>
@@ -462,7 +469,7 @@ footer{background:var(--foot);color:var(--foot-ink);padding-block:26px;font-size
     var fx=$('faixa');
     if(c.faixa_ativa&&c.faixa){fx.innerHTML=esc(c.faixa)+(c.faixa_link&&linkOk(c.faixa_link)?' <a href="'+esc(c.faixa_link)+'">Saiba mais</a>':'');fx.hidden=false}else fx.hidden=true;
     var partes=[];
-    if(c.whatsapp&&/^55\d{10,11}$/.test(c.whatsapp)){var z=$('zap');z.href='https://wa.me/'+c.whatsapp;z.hidden=false;var n=c.whatsapp.slice(2);partes.push('WhatsApp: <b>('+n.slice(0,2)+') '+n.slice(2,n.length-4)+'-'+n.slice(-4)+'</b>')}
+    if(c.whatsapp&&/^55\d{10,11}$/.test(c.whatsapp)){var z=$('zap');z.href='https://wa.me/'+c.whatsapp;z.hidden=false;var zf=$('zap-flut');if(zf){zf.href='https://wa.me/'+c.whatsapp+'?text='+encodeURIComponent('Olá! Vim pelo site do Agendio e tenho uma dúvida.');zf.hidden=false}var n=c.whatsapp.slice(2);partes.push('WhatsApp: <b>('+n.slice(0,2)+') '+n.slice(2,n.length-4)+'-'+n.slice(-4)+'</b>')}
     if(c.email)partes.push('E-mail: <b>'+esc(c.email)+'</b>');
     var ct=$('contato');if(partes.length){ct.innerHTML=partes.map(function(x){return '<span>'+x+'</span>'}).join('');ct.hidden=false}else ct.hidden=true;
     ligaCta();planos(L);faq(c.faq);
@@ -493,5 +500,6 @@ footer{background:var(--foot);color:var(--foot-ink);padding-block:26px;font-size
   pinta();
 })();
 </script>
+<a id="zap-flut" class="zap-flut" href="#" target="_blank" rel="noopener" hidden aria-label="Falar com a gente no WhatsApp"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3C9 3 3.4 8.6 3.4 15.5c0 2.4.7 4.7 1.9 6.600L3.200 29l7.100-2.100a12.500 12.500 0 0 0 5.700 1.400c6.900 0 12.600-5.600 12.600-12.500S22.900 3 16 3zm0 22.700c-1.800 0-3.600-.5-5.100-1.400l-.4-.2-4.200 1.200 1.200-4.100-.3-.4a10.200 10.200 0 0 1-1.600-5.400C5.600 9.800 10.300 5.200 16 5.200s10.400 4.600 10.400 10.300S21.700 25.700 16 25.700zm5.700-7.600c-.3-.2-1.900-.9-2.200-1s-.5-.2-.7.200-.8 1-1 1.200-.4.200-.7.100a8.500 8.500 0 0 1-4.200-3.700c-.3-.6.300-.5.900-1.700.1-.2 0-.4 0-.5l-1-2.300c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.100-.8.400s-1 1-1 2.500 1.100 2.900 1.200 3.100 2.100 3.300 5.200 4.600c1.900.8 2.700.9 3.600.7.600-.1 1.900-.8 2.200-1.500.3-.7.300-1.400.2-1.500s-.3-.2-.6-.4z"/></svg><span>Dúvidas? Fale comigo</span></a>
 </body>
 </html>
