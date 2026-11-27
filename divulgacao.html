@@ -381,7 +381,7 @@ footer{background:var(--foot);color:var(--foot-ink);padding-block:26px;font-size
     <h2 id="t-fim">Sua agenda organizada ainda esta semana</h2>
     <div class="cta">
       <a class="btn" data-cta href="/saas">Testar grátis</a>
-      <a class="btn ghost" id="zap" href="#" hidden target="_blank" rel="noopener">Falar no WhatsApp</a>
+      
     </div>
     <p class="contato" id="contato" hidden></p>
   </div>
@@ -469,7 +469,7 @@ footer{background:var(--foot);color:var(--foot-ink);padding-block:26px;font-size
     var fx=$('faixa');
     if(c.faixa_ativa&&c.faixa){fx.innerHTML=esc(c.faixa)+(c.faixa_link&&linkOk(c.faixa_link)?' <a href="'+esc(c.faixa_link)+'">Saiba mais</a>':'');fx.hidden=false}else fx.hidden=true;
     var partes=[];
-    if(c.whatsapp&&/^55\d{10,11}$/.test(c.whatsapp)){var z=$('zap');z.href='https://wa.me/'+c.whatsapp;z.hidden=false;var zf=$('zap-flut');if(zf){zf.href='https://wa.me/'+c.whatsapp+'?text='+encodeURIComponent('Olá! Vim pelo site do Agendio e tenho uma dúvida.');zf.hidden=false}var n=c.whatsapp.slice(2);partes.push('WhatsApp: <b>('+n.slice(0,2)+') '+n.slice(2,n.length-4)+'-'+n.slice(-4)+'</b>')}
+    if(c.whatsapp&&/^55\d{10,11}$/.test(c.whatsapp)){var zf=$('zap-flut');if(zf){zf.href='https://wa.me/'+c.whatsapp+'?text='+encodeURIComponent('Olá! Vim pelo site do Agendio e tenho uma dúvida.');zf.hidden=false}}
     if(c.email)partes.push('E-mail: <b>'+esc(c.email)+'</b>');
     var ct=$('contato');if(partes.length){ct.innerHTML=partes.map(function(x){return '<span>'+x+'</span>'}).join('');ct.hidden=false}else ct.hidden=true;
     ligaCta();planos(L);faq(c.faq);
