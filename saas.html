@@ -710,7 +710,7 @@ async function recarregar(){
     const desde=new Date(Date.now()-120*864e5).toISOString().slice(0,10),ignE=()=>{semE=true;return []};
     let semB=false;const ignB=()=>{semB=true;return []};let semC=false;
     let semV=false;const ignV=()=>{semV=true;return []};let semAn=false;let semPm=false;let semCp=false;
-    const [c,a,g,pr,fi,mv,bq,pd,es,pk,rs,ag,vl,cp,cmv,pvd,vnd,anm,prm,cpg,cbc]=await Promise.all([todos('clientes'),todos('atendimentos'),todos('despesas').catch(()=>{semD=true;return []}),
+    const [c,a,g,pr,fi,mv,bq,pd,es,pk,rs,ag,vl,cp,cmv,pvd,vnd,anm,prm,cpg,cbc,fnd]=await Promise.all([todos('clientes'),todos('atendimentos'),todos('despesas').catch(()=>{semD=true;return []}),
       todos('produtos').catch(ignE),todos('ficha_procedimento').catch(ignE),todos('movimentacoes_estoque',q=>q.gte('data',desde)).catch(ignE),
       S.legado?Promise.resolve([]):todos('bloqueios',q=>q.gte('data',desde)).catch(ignB),
       S.legado?Promise.resolve([]):todos('pedidos_agenda',q=>q.gte('data',desde)).catch(()=>[]),
@@ -736,12 +736,13 @@ async function recarregar(){
       S.legado?Promise.resolve([]):todos('anamneses').catch(()=>{semAn=true;return []}),
       S.legado?Promise.resolve([]):todos('promocoes').catch(()=>{semPm=true;return []}),
       S.legado?Promise.resolve([]):todos('contas_pagar').catch(()=>{semCp=true;return []}),
-      S.legado?Promise.resolve([]):sb.from('cashback_config').select('*').limit(1).then(r=>{if(r.error){semPm=true;return []}return r.data||[]},()=>{semPm=true;return []})]);
-    S.semAnam=semAn;S.semPromo=semPm;S.semContas=semCp;S.semVendas=semV;S.semCartao=semC;S.semDesp=semD;S.semEst=semE;S.semBloq=S.legado||semB;
-    const sig=JSON.stringify([c,a,g,pr,fi,mv,bq,pd,es,pk,rs,ag,vl,cp,cmv,pvd,vnd,anm,prm,cpg,cbc]);
+      S.legado?Promise.resolve([]):sb.from('cashback_config').select('*').limit(1).then(r=>{if(r.error){semPm=true;return []}return r.data||[]},()=>{semPm=true;return []}),
+      S.legado?Promise.resolve([]):todos('fornecedores').catch(()=>{S.semForn=true;return []})]);
+    S.semForn=S.legado?false:S.semForn;S.semAnam=semAn;S.semPromo=semPm;S.semContas=semCp;S.semVendas=semV;S.semCartao=semC;S.semDesp=semD;S.semEst=semE;S.semBloq=S.legado||semB;
+    const sig=JSON.stringify([c,a,g,pr,fi,mv,bq,pd,es,pk,rs,ag,vl,cp,cmv,pvd,vnd,anm,prm,cpg,cbc,fnd]);
     const mudou=sig!==S.sig||tinhaErro||!S.got;
     S.sig=sig;S.erro='';
-    if(mudou){S.contas=(cpg||[]).map(cpRow2);S.promos=(prm||[]).map(pmRow);S.cb=cbc&&cbc[0]?{ativo:!!cbc[0].ativo,pct:Number(cbc[0].percentual)||0,desde:cbc[0].ativado_em||''}:{ativo:false,pct:5,desde:''};S.anams=(anm||[]).map(anRow);S.pvs=(pvd||[]).map(pvRow);S.vendas=(vnd||[]).map(vdRow);S.cartoes=(cp||[]).map(cpRow);S.cmovs=(cmv||[]).map(cpMov);S.vales=(vl||[]).map(r=>({id:r.id,prof:r.profissional||'',data:r.data,valor:Number(r.valor)||0,obs:r.obs||''}));S.clientes=c.map(rowC);S.atendTodos=a.map(rowA);S.atend=S.atendTodos.filter(x=>!inativo(x));S.gastos=g.map(rowD);S.produtos=pr.map(rowP);S.fichas=fi.map(rowF);S.movs=mv.map(rowM);S.bloq=bq.map(b=>({id:b.id,profissional:b.profissional||'',data:b.data,inicio:b.inicio?String(b.inicio).slice(0,5):'',fim:b.fim?String(b.fim).slice(0,5):'',motivo:b.motivo||''}));S.pedidos=pd.filter(x=>x.status==='pendente'||(x.status==='recusado'&&x.sinal_status==='pago')).map(x=>({id:x.id,nome:x.nome,telefone:x.telefone,servico:x.servico,profissional:x.profissional,data:x.data,hora:String(x.hora||'').slice(0,5),obs:x.obs||'',duracao:x.duracao,status:x.status,sinalValor:Number(x.sinal_valor)||0,sinalStatus:x.sinal_status||'nenhum'})).sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora));S.pacotes=pk.map(x=>({id:x.id,clienteId:x.cliente_id,nome:x.nome,servico:x.servico||'',total:Number(x.total_sessoes)||0,usadas:Number(x.usadas)||0,preco:Number(x.preco)||0,validade:x.validade||'',status:x.status||'ativo',criado:x.criado_em||''}));S.resgates=rs.map(x=>({id:x.id,clienteId:x.cliente_id,premio:x.premio||'',criado:x.criado_em||''}));S.espera=es.filter(x=>x.status==='aguardando'||x.status==='avisada').map(x=>({id:x.id,nome:x.nome,telefone:x.telefone,servico:x.servico,profissional:x.profissional||'',data:x.data,periodo:x.periodo||'qualquer',obs:x.obs||'',status:x.status,origem:x.origem||'salao',avisadaEm:x.avisada_em||''})).sort((a,b)=>(a.data+a.status).localeCompare(b.data+b.status));S.agCfg=(ag&&ag.agenda_config)||{};S.onl=ag?{slug:ag.slug||'',on:!!ag.online_ativo,wa:ag._wa,mp:ag._mp,gw:ag._gw||'',uso:ag._uso||null,wp:ag._wp||null}:{slug:'',on:false,wa:null,mp:null,uso:null,wp:null};S.got=true;render()}
+    if(mudou){S.forns=(fnd||[]).map(fnRow).sort((x,y)=>x.nome.localeCompare(y.nome,'pt-BR'));S.contas=(cpg||[]).map(cpRow2);S.promos=(prm||[]).map(pmRow);S.cb=cbc&&cbc[0]?{ativo:!!cbc[0].ativo,pct:Number(cbc[0].percentual)||0,desde:cbc[0].ativado_em||''}:{ativo:false,pct:5,desde:''};S.anams=(anm||[]).map(anRow);S.pvs=(pvd||[]).map(pvRow);S.vendas=(vnd||[]).map(vdRow);S.cartoes=(cp||[]).map(cpRow);S.cmovs=(cmv||[]).map(cpMov);S.vales=(vl||[]).map(r=>({id:r.id,prof:r.profissional||'',data:r.data,valor:Number(r.valor)||0,obs:r.obs||''}));S.clientes=c.map(rowC);S.atendTodos=a.map(rowA);S.atend=S.atendTodos.filter(x=>!inativo(x));S.gastos=g.map(rowD);S.produtos=pr.map(rowP);S.fichas=fi.map(rowF);S.movs=mv.map(rowM);S.bloq=bq.map(b=>({id:b.id,profissional:b.profissional||'',data:b.data,inicio:b.inicio?String(b.inicio).slice(0,5):'',fim:b.fim?String(b.fim).slice(0,5):'',motivo:b.motivo||''}));S.pedidos=pd.filter(x=>x.status==='pendente'||(x.status==='recusado'&&x.sinal_status==='pago')).map(x=>({id:x.id,nome:x.nome,telefone:x.telefone,servico:x.servico,profissional:x.profissional,data:x.data,hora:String(x.hora||'').slice(0,5),obs:x.obs||'',duracao:x.duracao,status:x.status,sinalValor:Number(x.sinal_valor)||0,sinalStatus:x.sinal_status||'nenhum'})).sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora));S.pacotes=pk.map(x=>({id:x.id,clienteId:x.cliente_id,nome:x.nome,servico:x.servico||'',total:Number(x.total_sessoes)||0,usadas:Number(x.usadas)||0,preco:Number(x.preco)||0,validade:x.validade||'',status:x.status||'ativo',criado:x.criado_em||''}));S.resgates=rs.map(x=>({id:x.id,clienteId:x.cliente_id,premio:x.premio||'',criado:x.criado_em||''}));S.espera=es.filter(x=>x.status==='aguardando'||x.status==='avisada').map(x=>({id:x.id,nome:x.nome,telefone:x.telefone,servico:x.servico,profissional:x.profissional||'',data:x.data,periodo:x.periodo||'qualquer',obs:x.obs||'',status:x.status,origem:x.origem||'salao',avisadaEm:x.avisada_em||''})).sort((a,b)=>(a.data+a.status).localeCompare(b.data+b.status));S.agCfg=(ag&&ag.agenda_config)||{};S.onl=ag?{slug:ag.slug||'',on:!!ag.online_ativo,wa:ag._wa,mp:ag._mp,gw:ag._gw||'',uso:ag._uso||null,wp:ag._wp||null}:{slug:'',on:false,wa:null,mp:null,uso:null,wp:null};S.got=true;render()}
   }catch(e){S.erro=(e&&(e.code||e.message))||'erro';render()}
 }
 let tmr;
@@ -761,7 +762,7 @@ async function iniciar(){
   try{S.canal=sb.channel('salao-mudancas').on('postgres_changes',{event:'*',schema:'public'},agendar).subscribe()}catch(_){}
 }
 function parar(){
-  S.iniciado=false;S.waGeral=undefined;S.coms=undefined;S.mfaPed=false;S.mfaInfo=undefined;S.hist=undefined;S.got=false;S.push=null;S.anams=[];S.fotos=null;S.fotosUrl=null;S.fotosTs=null;S.semFotos=false;S.emCfg=undefined;S.clube=undefined;S.caixaDias=undefined;S.cxEsp=null;S.galeria=undefined;S.satisf=undefined;S.etqFiltro='';S.indic=undefined;S.contas=[];S.promos=[];S.cb={ativo:false,pct:5,desde:''};S.pvs=[];S.vendas=[];S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
+  S.iniciado=false;S.waGeral=undefined;S.coms=undefined;S.mfaPed=false;S.mfaInfo=undefined;S.hist=undefined;S.got=false;S.push=null;S.anams=[];S.fotos=null;S.fotosUrl=null;S.fotosTs=null;S.semFotos=false;S.emCfg=undefined;S.clube=undefined;S.caixaDias=undefined;S.cxEsp=null;S.galeria=undefined;S.satisf=undefined;S.etqFiltro='';S.indic=undefined;S.contas=[];S.promos=[];S.cb={ativo:false,pct:5,desde:''};S.pvs=[];S.forns=[];S.semForn=false;S.vendas=[];S.clientes=[];S.atend=[];S.atendTodos=[];S.gastos=[];S.produtos=[];S.fichas=[];S.movs=[];S.sig='';S.sel=null;S.erro='';S.ctx=null;S.ctxPronto=false;S.ctxErro=false;S.suspenso=false;S.msgs=null;S.com=null;S.semCom=false;S.bloq=[];S.agCfg={};S.onl={slug:'',on:false,wa:null,mp:null};S.semOnline=false;S.pedidos=[];S.semBloq=false;S.semAg=false;S.semDur=false;S.semProc2=false;
   if(S.canal&&sb){try{sb.removeChannel(S.canal)}catch(_){}}
   S.canal=null;
 }
@@ -778,6 +779,7 @@ const ICONES={
   despesas:IC('<path d="M5 4h14v17l-2.3-1.6L14.3 21 12 19.4 9.7 21l-2.4-1.6L5 21z"/><path d="M9 9h6M9 13h6"/>'),
   promocoes:IC('<path d="M20 12 12 20 4 12V4h8z"/><circle cx="8.5" cy="8.5" r="1.3"/>'),
   vendas:IC('<path d="M6 7h13l-1.5 8.5H8z"/><path d="M6 7 5 4H3"/><circle cx="9.5" cy="19" r="1.2"/><circle cx="16.5" cy="19" r="1.2"/>'),
+  fornecedores:IC('<path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.5"/><circle cx="17" cy="18" r="1.5"/>'),
   estoque:IC('<path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5 12 12l8.5-4.5M12 12v9"/>'),
   retornos:IC('<path d="M4 12a8 8 0 1 0 2.6-5.9"/><path d="M4 4v4.5h4.5"/>'),
   relatorios:IC('<path d="M4 20V4M4 20h16"/><path d="M8 16v-4M12 16V8M16 16v-6"/>'),
@@ -837,10 +839,10 @@ function render(){
 function renderTop(){
   const logado=!!S.sessao&&!S.recuperando&&!S.mfaPed&&S.ctxPronto&&temAcesso();
   document.body.classList.toggle('logado',logado);
-  const t=[['inicio','Início'],['agenda','Agenda'],['clientes','Clientes'],['atendimentos','Atendimentos'],['vendas','Vendas'],['promocoes','Promoções'],['retornos','Retornos'],['despesas','Despesas'],['estoque','Estoque'],['relatorios','Relatórios'],['equipe','Equipe'],['mensagens','Mensagens'],['salao','Salão'],['horarios','Horários'],['plataforma','Plataforma'],['backup','Backup'],['ajuda','Ajuda']];
+  const t=[['inicio','Início'],['agenda','Agenda'],['clientes','Clientes'],['atendimentos','Atendimentos'],['vendas','Vendas'],['promocoes','Promoções'],['retornos','Retornos'],['despesas','Despesas'],['estoque','Estoque'],['fornecedores','Fornecedores'],['relatorios','Relatórios'],['equipe','Equipe'],['mensagens','Mensagens'],['salao','Salão'],['horarios','Horários'],['plataforma','Plataforma'],['backup','Backup'],['ajuda','Ajuda']];
   $('tabs').hidden=!logado;
   $('tabs').innerHTML=logado?t.filter(([k])=>podeVer(k)).map(([k,l],i,a)=>{
-    const GEST=['despesas','estoque','relatorios','equipe','mensagens','salao','horarios','plataforma','backup','ajuda'];
+    const GEST=['despesas','estoque','fornecedores','relatorios','equipe','mensagens','salao','horarios','plataforma','backup','ajuda'];
     const pr=a.find(x=>GEST.includes(x[0])),g=(k==='inicio'||(pr&&k===pr[0]))?`<span class="grp" aria-hidden="true">${k==='inicio'?'Dia a dia':'Gestão'}</span>`:'';
     const nb=k==='ajuda'?S.aj.pend:k==='plataforma'?S.pl.pend:0;return g+`<button data-go="${k}" ${S.view===k?'aria-current="page"':''}${nb?` data-n="${nb}"`:''}>${ICONES[k]}<span>${l}</span></button>`}).join(''):'';
   const vis=logado?t.filter(([k])=>podeVer(k)):[],prim=['inicio','agenda','clientes','atendimentos','plataforma','relatorios'].filter(k=>vis.some(x=>x[0]===k)).slice(0,4),resto=vis.filter(x=>!prim.includes(x[0]));
@@ -883,6 +885,7 @@ function conteudo(){
   if(v==='atendimentos')return telaAtend();
   if(v==='despesas')return telaDesp();
   if(v==='estoque')return telaEstoque();
+  if(v==='fornecedores')return telaFornecedores();
   if(v==='vendas')return telaVendas();
   if(v==='promocoes')return telaPromocoes();
   if(v==='retornos')return telaRet()+blocoSumidas()+blocoSatisf();
@@ -896,7 +899,7 @@ function conteudo(){
   return telaBackup();
 }
 const NV=k=>S.ctx?((S.ctx.permissoes&&S.ctx.permissoes[k])||'nenhum'):'escrita';
-const ROTAS={mensagens:'config',equipe:'equipe',salao:'config',horarios:'config',clientes:'clientes',agenda:'agenda',atendimentos:'agenda',vendas:'agenda',promocoes:'agenda',retornos:'clientes',despesas:'financeiro',relatorios:'financeiro',estoque:'estoque',backup:'config'};
+const ROTAS={mensagens:'config',equipe:'equipe',salao:'config',horarios:'config',clientes:'clientes',agenda:'agenda',atendimentos:'agenda',vendas:'agenda',promocoes:'agenda',retornos:'clientes',despesas:'financeiro',relatorios:'financeiro',estoque:'estoque',fornecedores:'estoque',backup:'config'};
 const podeVer=v=>v==='plataforma'?ehAdmin():(!temSalao()&&ehAdmin())?false:(S.legado&&(v==='equipe'||v==='salao'||v==='horarios'||v==='ajuda'||v==='vendas'||v==='promocoes'))?false:(v==='vendas'&&!recOk('vendas'))?false:(v==='promocoes'&&!recOk('promocoes'))?false:(!ROTAS[v]||NV(ROTAS[v])!=='nenhum');
 const temSalao=()=>S.legado||!!(S.ctx&&S.ctx.tenant);
 const ehAdmin=()=>!!(S.ctx&&S.ctx.admin);
@@ -1062,7 +1065,8 @@ function formVale(){
   <p class="erro" id="a-erro" role="alert"></p><div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Salvar</button></div></form>`);
 }
 /* ---------- Vendas de produtos (shampoo, perfume, pomada, balm...) ---------- */
-const pvRow=r=>({id:r.id,nome:r.nome||'',categoria:r.categoria||'',preco:Number(r.preco)||0,custo:Number(r.custo)||0,estoque:Number(r.estoque)||0,minimo:Number(r.minimo)||0,ativo:r.ativo!==false});
+const pvRow=r=>({id:r.id,nome:r.nome||'',categoria:r.categoria||'',preco:Number(r.preco)||0,custo:Number(r.custo)||0,estoque:Number(r.estoque)||0,minimo:Number(r.minimo)||0,ativo:r.ativo!==false,fornecedorId:r.fornecedor_id||''});
+const fnRow=r=>({id:r.id,nome:r.nome||'',contato:r.contato||'',telefone:r.telefone||'',email:r.email||'',cnpj:r.cnpj||'',obs:r.obs||''});
 const vdRow=r=>({id:r.id,data:r.data,clienteId:r.cliente_id||'',forma:r.forma||'',subtotal:Number(r.subtotal)||0,desconto:Number(r.desconto)||0,total:Number(r.total)||0,custo:Number(r.custo_total)||0,status:r.status==='cancelada'?'cancelada':'ativa',obs:r.obs||'',cartao:r.cartao_id||'',prof:r.profissional||''});
 const PV_CAT=['Cabelo','Barba','Perfume','Unhas','Pele','Maquiagem','Acessório'];
 const FORMAS_PAG=['Pix','Dinheiro','Cartão de débito','Cartão de crédito','Outro'];
@@ -1199,7 +1203,7 @@ function telaVendas(){
   (V.length?`<div class="list">${V.map(item).join('')}</div>`+((S.vendas||[]).length>V.length?'<div class="bar"><button type="button" class="btn ghost" data-act="vdMais">Mostrar mais</button></div>':''):`<div class="empty"><h2>Nenhuma venda ainda</h2><p>${(S.pvs||[]).length?'Clique em “Nova venda” para registrar o que a cliente levou.':'Primeiro cadastre os produtos na aba “Produtos à venda”.'}</p></div>`);
 }
 function formProdutoVenda(id){
-  const p=id?(S.pvs||[]).find(x=>x.id===id):{nome:'',categoria:'',preco:'',custo:'',estoque:'',minimo:'',ativo:true};if(id&&!p)return;
+  const p=id?(S.pvs||[]).find(x=>x.id===id):{nome:'',categoria:'',preco:'',custo:'',estoque:'',minimo:'',ativo:true,fornecedorId:''};if(id&&!p)return;
   const cats=[...new Set([...PV_CAT,...(S.pvs||[]).map(x=>x.categoria).filter(Boolean)])];
   abrir(`<h2>${id?'Editar':'Novo'} produto à venda</h2><form data-form="pvsalvar" data-id="${esc(id||'')}">
   <label for="pv-n">Nome *</label><input id="pv-n" name="nome" required maxlength="80" value="${esc(p.nome)}" placeholder="Ex.: Shampoo 300ml, Pomada modeladora, Balm para barba">
@@ -1208,6 +1212,7 @@ function formProdutoVenda(id){
   <div><label for="pv-p">Preço de venda (R$) *</label><input id="pv-p" name="preco" type="number" step="0.01" min="0" required inputmode="decimal" value="${esc(p.preco)}"></div>
   <div><label for="pv-k">Quanto você pagou (R$)</label><input id="pv-k" name="custo" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(p.custo)}" placeholder="Para calcular o lucro"></div>
   <div><label for="pv-m">Avisar quando restar até</label><input id="pv-m" name="minimo" type="number" step="1" min="0" inputmode="numeric" value="${esc(p.minimo||'')}" placeholder="Ex.: 2"></div>
+  <div>${selForn('pv-f','fornecedor_id',p.fornecedorId,'')}</div>
   ${id?'':`<div><label for="pv-e">Quantas unidades tem agora</label><input id="pv-e" name="estoque" type="number" step="1" min="0" inputmode="numeric" placeholder="Ex.: 10"></div>`}</div>
   ${id?`<label class="chk"><input type="checkbox" name="ativo" ${p.ativo?'checked':''}> Produto ativo (aparece na hora de vender)</label>`:''}
   <p class="erro" id="a-erro" role="alert"></p><div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Salvar</button></div></form>`);
@@ -1216,7 +1221,8 @@ async function salvarProdutoVenda(id,d){
   const preco=Number(d.preco);if(!(preco>=0)||d.preco==='')throw erroUi('Informe o preço de venda.');
   const cat=d.categoria==='__nova'?String(d.categoria_nova||'').trim().slice(0,40):String(d.categoria||'').trim();
   if(d.categoria==='__nova'&&!cat)throw erroUi('Digite o nome da nova categoria ou escolha uma da lista.');
-  await vdChama('pv_salvar',{p_id:id||null,p_nome:String(d.nome||'').trim(),p_categoria:cat,p_preco:din(d.preco),p_custo:din(d.custo),p_estoque:id?0:Math.max(0,Math.floor(Number(d.estoque)||0)),p_minimo:Math.max(0,Math.floor(Number(d.minimo)||0)),p_ativo:id?d.ativo==='on':true});
+  const rv=await vdChama('pv_salvar',{p_id:id||null,p_nome:String(d.nome||'').trim(),p_categoria:cat,p_preco:din(d.preco),p_custo:din(d.custo),p_estoque:id?0:Math.max(0,Math.floor(Number(d.estoque)||0)),p_minimo:Math.max(0,Math.floor(Number(d.minimo)||0)),p_ativo:id?d.ativo==='on':true});
+  await ligaForn('venda',rv.id||id,d.fornecedor_id,id?(S.pvs.find(x=>x.id===id)||{}).fornecedorId:'');
   await recarregar();toast('Produto salvo.');
 }
 function formAjustePv(id){
@@ -3589,7 +3595,7 @@ const r3=n=>Math.round((Number(n)||0)*1e3)/1e3,r4=n=>Math.round((Number(n)||0)*1
 const nTxt=(n,d=2)=>Number(n||0).toLocaleString('pt-BR',{maximumFractionDigits:d});
 const erroAviso=m=>Object.assign(new Error(m),{aviso:m});
 const rowP=r=>({id:r.id,nome:r.nome||'',categoria:r.categoria||'Outros',unidade:UN.includes(r.unidade)?r.unidade:'g',conteudo:Number(r.conteudo)>0?Number(r.conteudo):1,preco:Number(r.preco)||0,
-  uso:Number(r.uso_aplicacao)||0,perda:Number(r.perda)||0,estoque:Number(r.estoque)||0,minimo:Number(r.minimo)||0,fornecedor:r.fornecedor||'',validade:r.validade||'',obs:r.obs||''});
+  uso:Number(r.uso_aplicacao)||0,perda:Number(r.perda)||0,estoque:Number(r.estoque)||0,minimo:Number(r.minimo)||0,fornecedor:r.fornecedor||'',fornecedorId:r.fornecedor_id||'',validade:r.validade||'',obs:r.obs||''});
 const rowF=r=>({id:r.id,procedimento:r.procedimento||'',produtoId:r.produto_id,quantidade:Number(r.quantidade)||0});
 const rowM=r=>({id:r.id,produtoId:r.produto_id,data:r.data,tipo:r.tipo,quantidade:Number(r.quantidade)||0,motivo:r.motivo||'',atendimentoId:r.atendimento_id||''});
 /* Rendimento: quanto uma embalagem rende e quanto custa cada aplicação. */
@@ -3634,6 +3640,61 @@ function telaEstoque(){
   <div id="lista-est">${itensProdutos()}</div>`;
 }
 /* Produto: cadastro com cálculo de rendimento ao vivo */
+
+/* ---------- Fornecedores ---------- */
+const fnPode=()=>!S.legado&&NV('estoque')==='escrita';
+const fnWa=t=>{const d=String(t||'').replace(/\D/g,'');return d.length>=10?'55'+d.replace(/^55(?=\d{10,11}$)/,''):''};
+function selForn(idc,nome,atual,textoAntigo){
+  const F=S.forns||[],tem=atual&&F.some(f=>f.id===atual);
+  return `<label for="${idc}">Fornecedor</label><select id="${idc}" name="${nome}"><option value="">Sem fornecedor</option>${!tem&&textoAntigo?`<option value="__manter" selected>${esc(textoAntigo)} (texto antigo)</option>`:''}${F.map(f=>`<option value="${esc(f.id)}" ${f.id===atual?'selected':''}>${esc(f.nome)}</option>`).join('')}</select>${fnPode()?'<p class="muted" style="margin:4px 0 0">Para cadastrar um novo, use a aba Fornecedores.</p>':''}`;
+}
+async function ligaForn(tipo,pid,novo,antigo){
+  const v=String(novo||'');if(v==='__manter'||S.semForn||S.legado)return;
+  if(v===String(antigo||''))return;
+  const r=await sb.rpc('produto_fornecedor_definir',{p_tipo:tipo,p_id:pid,p_forn:v||null});if(r.error)throw r.error;
+}
+function pedidosForn(L){
+  const g={};L.forEach(x=>{const f=(S.forns||[]).find(y=>y.id===x.p.fornecedorId);if(f&&fnWa(f.telefone))(g[f.id]=g[f.id]||{f,l:[]}).l.push(x)});
+  const ks=Object.keys(g);if(!ks.length)return '';
+  return `<div class="panel" style="margin-top:10px"><b>Pedir direto ao fornecedor</b>${ks.map(k=>{const {f,l}=g[k],t='Olá'+(f.contato?', '+f.contato:'')+'! Gostaria de pedir:\n'+l.map(x=>'- '+x.p.nome+': '+x.q+(x.q===1?' embalagem':' embalagens')).join('\n')+'\nObrigado!';return `<div style="margin-top:8px"><a class="btn sm" target="_blank" rel="noopener" href="https://wa.me/${fnWa(f.telefone)}?text=${encodeURIComponent(t)}">WhatsApp: ${esc(f.nome)}</a></div>`}).join('')}</div>`;
+}
+function telaFornecedores(){
+  if(S.semForn)return aviso('Falta ativar a aba Fornecedores','Rode o arquivo agendio-TUDO.sql (etapa 77) no SQL Editor do Supabase e atualize a página.');
+  const F=S.forns||[],pode=fnPode();
+  const uso=id=>S.produtos.filter(p=>p.fornecedorId===id).length+(S.pvs||[]).filter(p=>p.fornecedorId===id).length;
+  const item=f=>{const n=uso(f.id),w=fnWa(f.telefone);
+    return `<div class="item" style="align-items:flex-start"><div class="grow"><div class="t">${esc(f.nome)}</div>
+    <div class="muted">${[f.contato,f.telefone,f.email,f.cnpj].filter(Boolean).map(esc).join(' · ')||'Sem contato cadastrado'}</div>
+    ${f.obs?`<div class="muted">${esc(f.obs)}</div>`:''}
+    <div class="muted">${n?n+(n===1?' produto vinculado':' produtos vinculados'):'Nenhum produto vinculado'}</div>
+    <div class="row-actions" style="margin-top:8px">${w?`<a class="btn sm" target="_blank" rel="noopener" href="https://wa.me/${w}">WhatsApp</a>`:''}${pode?`<button type="button" class="btn ghost sm" data-act="fornEdit" data-id="${esc(f.id)}">Editar</button><button type="button" class="btn ghost sm" data-act="fornDel" data-id="${esc(f.id)}">Excluir</button>`:''}</div></div></div>`};
+  return `<div class="bar">${pode?'<button type="button" class="btn" data-act="fornNovo">Novo fornecedor</button>':''}</div>`+
+    (F.length?`<div class="list">${F.map(item).join('')}</div>`:`<div class="empty"><h2>Nenhum fornecedor cadastrado</h2><p>Cadastre quem vende os produtos para o salão. Depois é só escolher o fornecedor ao cadastrar um produto no Estoque ou em Vendas.</p></div>`);
+}
+function formForn(id){
+  const f=id?(S.forns||[]).find(x=>x.id===id):{nome:'',contato:'',telefone:'',email:'',cnpj:'',obs:''};if(id&&!f)return;
+  abrir(`<h2>${id?'Editar fornecedor':'Novo fornecedor'}</h2><form data-form="forn" data-id="${esc(id||'')}">
+  <label for="fn-n">Nome do fornecedor *</label><input id="fn-n" name="nome" required maxlength="80" value="${esc(f.nome)}" placeholder="Ex.: Distribuidora Beleza Pro">
+  <div class="grid2"><div><label for="fn-c">Pessoa de contato</label><input id="fn-c" name="contato" maxlength="80" value="${esc(f.contato)}"></div>
+  <div><label for="fn-t">WhatsApp / telefone</label><input id="fn-t" name="telefone" type="tel" inputmode="tel" maxlength="30" value="${esc(f.telefone)}" placeholder="(11) 90000-0000"></div>
+  <div><label for="fn-e">E-mail</label><input id="fn-e" name="email" type="email" maxlength="120" value="${esc(f.email)}"></div>
+  <div><label for="fn-d">CNPJ (opcional)</label><input id="fn-d" name="cnpj" maxlength="20" inputmode="numeric" value="${esc(f.cnpj)}"></div></div>
+  <label for="fn-o">Observações</label><textarea id="fn-o" name="obs" rows="2" maxlength="300">${esc(f.obs)}</textarea>
+  <p class="erro" id="a-erro" role="alert"></p><div class="acts"><button type="button" class="btn ghost" data-act="fechar">Cancelar</button><button class="btn">Salvar</button></div></form>`);
+}
+async function salvarForn(id,d){
+  const nome=String(d.nome||'').trim();if(!nome)throw erroUi('Informe o nome do fornecedor.');
+  const r=await sb.rpc('fornecedor_salvar',{p_id:id||null,p_nome:nome,p_contato:String(d.contato||'').trim(),p_telefone:String(d.telefone||'').trim(),p_email:String(d.email||'').trim(),p_cnpj:String(d.cnpj||'').trim(),p_obs:String(d.obs||'').trim()});
+  if(r.error)throw r.error;
+  await recarregar();toast(id?'Fornecedor atualizado.':'Fornecedor cadastrado.');
+}
+function pedirDelForn(id){
+  const f=(S.forns||[]).find(x=>x.id===id);if(!f)return;
+  confirmar(`Excluir "${f.nome}"?`,'Os produtos ligados a ele ficam sem fornecedor. Esta ação não pode ser desfeita.','Excluir',async()=>{
+    const r=await sb.rpc('fornecedor_excluir',{p_id:id});if(r.error)throw r.error;
+    await recarregar();toast('Fornecedor excluído.');
+  });
+}
 /* Lista de compras: produtos em falta ou abaixo do mínimo, por fornecedor */
 function textoCompras(L){
   const g={};L.forEach(x=>{(g[x.p.fornecedor||'Sem fornecedor']=g[x.p.fornecedor||'Sem fornecedor']||[]).push(x)});
@@ -3649,10 +3710,10 @@ function listaCompras(){
   <div class="list">${L.map(x=>`<div class="item"><div class="grow"><div class="t">${esc(x.p.nome)}</div><div class="muted">${esc(x.p.fornecedor||'Sem fornecedor')} · tem ${Math.max(0,Math.round(nEmb(x.p)*100)/100)} emb.</div></div><div class="side"><b>${x.q} emb.</b><div class="muted">${brl(x.custo)}</div></div></div>`).join('')}</div>
   <p style="margin:10px 0"><b>Total estimado: ${brl(tot)}</b></p>
   <textarea id="cv-txt" rows="6" readonly aria-label="Texto da lista">${esc(txt)}</textarea>
-  <div class="acts"><button type="button" class="btn ghost" data-act="copiaConvite">Copiar lista</button><a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(txt)}">Enviar por WhatsApp</a></div>`);
+  <div class="acts"><button type="button" class="btn ghost" data-act="copiaConvite">Copiar lista</button><a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(txt)}">Enviar por WhatsApp</a></div>${pedidosForn(L)}`);
 }
 function formProd(id){
-  const p=id?S.produtos.find(x=>x.id===id):{nome:'',categoria:'',unidade:'g',conteudo:'',preco:'',uso:'',perda:'',minimo:'',fornecedor:'',validade:'',obs:''};if(id&&!p)return;
+  const p=id?S.produtos.find(x=>x.id===id):{nome:'',categoria:'',unidade:'g',conteudo:'',preco:'',uso:'',perda:'',minimo:'',fornecedor:'',fornecedorId:'',validade:'',obs:''};if(id&&!p)return;
   const cats=[...new Set([...CAT_EST,...S.produtos.map(x=>x.categoria)])];
   abrir(`<h2>${id?'Editar produto':'Novo produto'}</h2><form data-form="prod" data-id="${esc(id||'')}">
   <label for="p-nome">Nome *</label><input id="p-nome" name="nome" required maxlength="120" placeholder="Ex.: Máscara de hidratação, esmalte, cera" value="${esc(p.nome)}">
@@ -3665,7 +3726,7 @@ function formProd(id){
   <div><label for="p-perda">Perda / desperdício (%)</label><input id="p-perda" name="perda" type="number" step="0.01" min="0" max="100" inputmode="decimal" placeholder="0" value="${esc(p.perda)}"></div>
   ${id?'':`<div><label for="p-ini">Embalagens em estoque agora</label><input id="p-ini" name="inicial" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Ex.: 3"></div>`}
   <div><label for="p-min">Estoque mínimo (embalagens)</label><input id="p-min" name="minimo" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Avisar quando ficar abaixo" value="${esc(p.minimo)}"></div>
-  <div><label for="p-forn">Fornecedor</label><input id="p-forn" name="fornecedor" maxlength="120" value="${esc(p.fornecedor)}"></div>
+  <div>${selForn('p-forn','fornecedor_id',p.fornecedorId,p.fornecedor)}</div>
   <div><label for="p-val">Validade</label><input id="p-val" name="validade" type="date" value="${esc(p.validade)}"></div></div>
   <div id="p-prev" class="panel muted num" style="margin-top:10px"></div>
   <label for="p-obs">Observações</label><textarea id="p-obs" name="obs" rows="2">${esc(p.obs)}</textarea>
@@ -3683,14 +3744,16 @@ async function salvarProd(id,d){
   if(!nome)throw erroAviso('Informe o nome do produto.');
   if(!(cont>0))throw erroAviso('Informe o conteúdo da embalagem (maior que zero).');
   const o={nome,categoria:(d.categoria||'').trim()||'Outros',unidade:UN.includes(d.unidade)?d.unidade:'g',conteudo:cont,preco:din(d.preco),uso_aplicacao:r3(d.uso),
-    perda:Math.min(100,Math.max(0,Math.round((Number(d.perda)||0)*100)/100)),minimo:r3(d.minimo),fornecedor:(d.fornecedor||'').trim(),validade:d.validade||null,obs:(d.obs||'').trim()};
+    perda:Math.min(100,Math.max(0,Math.round((Number(d.perda)||0)*100)/100)),minimo:r3(d.minimo),validade:d.validade||null,obs:(d.obs||'').trim()};
   if(id){const r=await sb.from('produtos').update(o).eq('id',id);if(r.error)throw r.error}
   else{
     o.id=novoId();
+    o.fornecedor='';
     const r=await sb.from('produtos').insert(o);if(r.error)throw r.error;
     const ini=Number(d.inicial)||0;
     if(ini>0){const m=await sb.from('movimentacoes_estoque').insert({id:novoId(),produto_id:o.id,data:hoje(),tipo:'entrada',quantidade:r4(ini*cont),motivo:'Estoque inicial'});if(m.error)throw m.error}
   }
+  await ligaForn('estoque',id||o.id,d.fornecedor_id,id?(S.produtos.find(x=>x.id===id)||{}).fornecedorId:'');
   await recarregar();toast(id?'Produto atualizado.':'Produto cadastrado.');
 }
 function pedirDelProd(id){
@@ -5576,7 +5639,7 @@ document.addEventListener('click',e=>{
     sinalOk:()=>sb.rpc('pedido_sinal_confirmar',{p_id:id}).then(async r=>{if(r.error)throw r.error;S.sig='';await recarregar();toast('Sinal marcado como recebido.')}).catch(x=>toast(falha(x),true)),aceitaPedido:()=>responderPedido(id,true).catch(x=>toast(falha(x),true)),recusaPedido:()=>{const go=()=>responderPedido(id,false).catch(x=>toast(falha(x),true));if(a.dataset.sinal)confirmar('Recusar pedido com sinal pago?','A cliente já pagou o sinal. Você precisa devolver o valor a ela (pelo Pix ou pelo app do Mercado Pago).','Recusar',go);else go()},
     waFb:()=>conectarFb(),
     areaEnviar:()=>areaEnviar(id,false).catch(falha),areaRenovar:()=>confirmar('Gerar novo link?','O link que a cliente já recebeu deixa de funcionar. Você terá de enviar o novo link para ela.','Gerar novo link',async()=>{await areaEnviar(id,true);throw Object.assign(new Error('mantem'),{mantem:true})}),fotoNova:()=>formFoto(id),fotoVer:()=>verFoto(id),fotoBaixar:()=>fotoBaixar(id).catch(falha),fotoComp:()=>fotoComparativo(id).catch(falha),fotoExcluir:()=>confirmar('Excluir esta foto?','A foto é apagada definitivamente do armazenamento do salão.','Excluir',async()=>{const f=fotoAcha(id),cid=f&&f.clienteId;const r=await sb.rpc('foto_excluir',{p_id:id});if(r.error)throw r.error;if(r.data)await sb.storage.from('fotos').remove([r.data]);if(cid){await fotosCarrega(cid,true);fotosPinta(cid)}toast('Foto excluída.')}),anNova:()=>formAnamnese(id),anLimpa:()=>window.anLimpaSig(),anExcluir:()=>confirmar('Excluir esta ficha?','A ficha de anamnese e a assinatura são apagadas definitivamente.','Excluir',async()=>{const r=await sb.rpc('anamnese_excluir',{p_id:id});if(r.error)throw r.error;if(!r.data||r.data.ok!==true)throw erroUi((r.data&&r.data.erro)||'Não foi possível excluir.');await recarregar();toast('Ficha excluída.')}),
-    pvCat:()=>{S.pvCat=id;render()},vdAba:()=>{S.vdAba=id;render()},vdNova:()=>formVenda(),vdMais:()=>{S.vdLim=(S.vdLim||60)+60;render()},vdVer:()=>vdVer(id).catch(x=>toast(falha(x),true)),pvNovo:()=>formProdutoVenda(),pvEdit:()=>formProdutoVenda(id),pvAjusta:()=>formAjustePv(id),
+    pvCat:()=>{S.pvCat=id;render()},vdAba:()=>{S.vdAba=id;render()},vdNova:()=>formVenda(),vdMais:()=>{S.vdLim=(S.vdLim||60)+60;render()},vdVer:()=>vdVer(id).catch(x=>toast(falha(x),true)),fornNovo:()=>formForn(),fornEdit:()=>formForn(id),fornDel:()=>pedirDelForn(id),pvNovo:()=>formProdutoVenda(),pvEdit:()=>formProdutoVenda(id),pvAjusta:()=>formAjustePv(id),
     pvExcluir:()=>{const p=(S.pvs||[]).find(x=>x.id===id);if(p)confirmar('Excluir '+p.nome+'?','O produto sai da lista. As vendas antigas continuam no histórico.','Excluir',async()=>{await vdChama('pv_excluir',{p_id:id});await recarregar();toast('Produto excluído.')})},
     periodoPagar:()=>periodoPagar(Number(id)).catch(x=>toast(falha(x),true)),dpAba:()=>{S.dpAba=id;render()},fxSem:()=>{S.fxSem=Number(id);render()},cpNova:()=>formConta(),cpEdit:()=>formConta(id),cpPagar:()=>formContaPaga(id),cpExcluir:()=>confirmar('Excluir esta conta?','Ela deixa de aparecer nas contas a pagar.',async()=>{await cpChama('conta_excluir',{p_id:id});await recarregar();toast('Conta excluída.')}),instalarNao:()=>{LS.set('salao_inst_ok','1');render()},pushLigar:()=>pushLigar().catch(x=>toast(falha(x),true)),pushDesliga:()=>pushDesliga().catch(x=>toast(falha(x),true)),pushTeste:()=>pushTeste().catch(x=>toast(falha(x),true)),pmAba:()=>{S.pmAba=id;render()},cpModelo:()=>{cpLeMsg();S.cpMsg=CP_MODELOS[id]();render()},cpZap:()=>cpZap(id),pmNovo:()=>formPromo(),pmEdit:()=>formPromo(id),pmAlterna:()=>pmAlterna(id).catch(x=>toast(falha(x),true)),pmExcluir:()=>confirmar('Excluir este cupom?','O cupom deixa de existir. As vendas já feitas não mudam.',async()=>{await vdChama('promo_excluir',{p_id:id});await recarregar();toast('Cupom excluído.')}),cbConfig:()=>formCashback(),cbVer:()=>cbVer(id).catch(x=>toast(falha(x),true)),
     vdCancela:()=>confirmar('Cancelar esta venda?','Os produtos voltam para o estoque. Se foi paga com cartão-presente, o saldo volta para o cartão.','Cancelar venda',async()=>{await vdChama('venda_cancelar',{p_venda:id});await recarregar();toast('Venda cancelada.')}),
@@ -5731,6 +5794,7 @@ $('dlg').addEventListener('submit',async e=>{
     else if(k==='cpusar')await usarCartao(id,dados);
     else if(k==='desp')await salvarDesp(id,dados);
     else if(k==='prod')await salvarProd(id,dados);
+    else if(k==='forn')await salvarForn(id,dados);
     else if(k==='mov')await salvarMov(id,dados);
     else if(k==='ficha')await salvarFicha(id,dados);
     else if(k==='receber')await salvarReceber(id,dados);
