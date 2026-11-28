@@ -483,11 +483,19 @@ footer{background:var(--foot);color:var(--foot-ink);padding-block:26px;font-size
   aplica(null);planos([]);
   if(C.url&&C.anonKey){
     var HD={'Content-Type':'application/json',apikey:C.anonKey,Authorization:'Bearer '+C.anonKey};
-    fetch(C.url+'/rest/v1/rpc/whatsapp_geral_ligado',{method:'POST',headers:HD,body:'{}'})
-      .then(function(r){return r.ok?r.json():true}).catch(function(){return true})
-      .then(function(v){WAOFF=(v===false);if(WAOFF){var t=$('lemb-txt');if(t)t.textContent='Aviso por e-mail no dia anterior, com confirmação de presença, remarcação e cancelamento pelo link.'}
-        return fetch(C.url+'/rest/v1/rpc/publico_site',{method:'POST',headers:HD,body:'{}'})})
-      .then(function(r){if(!r.ok)throw 0;return r.json()}).then(aplica).catch(function(){$('planos-lista').innerHTML='<p class="vazio">Não foi possível carregar os planos agora. <a href="'+esc(ENTRAR)+'">Entre no sistema</a> para ver todos.</p>'});
+    var CK='agendio_site_v1',lsGet=function(){try{return JSON.parse(localStorage.getItem(CK)||'null')}catch(e){return null}},lsSet=function(v){try{localStorage.setItem(CK,JSON.stringify(v))}catch(e){}};
+    var rpc=function(n){return fetch(C.url+'/rest/v1/rpc/'+n,{method:'POST',headers:HD,body:'{}'}).then(function(r){if(!r.ok)throw 0;return r.json()})};
+    var tenta=function(n,k){return rpc(n).catch(function(e){if(k<=0)throw e;return new Promise(function(ok){setTimeout(ok,1200)}).then(function(){return tenta(n,k-1)})})};
+    var guard=lsGet();
+    if(guard&&guard.site){WAOFF=guard.waoff===true;try{aplica(guard.site)}catch(e){}}
+    var pWa=tenta('whatsapp_geral_ligado',1).then(function(v){return v!==false},function(){return guard?guard.waoff!==true:true});
+    var pSite=tenta('publico_site',2);
+    Promise.all([pWa,pSite.then(function(x){return {ok:true,x:x}},function(){return {ok:false}})]).then(function(r){
+      var ligado=r[0],st=r[1];WAOFF=!ligado;
+      if(WAOFF){var t=$('lemb-txt');if(t)t.textContent='Aviso por e-mail no dia anterior, com confirmação de presença, remarcação e cancelamento pelo link.'}
+      if(st.ok){lsSet({site:st.x,waoff:WAOFF});aplica(st.x)}
+      else if(guard&&guard.site){aplica(guard.site)}
+      else $('planos-lista').innerHTML='<p class="vazio">Não foi possível carregar os planos agora. Recarregue a página ou <a href="'+esc(ENTRAR)+'">entre no sistema</a> para ver todos.</p>'});
   }else $('planos-lista').innerHTML='<p class="vazio">Entre no sistema para ver os planos disponíveis.</p>';
 
   // exemplo interativo da tela da cliente (novembro de 2026 é só uma amostra)
